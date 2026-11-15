@@ -12,9 +12,25 @@ skills-hub/
   agents.conf        # реестр агентов и путей к их скиллам
   install.sh         # инсталлятор macOS / Linux
   install.ps1        # инсталлятор Windows
-  _template/skill/   # шаблон нового скилла
+  docs/skill-guide.md  # как писать скиллы
+  tools/
+    new_skill.py     # создать скилл из шаблона
+    validate.py      # проверить скиллы
+  _template/skill-name/  # шаблон скилла
   design-sites/      # тема: дизайн и вёрстка сайтов
-    skills/<name>/SKILL.md
+    skills/<skill-name>/
+```
+
+Устройство одного скилла:
+
+```
+<skill-name>/
+  SKILL.md       # frontmatter (name, description) + процесс, ключевые правила, ресурсы
+  references/    # подробные правила и справка, читаются по необходимости
+  examples/      # разобранные примеры: запрос → ход работы → результат, плохо/хорошо
+  scripts/       # скрипты для детерминированных шагов
+  assets/        # шаблоны и файлы для результата
+  evals/         # тест-кейсы (агентам не ставятся)
 ```
 
 | Тема | Что внутри |
@@ -77,10 +93,13 @@ irm https://raw.githubusercontent.com/realax07/skills-hub/main/install.ps1 | iex
 
 ## Добавить скилл
 
-1. `cp -R _template/skill <тема>/skills/<имя-скилла>`
-2. Заполнить `SKILL.md`: `name` = имя папки, `description` — что делает и когда применять.
-3. Добавить строку в README темы.
-4. `./install.sh install -s <имя-скилла>`
+Подробно — в [docs/skill-guide.md](docs/skill-guide.md).
+
+```bash
+python3 tools/new_skill.py design-sites hero-section     # каркас со всей структурой + строка в README темы
+python3 tools/validate.py design-sites/skills/hero-section --strict
+./install.sh install -s hero-section
+```
 
 Имена скиллов уникальны во всём репо (агенты кладут их в одну плоскую папку).
-Новая тема — просто новая папка верхнего уровня с `skills/` внутри и строкой в таблице выше.
+Новая тема создаётся тем же `new_skill.py` — останется добавить её в таблицу тем выше.

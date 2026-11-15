@@ -207,6 +207,7 @@ cmd_install() {
       run mkdir -p "$(dirname "$dest")"
       if [ "$MODE" = "copy" ]; then
         run cp -R "$d" "$dest"
+        run rm -rf "$dest/evals"   # тесты скилла агенту не нужны
         [ "$DRY" = 1 ] || echo "$REPO" >"$dest/$MARKER"
       else
         run ln -s "$d" "$dest"

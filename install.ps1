@@ -123,7 +123,7 @@ function Cmd-Install {
       }
       Do-It { New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent) | Out-Null } "mkdir"
       if ($Copy) {
-        Do-It { Copy-Item $s.Dir $dest -Recurse; Set-Content (Join-Path $dest $Marker) $Repo } "copy $($s.Dir) -> $dest"
+        Do-It { Copy-Item $s.Dir $dest -Recurse; Remove-Item (Join-Path $dest "evals") -Recurse -Force -ErrorAction SilentlyContinue; Set-Content (Join-Path $dest $Marker) $Repo } "copy $($s.Dir) -> $dest"
         $mode = "copy"
       } else {
         Do-It { New-Item -ItemType Junction -Path $dest -Target $s.Dir | Out-Null } "junction $dest -> $($s.Dir)"
