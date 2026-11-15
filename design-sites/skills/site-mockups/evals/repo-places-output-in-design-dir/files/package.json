@@ -1,0 +1,1 @@
+{ "name": "acme-web", "private": true, "scripts": { "build": "echo built > /dev/null" } }

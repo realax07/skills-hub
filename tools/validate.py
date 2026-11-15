@@ -140,6 +140,11 @@ def validate(skill: Path, strict: bool) -> Report:
             r.warn("description короткий: опиши не только что делает скилл, но и когда его брать")
     if len(fm.get("compatibility", "")) > 500:
         r.err("compatibility длиннее 500 символов")
+    setup = [p for p in ("setup.mjs", "setup.py", "setup.sh", "setup.ps1") if (skill / "scripts" / p).is_file()]
+    if setup and not fm.get("compatibility"):
+        r.warn(f"есть scripts/{setup[0]}, но нет compatibility: опиши зависимости во frontmatter")
+    if fm.get("compatibility") and not setup:
+        r.warn("compatibility задан, но нет scripts/setup.* — дай установщик, чтобы скилл раскатывался на любую машину")
 
     nested = [p for p in skill.rglob("SKILL.md")
               if p != md and not (set(p.relative_to(skill).parts) & SKIP_DIRS)
@@ -158,7 +163,7 @@ def validate(skill: Path, strict: bool) -> Report:
             r.err(f"ссылка на несуществующий файл: {target}")
 
     for f in skill.rglob("*"):
-        if f.is_file() and f.suffix in {".md", ".py", ".sh", ".yaml", ".ps1"} \
+        if f.is_file() and f.suffix in {".md", ".py", ".sh", ".yaml", ".ps1", ".js", ".mjs", ".json"} \
                 and not (set(f.relative_to(skill).parts) & SKIP_DIRS):
             if "TODO" in f.read_text(encoding="utf-8", errors="ignore"):
                 (r.err if strict else r.warn)(f"TODO-заглушка: {f.relative_to(skill)}")

@@ -11,6 +11,8 @@ param(
   [Alias("p")][string]$Project = "",
   [switch]$Copy,
   [switch]$Force,
+  [switch]$Deps,
+  [switch]$Check,
   [Alias("n")][switch]$DryRun
 )
 $ErrorActionPreference = "Stop"
@@ -133,7 +135,35 @@ function Cmd-Install {
     }
   }
   Write-Host "Готово: $n установок. Перезапусти агента, чтобы он подхватил скиллы."
+  if ($Deps) { Cmd-Deps } else { Deps-Hint }
 }
+# Зависимости скилла: scripts/setup.mjs | setup.py | setup.ps1 (соглашение хаба, см. docs/skill-guide.md)
+function Setup-Of($dir) {
+  foreach ($f in @("setup.mjs", "setup.py", "setup.ps1")) { $p = Join-Path (Join-Path $dir "scripts") $f; if (Test-Path $p) { return $p } }
+  return $null
+}
+function Cmd-Deps {
+  $extra = @(); if ($Check) { $extra = @("--check") }
+  $any = $false; $failed = $false
+  foreach ($s in Selected-Skills) {
+    $f = Setup-Of $s.Dir; if (-not $f) { continue }
+    $any = $true; Write-Host "> $($s.Skill): $f $extra"
+    if ($DryRun) { continue }
+    switch -Wildcard ($f) {
+      "*.mjs" { if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Host "  ! нужен Node.js 18+: https://nodejs.org"; $failed = $true; continue }; & node $f @extra }
+      "*.py" { & python $f @extra }
+      "*.ps1" { & $f @extra }
+    }
+    if ($LASTEXITCODE -ne 0) { $failed = $true }
+  }
+  if (-not $any) { Write-Host "У выбранных скиллов нет зависимостей." }
+  if ($failed) { exit 1 }
+}
+function Deps-Hint {
+  $names = @(Selected-Skills | Where-Object { Setup-Of $_.Dir } | ForEach-Object { $_.Skill })
+  if ($names) { Write-Host "Скиллам нужны зависимости ($($names -join ',')). Поставь: .\install.ps1 deps -Skill $($names -join ',')" }
+}
+
 function Cmd-Uninstall {
   if ($Agent -eq "auto") { $script:Agent = "all" }
   foreach ($a in Selected-Agents) {
@@ -159,6 +189,7 @@ switch ($Command) {
   "install" { Cmd-Install }
   "uninstall" { Cmd-Uninstall }
   "status" { Cmd-Status }
+  "deps" { Cmd-Deps }
   "update" { git -C $Repo pull --ff-only }
-  default { Write-Host "Commands: list | agents | install | uninstall | status | update"; Write-Host "Options: -Agent -Topic -Skill -Project -Copy -Force -DryRun" }
+  default { Write-Host "Commands: list | agents | install | uninstall | status | update | deps"; Write-Host "Options: -Agent -Topic -Skill -Project -Copy -Force -Deps -Check -DryRun" }
 }

@@ -35,6 +35,7 @@ Commands:
   uninstall            удалить скиллы, поставленные из этого репо
   status               что и куда установлено
   update               git pull (симлинки обновятся сами, копии — переустанови)
+  deps                 поставить зависимости скиллов (их scripts/setup.*)
 
 Options:
   -a, --agent LIST     claude,codex,... | all | auto (по умолчанию: auto = найденные)
@@ -43,6 +44,8 @@ Options:
   -p, --project DIR    ставить в проект DIR, а не глобально
       --copy           копировать вместо симлинка
       --force          перезаписать чужую папку с тем же именем (старая -> .bak)
+      --deps           после install сразу поставить зависимости скиллов
+      --check          для deps: только проверить зависимости
   -n, --dry-run        только показать, что будет сделано
   -h, --help
 
@@ -51,6 +54,8 @@ Examples:
   ./install.sh install
   ./install.sh install -a claude,codex -t design-sites
   ./install.sh install -a all -p ~/code/my-site --copy
+  ./install.sh install --deps -s site-mockups
+  ./install.sh deps --check
   ./install.sh uninstall -a all
 EOF
 }
@@ -58,7 +63,7 @@ EOF
 # --- args
 CMD="install"
 AGENTS_SEL="auto"; TOPICS_SEL=""; SKILLS_SEL=""; PROJECT=""
-MODE="link"; FORCE=0; DRY=0
+MODE="link"; FORCE=0; DRY=0; DEPS=0; CHECK=0
 if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then CMD="$1"; shift; fi
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -68,6 +73,8 @@ while [ $# -gt 0 ]; do
     -p|--project) PROJECT="$(cd "$2" && pwd -P)"; shift 2 ;;
     --copy)       MODE="copy"; shift ;;
     --force)      FORCE=1; shift ;;
+    --deps)       DEPS=1; shift ;;
+    --check)      CHECK=1; shift ;;
     -n|--dry-run) DRY=1; shift ;;
     -h|--help)    usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -169,7 +176,7 @@ cmd_list() {
   local t s d desc last=""
   all_skills | while IFS='|' read -r t s d; do
     [ "$t" != "$last" ] && { echo "$t/"; last="$t"; }
-    desc="$(sed -n 's/^description:[[:space:]]*//p' "$d/SKILL.md" | head -1 | cut -c1-90)"
+    desc="$(sed -n 's/^description:[[:space:]]*//p' "$d/SKILL.md" | head -1 | sed "s/[.—].*//")"
     printf '  %-28s %s\n' "$s" "$desc"
   done
 }
@@ -216,6 +223,38 @@ cmd_install() {
     done <<<"$skills"
   done <<<"$agents"
   echo "Готово: $n установок. Перезапусти агента, чтобы он подхватил скиллы."
+  if [ "$DEPS" = 1 ]; then cmd_deps; else deps_hint; fi
+}
+
+# Зависимости скилла: scripts/setup.mjs | setup.py | setup.sh (соглашение хаба, см. docs/skill-guide.md)
+setup_of() {
+  local d="$1"
+  for f in setup.mjs setup.py setup.sh; do [ -f "$d/scripts/$f" ] && { echo "$d/scripts/$f"; return; }; done
+}
+cmd_deps() {
+  local t s d f rc=0 any=0 extra=""
+  [ "$CHECK" = 1 ] && extra="--check"
+  while IFS='|' read -r t s d; do
+    [ -z "$s" ] && continue
+    f="$(setup_of "$d")"; [ -z "$f" ] && continue
+    any=1; echo "> $s: ${f#$REPO/} $extra"
+    case "$f" in
+      *.mjs) command -v node >/dev/null || { echo "  ! нужен Node.js 18+: https://nodejs.org"; rc=1; continue; }
+             run node "$f" $extra || rc=1 ;;
+      *.py)  run python3 "$f" $extra || rc=1 ;;
+      *.sh)  run bash "$f" $extra || rc=1 ;;
+    esac
+  done <<<"$(selected_skills)"
+  [ "$any" = 0 ] && echo "У выбранных скиллов нет зависимостей."
+  return $rc
+}
+deps_hint() {
+  local t s d names=""
+  while IFS='|' read -r t s d; do
+    [ -n "$s" ] && [ -n "$(setup_of "$d")" ] && names="$names,$s"
+  done <<<"$(selected_skills)"
+  [ -n "$names" ] && echo "Скиллам нужны зависимости (${names#,}). Поставь: ./install.sh deps -s ${names#,}"
+  return 0
 }
 
 cmd_uninstall() {
@@ -259,6 +298,7 @@ case "$CMD" in
   install) cmd_install ;;
   uninstall) cmd_uninstall ;;
   status) cmd_status ;;
+  deps) cmd_deps ;;
   update) git -C "$REPO" pull --ff-only ;;
   help) usage ;;
   *) echo "Unknown command: $CMD" >&2; usage >&2; exit 2 ;;

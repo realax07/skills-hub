@@ -85,8 +85,13 @@ irm https://raw.githubusercontent.com/realax07/skills-hub/main/install.ps1 | iex
 ./install.sh install -a claude,codex -t design-sites
 ./install.sh install -a all -p ~/code/site --copy  # в проект, копией
 ./install.sh status
+./install.sh deps                                  # зависимости скиллов (Playwright и т.п.)
+./install.sh install --deps                        # скиллы + зависимости за раз
 ./install.sh uninstall                             # снимает только то, что ставил хаб
 ```
+
+Если скиллу нужно что-то кроме стандартной библиотеки, у него есть `scripts/setup.*`.
+`install` подскажет, у каких скиллов есть зависимости, а `deps --check` проверит, всё ли стоит.
 
 Опции: `-a` агенты (`auto` | `all` | список), `-t` темы, `-s` скиллы,
 `-p` проект, `--copy`, `--force`, `-n` dry-run. В PowerShell те же: `-Agent`, `-Topic`, `-Skill`, `-Project`, `-Copy`, `-Force`, `-DryRun`.
