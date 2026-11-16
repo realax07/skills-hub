@@ -32,6 +32,7 @@ TICK_RE = re.compile(r"`((?:references|scripts|assets|examples)/[^`\s<>]*)`")
 PLACEHOLDER_RE = re.compile(r"\{\{(name|title|script|run|env)\}\}")
 STUB = "TO" + "DO"  # склеено, чтобы сам валидатор не считался заглушкой
 TEXT_SUFFIXES = {".md", ".py", ".sh", ".yaml", ".yml", ".ps1", ".js", ".mjs", ".json", ".txt"}
+WHEN_RE = re.compile(r"(?im)^#{1,6}\s+((?:когда\s+(?:применять|использовать|брать|вызывать)|when\s+to\s+use|use\s+when)\b.*)$")
 TRIGGER_HINTS = ("когда", "используй", "применяй", "use when", "when ", "даже если", "trigger")
 
 
@@ -123,6 +124,10 @@ def check_body(skill: Path, body: str, r: Report):
     n = len(body.splitlines())
     if n > BODY_LINES_LIMIT:
         r.warn(f"тело SKILL.md {n} строк (> {BODY_LINES_LIMIT}): вынеси детали в references/")
+    # условия срабатывания живут в description: тело грузится уже после решения брать скилл
+    m = WHEN_RE.search(body)
+    if m:
+        r.warn(f"в теле раздел «{m.group(1).strip()}»: условия срабатывания перенеси в description, тело — только про выполнение")
     for target in sorted(set(LINK_RE.findall(body)) | set(TICK_RE.findall(body))):
         if re.match(r"^[a-z]+:", target):  # http:, mailto:
             continue

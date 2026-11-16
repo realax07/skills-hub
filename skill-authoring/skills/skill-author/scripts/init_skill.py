@@ -77,7 +77,11 @@ def skill_md_transform(lang: str, setup):
                              if "{{run}}" not in l and "{{script}}" not in l) + "\n"
         if setup:
             cmd = "python3 scripts/setup.py" if setup == "py" else "node scripts/setup.mjs"
-            text = text.replace("\n---\n", "\ncompatibility: " + STUB + " — рантайм, пакеты, сколько весит, куда ставится.\n---\n", 1)
+            compat = "compatibility: " + STUB + " — рантайм, пакеты, сколько весит, куда ставится."
+            if re.search(r"(?m)^# compatibility:.*$", text):  # раскомментировать подсказку из шаблона
+                text = re.sub(r"(?m)^# compatibility:.*$", compat, text, count=1)
+            else:
+                text = text.replace("\n---\n", "\n" + compat + "\n---\n", 1)
             text = text.replace("1. **Понять задачу.**",
                                 f"1. **Зависимости.** `{cmd} --check`; если не ок — `{cmd}` (ставит вне папки скилла).\n"
                                 "2. **Понять задачу.**", 1).replace("2. **Сделать.**", "3. **Сделать.**", 1) \

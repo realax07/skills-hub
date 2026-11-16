@@ -17,7 +17,7 @@
    - **специфика таблиц** (60 строк о границах ячеек) → `references/tables.md`, в теле — «открой, если в PDF таблицы».
 3. **Зависимости.** pypdf и pdfplumber → `compatibility` во frontmatter + `scripts/setup.py` (шаблон `assets/extras/setup.py.tmpl`),
    пиннованные версии, установка в `~/.cache/agent-skills/pdf-extract`. Первый шаг процесса — `setup.py --check`.
-4. **description** переписать по [references/description.md](../references/description.md).
+4. **Метаданные.** description переписать по [references/description.md](../references/description.md); условия «когда брать» из тела перенести туда, раздел в теле удалить.
 5. **Примеры:** `examples/01-invoice.md` (счёт → JSON с позициями), `examples/02-scanned.md` (плохо: пустой текст без предупреждения / хорошо: определить скан и предложить OCR).
 6. **Тесты:** `new_eval.py` ×2 с `--files` (текстовый PDF с таблицей; скан).
 7. `validate_skill.py pdf-extract --strict --run-scripts` → 0 ошибок. Прогнать один запрос старой и новой версией: новая не перепечатывает код и не забывает про сканы.

@@ -20,6 +20,7 @@ SKIP_DIRS = {"__pycache__", "node_modules", ".git"}
 RESERVED_CASES = {"results", "mocks", "node_modules", "files", "true", "false", "null"}
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 CASE_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+WHEN_RE = re.compile(r"(?im)^#{1,6}\s+((?:когда\s+(?:применять|использовать|брать|вызывать)|when\s+to\s+use|use\s+when)\b.*)$")
 BODY_LINES_LIMIT = 500
 # ссылки на ресурсы скилла: [текст](path) и `path` с известными папками
 LINK_RE = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
@@ -155,6 +156,10 @@ def validate(skill: Path, strict: bool) -> Report:
     n = len(body.splitlines())
     if n > BODY_LINES_LIMIT:
         r.warn(f"SKILL.md {n} строк (> {BODY_LINES_LIMIT}): вынеси детали в references/")
+    # условия срабатывания живут в description: тело грузится уже после решения брать скилл
+    m = WHEN_RE.search(body)
+    if m:
+        r.warn(f"в теле раздел «{m.group(1).strip()}»: условия срабатывания перенеси в description, тело — только про выполнение")
 
     for target in set(LINK_RE.findall(body)) | set(TICK_RE.findall(body)):
         if re.match(r"^[a-z]+:", target):  # http:, mailto:
