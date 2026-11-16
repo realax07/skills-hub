@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: links-guide-into-agents-md
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Агент снимает мокапы в mockups/ и пишет "context" в plan.json (AGENTS.md — пользователь выбрал сам).
+  В mockups/ есть GUIDE.md: какие вопросы решают мокапы, таблица «задача → что открыть», указатель страниц,
+  компонентов и модалки входа со ссылками на существующие файлы. В AGENTS.md добавлен блок между метками
+  site-mockups:start/end со ссылкой на mockups/GUIDE.md; прежний текст AGENTS.md сохранён, CLAUDE.md
+  (только @AGENTS.md) не тронут. Отчёт называет GUIDE.md и файл, куда вписан указатель.

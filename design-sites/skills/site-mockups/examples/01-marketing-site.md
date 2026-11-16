@@ -9,6 +9,8 @@
 
 1. `node scripts/setup.mjs --check` — ок.
 2. Куда класть: работаем в репозитории сайта → `mockups/` в корне репозитория.
+   Указатель: `node scripts/link-context.mjs --suggest --root .` → есть `AGENTS.md` и `CLAUDE.md` с `@AGENTS.md`.
+   Спросил пользователя: «Впишу в AGENTS.md блок о мокапах — когда их открывать и путь до mockups/GUIDE.md. Ок?» → да.
 3. Пользователь сам запустил dev-сервер. Разведка:
    ```bash
    node scripts/discover.mjs --url http://localhost:5173 --src apps/web/src --out mockups/discovery.json
@@ -22,6 +24,7 @@
    ```json
    {
      "baseUrl": "http://localhost:5173",
+     "context": "../AGENTS.md",
      "viewports": { "desktop": { "width": 1440, "height": 900 }, "mobile": { "width": 390, "height": 844, "isMobile": true, "deviceScaleFactor": 2 } },
      "defaults": { "hide": ["#cookie-consent"] },
      "pages": [
@@ -59,7 +62,8 @@
 ## Результат (сообщение пользователю)
 
 ```
-Мокапы в mockups/ — карта разделов: mockups/README.md, каталог: mockups/_catalog.html
+Мокапы в mockups/ — гайд для агентов: mockups/GUIDE.md, карта разделов: mockups/README.md, каталог: mockups/_catalog.html
+В AGENTS.md добавлен блок «Мокапы дизайна сайта» со ссылкой на гайд (обновляется при пересъёмке).
 Разделы: / (главная), pricing/, features/, blog/ (+ launch-week/), contact/
 - 7 страниц (+ главная с открытым «Запросить демо»), desktop и mobile
 - 14 компонентов: layout, sections, content, controls, forms
@@ -72,7 +76,8 @@ verify: 41/42 — в футере не загрузилась иконка со�
 
 ## Почему так
 
-- Место выбрано по существующей `docs/design/` (правило «куда класть»).
+- Место — `mockups/` в корне репозитория сайта (правило «куда класть»).
+- Указатель вписан туда, что агенты читают всегда (`AGENTS.md`), и только с согласия пользователя: это его файл.
 - Блог представлен одной статьёй — остальные однотипны.
 - Модалки открыты реальными кликами, у каждой есть `notes` — следующий агент поймёт, откуда она.
 - Тост не стали подделывать через `eval` — честно отметили пропуск.

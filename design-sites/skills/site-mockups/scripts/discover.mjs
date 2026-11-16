@@ -5,8 +5,8 @@
 //   node scripts/discover.mjs --serve ./dist --out discovery.json      (только папка сборки)
 //   node scripts/discover.mjs --src ./src --no-browser                 (только исходники)
 //
-// Флаги: --max-pages 40  --depth 3  --storage-state auth.json  --include-query
-// Результат (JSON): { baseUrl, pages:[{url,path,title,candidates}], source:{routes, modals, components} }
+// Флаги: --max-pages 40  --depth 3  --per-section 6  --storage-state auth.json  --include-query
+// Результат (JSON): { baseUrl, pages:[{url,path,title,candidates}], sections:[{section,visited,skipped}], source:{routes, modals, components} }
 // Это сырьё для plan.json — агент выбирает из него, что снимать (см. references/plan-format.md).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, extname, dirname } from "node:path";
@@ -17,7 +17,7 @@ import { serveDir } from "./lib/serve.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const args = parseArgs(process.argv.slice(2), {
   url: {}, serve: {}, src: {}, out: { default: "discovery.json" },
-  "max-pages": { type: "int", default: 40 }, depth: { type: "int", default: 3 },
+  "max-pages": { type: "int", default: 40 }, "per-section": { type: "int", default: 6 }, depth: { type: "int", default: 3 },
   "storage-state": {}, "include-query": { type: "bool" }, "no-browser": { type: "bool" },
   help: { alias: "h", type: "bool" },
 });
@@ -113,11 +113,24 @@ async function crawl(baseUrl) {
   } catch {}
   const seen = new Set();
   const pages = [];
+  // Лимит на раздел: однотипные страницы (/docs/*, /blog/*) не съедают весь бюджет обхода,
+  // и он доходит до других веток. Пропущенные учитываются в sections — агент видит объём раздела.
+  const sections = new Map();
+  // страницы верхнего уровня (/pricing, /blog) — разные разделы, лимит к ним не применяется
+  const sectionOf = (u) => {
+    const p = new URL(u).pathname.replace(/\/$/, "");
+    return p.split("/").length <= 2 ? p || "/" : p.replace(/\/[^/]*$/, "");
+  };
   while (queue.length && pages.length < args["max-pages"]) {
     const [url, d] = queue.shift();
     if (seen.has(url)) continue;
     seen.add(url);
     if (/\.(pdf|zip|png|jpe?g|gif|svg|webp|mp4|xml|json|txt)$/i.test(url)) continue;
+    const sec = sectionOf(url);
+    if (!sections.has(sec)) sections.set(sec, { section: sec, visited: 0, skipped: [] });
+    const st = sections.get(sec);
+    if (st.visited >= args["per-section"]) { st.skipped.push(new URL(url).pathname); continue; }
+    st.visited++;
     try {
       const resp = await page.goto(url, { waitUntil: "load", timeout: 20000 });
       await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
@@ -130,7 +143,11 @@ async function crawl(baseUrl) {
     }
   }
   await browser.close();
-  return pages;
+  const summary = [...sections.values()].filter((x) => x.visited)
+    .map((x) => ({ section: x.section, visited: x.visited, skipped: x.skipped.length, skippedSample: x.skipped.slice(0, 5) }))
+    .sort((a, b) => a.section.localeCompare(b.section));
+  for (const x of summary) if (x.skipped) console.log(`  раздел ${x.section}: снято ${x.visited}, пропущено однотипных ${x.skipped}`);
+  return { pages, sections: summary };
 }
 
 async function main() {
@@ -150,7 +167,7 @@ async function main() {
   }
   if (result.baseUrl && !args["no-browser"]) {
     console.log(`→ обхожу ${result.baseUrl}`);
-    result.pages = await crawl(result.baseUrl);
+    Object.assign(result, await crawl(result.baseUrl));
   }
   if (server) server.close();
   writeFile(args.out, JSON.stringify(result, null, 2));

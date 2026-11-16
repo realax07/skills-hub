@@ -30,6 +30,7 @@
 | Vue | `<Teleport to="body">`, `v-if="show"` | цель телепорта | класс модалки |
 | Nuxt UI / Vuetify | `<UModal v-model>`, `<v-dialog>` | портал / `.v-overlay-container` | `.v-overlay--active .v-card` |
 | Svelte | `{#if open}<Modal/>{/if}` | на месте или портал-экшен | класс модалки |
+| Поиск Algolia DocSearch | кнопка `⌘K`, `@docsearch/react` | портал `.DocSearch-Container` (фон), **без `role=dialog`** | `.DocSearch-Modal`; ждать `.DocSearch-Input` |
 | Alpine.js | `x-data="{open:false}" @click="open=true" x-show="open"` | на месте | элемент с `x-show` |
 | jQuery-плагины | `$('#x').modal('show')`, fancybox, magnific | конец `body` | `.fancybox-container`, `.mfp-content` |
 | Tailwind UI (vanilla) | `classList.remove('hidden')` | на месте | элемент без `.hidden` |
@@ -43,3 +44,7 @@
 - **Вкладки и аккордеоны** — каждая значимая вкладка/секция как отдельное состояние, если контент различается по виду.
 - **Cookie-баннер / онбординг** — сними один раз как модалку, а для остального скрой через `defaults.hide`.
 - **Тёмная тема** — второй вьюпорт с `colorScheme: "dark"` или шаг переключения темы.
+
+Если селектор по роли не находится (`waitFor` по `[role=dialog]` упал по таймауту), открой страницу,
+выполни шаги и посмотри, что появилось в конце `body`: многие библиотеки (DocSearch, самописные модалки)
+ставят только классы. В шаге клика добавляй `>> visible=true`, если кнопка продублирована для мобилки и десктопа.

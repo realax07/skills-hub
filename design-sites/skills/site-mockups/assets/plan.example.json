@@ -1,5 +1,6 @@
 {
   "baseUrl": "http://localhost:3000",
+  "context": "../AGENTS.md",
   "viewports": {
     "desktop": {
       "width": 1440,

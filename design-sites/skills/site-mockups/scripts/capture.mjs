@@ -21,6 +21,7 @@ import { loadPlaywright, parseArgs, writeFile, readJson, hash, ensureDir } from 
 import { serveDir } from "./lib/serve.mjs";
 import { runSteps } from "./lib/steps.mjs";
 import { build, MARK } from "./lib/build.mjs";
+import { linkContext } from "./lib/guide.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERIALIZE = readFileSync(join(HERE, "lib/page-serialize.js"), "utf8");
@@ -106,7 +107,18 @@ async function download(url) {
 }
 
 // url() в CSS → метки блобов (пути расставит сборка)
-async function rewriteCss(text, base, tokenAssets) {
+// Ссылки из CSS — метки от URL (__MOCKUP_URL_<хэш>__): текст CSS выходит одинаковым на всех страницах,
+// даже если одна страница файл использует, а другая нет. Путь или url("") подставит сборка по urls.json.
+const urlsFile = () => join(CACHE, "urls.json");
+const cssUrls = existsSync(urlsFile()) ? readJson(urlsFile()) : {}; // хэш -> { url, key }
+const urlToken = (url, key) => {
+  const h = hash(url, 12);
+  const prev = cssUrls[h];
+  cssUrls[h] = { url, key: key || (prev && prev.key) || null };
+  return `__MOCKUP_URL_${h}__`;
+};
+
+async function rewriteCss(text, base, tokenAssets, unused) {
   if (!tokenAssets) {
     // CSS, скачанный раннером: url() ещё не токенизированы
     text = text.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (m, q, u) => {
@@ -121,16 +133,21 @@ async function rewriteCss(text, base, tokenAssets) {
   let last = 0;
   for (const m of text.matchAll(/__MOCKUP_ASSET_(\d+)__|__RAW__(.+?)__RAW__/g)) {
     parts.push(text.slice(last, m.index));
-    const k = await download(m[1] !== undefined ? tokenAssets[+m[1]] : m[2]);
-    parts.push(k ? `__MOCKUP_BLOB_${k}__` : "");
+    const url = m[1] !== undefined ? tokenAssets[+m[1]] : m[2];
+    if (m[1] !== undefined && unused && unused.has(+m[1])) parts.push(urlToken(url, null));
+    else {
+      const k = await download(url);
+      // @import ссылается на CSS-блоб — его связи сборка читает напрямую
+      parts.push(k && k.endsWith(".css") ? `__MOCKUP_BLOB_${k}__` : urlToken(url, k));
+    }
     last = m.index + m[0].length;
   }
   parts.push(text.slice(last));
   return parts.join("");
 }
 
-async function saveCss(text, base, media, tokenAssets) {
-  const css = await rewriteCss(text, base, tokenAssets);
+async function saveCss(text, base, media, tokenAssets, unused) {
+  const css = await rewriteCss(text, base, tokenAssets, unused);
   const finalCss = media ? `@media ${media} {\n${css}\n}` : css;
   const key = nameFor(base && /^https?:/.test(base) && /\.css(\?|$)/.test(base) ? base : "inline", finalCss, ".css");
   if (!existsSync(blobFile(key))) writeFile(blobFile(key), finalCss);
@@ -152,7 +169,7 @@ async function snapshot(page, opts, fileRel) {
         k = r.ok() ? await saveCss(await r.text(), s.href, s.media, null) : null;
       } catch { k = null; }
       if (!k) log.warnings.push(`CSS не получен: ${s.href}`);
-    } else if (s.text) k = await saveCss(s.text, s.href || "inline", s.media, res.assets);
+    } else if (s.text) k = await saveCss(s.text, s.href || "inline", s.media, res.assets, new Set(res.unusedCss || []));
     if (k && !cssKeys.includes(k)) cssKeys.push(k);
   }
   let html = res.html;
@@ -246,7 +263,19 @@ async function captureItem(page, item, vp) {
       ensureDir(dirname(join(OUT, shot)));
       try {
         if (isPageLike) await page.screenshot({ path: join(OUT, shot), fullPage: true });
-        else await page.locator(item.selector).nth(opts.index).screenshot({ path: join(OUT, shot), timeout: 5000 });
+        else {
+          const loc = page.locator(item.selector).nth(opts.index);
+          // Элемент выше окна Playwright снимает прокруткой, и fixed/sticky-слои страницы (шапка,
+          // липкие заголовки) налезают на него. Такой элемент снимаем куском полной страницы —
+          // в режиме fullPage fixed-слои рисуются один раз на своём месте, а не над элементом.
+          const box = await loc.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height, tall: r.height > innerHeight };
+          }, null, { timeout: 5000 });
+          if (box.tall) await page.screenshot({ path: join(OUT, shot), fullPage: true,
+            clip: { x: Math.max(0, box.x), y: Math.max(0, box.y), width: box.width, height: box.height } });
+          else await loc.screenshot({ path: join(OUT, shot), timeout: 5000 });
+        }
       } catch (e) {
         log.warnings.push(`${id}: скриншот не снят (${String(e.message).split("\n")[0]})`);
         shot = null;
@@ -381,10 +410,20 @@ async function main() {
   const ids = new Set(manifest.map((m) => m.id));
   const prevItems = only ? (prevDoc.items || []).filter((m) => !ids.has(m.id) && !only.has(m.baseId)) : [];
   const doc = {
-    generator: "site-mockups", layout: "sections", source: plan.serve ? `папка ${plan.serve} (локальный сервер)` : plan.baseUrl, createdAt: new Date().toISOString(),
-    viewports, primaryViewport: vpNames[0], cssBundle: plan.cssBundle !== false, items: [...prevItems, ...manifest], generated: prevDoc.generated || [],
+    generator: "site-mockups", layout: "sections", source: plan.serve ? `сборка ${plan.serve}` : plan.baseUrl, createdAt: new Date().toISOString(),
+    plan: relative(OUT, resolve(planPath)).split("\\").join("/") || "plan.json", viewports, primaryViewport: vpNames[0], cssBundle: plan.cssBundle !== false, items: [...prevItems, ...manifest], generated: prevDoc.generated || [],
   };
+  writeFile(urlsFile(), JSON.stringify(cssUrls));
   build(OUT, doc, tokens, log);
+  // Указатель на гайд в файле инструкций проекта (AGENTS.md, CLAUDE.md…) — куда, решает пользователь (plan.context).
+  const ctx = [].concat(plan.context || []).map((f) => resolve(planDir, f));
+  if (ctx.length) {
+    doc.context = [];
+    for (const r of linkContext(ctx, join(OUT, "GUIDE.md"), doc, log)) {
+      doc.context.push(relative(OUT, r.file).split("\\").join("/"));
+      console.log(`  контекст: ${relative(process.cwd(), r.file) || r.file} — ${r.action}`);
+    }
+  }
   writeFile(mf, JSON.stringify(doc, null, 2));
   log.finishedAt = new Date().toISOString();
   // При частичной пересъёмке дописываем лог: предупреждения полного прогона не должны пропасть.

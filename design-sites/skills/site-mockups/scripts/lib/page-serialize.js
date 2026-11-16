@@ -12,7 +12,7 @@
 //   media        — { mode: "placeholder"|"keep", design:[sel], content:[sel], iconMax: 64 }:
 //                  картинки/видео-контент заменяются заглушками, дизайн скачивается
 //
-// Возвращает { ok, html, sheets:[{href,text}], assets:[url], frames:[{x,y,width,height}], title, lang, rect, error }
+// Возвращает { ok, html, sheets:[{href,text}], assets:[url], unusedCss:[индекс в assets], frames:[{x,y,width,height}], title, lang, rect, error }
 // Токены __MOCKUP_FRAME_<n>__ в html — места для кадров видео (frames[n], координаты документа).
 // В html и CSS все внешние URL заменены токенами __MOCKUP_ASSET_<n>__ (индекс в assets).
 (opts) => {
@@ -55,6 +55,36 @@
     }
     return out.join("\n");
   };
+  // URL из правил, чей селектор ничего не находит на странице (утилиты из примеров документации,
+  // стили других страниц), не скачиваем: это не дизайн этой страницы. Скачает страница, где правило
+  // сработало, а если такой не было — сборка оставит url(""). @font-face и прочие at-правила — нужны.
+  const urlRe = /url\(\s*(['"]?)([^'")]+)\1\s*\)/g;
+  const matchCache = new Map();
+  const selectorUsed = (sel) => {
+    if (matchCache.has(sel)) return matchCache.get(sel);
+    let used = true;
+    const plain = sel.replace(/::?(?:hover|focus(?:-visible|-within)?|active|visited|target|checked|disabled|placeholder(?:-shown)?|before|after|marker|selection|first-line|first-letter|backdrop|file-selector-button|-webkit-[a-z-]+|-moz-[a-z-]+)(?:\([^)]*\))?/gi, "");
+    try { used = !plain.trim() || !!document.querySelector(plain); } catch { used = true; }
+    matchCache.set(sel, used);
+    return used;
+  };
+  const usedUrls = new Set(), unusedUrls = new Set();
+  const scanRules = (rules, base, depth) => {
+    for (const r of rules) {
+      if (typeof CSSImportRule !== "undefined" && r instanceof CSSImportRule) {
+        try { if (r.styleSheet && depth < 5) scanRules(r.styleSheet.cssRules, r.styleSheet.href || base, depth + 1); } catch {}
+        continue;
+      }
+      const isStyle = typeof CSSStyleRule !== "undefined" && r instanceof CSSStyleRule;
+      if (!isStyle && r.cssRules) { scanRules(r.cssRules, base, depth); continue; }
+      const text = r.cssText;
+      if (!text.includes("url(")) continue;
+      const used = !isStyle || selectorUsed(r.selectorText);
+      for (const m of text.matchAll(urlRe)) {
+        try { (used ? usedUrls : unusedUrls).add(new URL(m[2].trim(), base).href); } catch {}
+      }
+    }
+  };
   const sheets = [];
   const allSheets = [...document.styleSheets, ...(document.adoptedStyleSheets || [])];
   for (const s of allSheets) {
@@ -64,6 +94,7 @@
     const media = s.media && s.media.mediaText && s.media.mediaText !== "all" ? s.media.mediaText : "";
     const text = rulesText(s, 0);
     const base = s.href || document.baseURI;
+    if (text !== null) try { scanRules(s.cssRules, base, 0); } catch {}
     if (text === null) sheets.push({ href: s.href, media, text: null });
     else sheets.push({ href: s.href, media, text: tokenCssUrls(text, base) });
   }
@@ -98,6 +129,8 @@
     if (/^data:/.test(src) || /\.svg(\?|#|$)/i.test(src)) return false;
     const hint = `${src} ${el.className} ${el.alt || ""} ${el.id}`;
     if (/logo|icon|brand|wordmark|sprite|emblem|favicon/i.test(hint)) return false;
+    // Аватары и фото (JPEG, фотостоки, сервисы аватаров) — контент даже в 24px: иконки в JPEG не делают.
+    if (/avatar|author|userpic|profile-?(pic|photo|image)|gravatar|unsplash|pexels|\.(jpe?g|avif)\b/i.test((() => { try { return decodeURIComponent(hint); } catch { return hint; } })())) return true;
     const r = el.getBoundingClientRect();
     const nw = el.naturalWidth || +el.getAttribute("width") || 0, nh = el.naturalHeight || +el.getAttribute("height") || 0;
     // Скрытая картинка (другой вьюпорт, карусель) с lazy-загрузкой: размера не узнать — растровая,
@@ -293,6 +326,7 @@
     html: doctype + "\n" + clone.outerHTML,
     sheets,
     assets,
+    unusedCss: assets.map((u, i) => (unusedUrls.has(u) && !usedUrls.has(u) ? i : -1)).filter((i) => i >= 0),
     title: document.title,
     lang: document.documentElement.lang || "",
     rect,
