@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+// TODO: что делает скрипт (одна строка — её видно в --help).
+//
+// Скрипт скилла {{name}}: детерминированный шаг, который агент иначе писал бы заново каждый раз.
+// Только стандартная библиотека Node.js 18+ (остальное — через scripts/setup.mjs и compatibility).
+//
+//   node scripts/{{script}} <вход> [--json]
+//
+// Код выхода: 0 — успех, 1 — ошибка во входных данных, 2 — неверные аргументы.
+import { readFileSync, existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
+import { parseArgs } from "node:util";
+
+const HELP = `Использование: node scripts/{{script}} <вход> [--json]
+
+TODO: что делает и что возвращает.
+
+  --json    машиночитаемый вывод
+  -h, --help`;
+
+function run(path) {
+  // TODO: настоящая логика
+  const text = readFileSync(path, "utf8");
+  return { file: path, lines: text.split(/\r?\n/).length, chars: text.length };
+}
+
+function main() {
+  let parsed;
+  try {
+    parsed = parseArgs({
+      allowPositionals: true,
+      options: { json: { type: "boolean" }, help: { type: "boolean", short: "h" } },
+    });
+  } catch (e) {
+    console.error(`error: ${e.message}\n\n${HELP}`);
+    return 2;
+  }
+  const { values, positionals } = parsed;
+  if (values.help) {
+    console.log(HELP);
+    return 0;
+  }
+  if (positionals.length !== 1) {
+    console.error(HELP);
+    return 2;
+  }
+  const input = resolve(positionals[0]);
+  if (!existsSync(input) || !statSync(input).isFile()) {
+    console.error(`error: файл не найден: ${input}`);
+    return 1;
+  }
+  const result = run(input);
+  if (values.json) console.log(JSON.stringify(result, null, 2));
+  else for (const [k, v] of Object.entries(result)) console.log(`${k}: ${v}`);
+  return 0;
+}
+
+process.exit(main());

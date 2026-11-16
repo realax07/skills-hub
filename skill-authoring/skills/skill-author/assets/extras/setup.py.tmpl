@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Установщик зависимостей скилла {{name}} (идемпотентный).
+
+  python3 scripts/setup.py           поставить (повторный запуск ничего не ломает)
+  python3 scripts/setup.py --check   только проверить: код 0 — всё есть, 1 — чего-то не хватает
+
+Ставит в отдельный venv вне папки скилла (скилл бывает симлинком в git-репо или read-only копией):
+  macOS/Linux: ~/.cache/agent-skills/{{name}}
+  Windows:     %LOCALAPPDATA%\\agent-skills\\{{name}}
+Переопределить: {{env}}_HOME=<dir>.
+
+Скрипты скилла запускай интерпретатором из этого venv: путь печатает `--check`.
+"""
+import argparse
+import os
+import subprocess
+import sys
+import venv
+from pathlib import Path
+
+# TODO: пиннованные зависимости — одинаковое поведение на всех машинах
+PACKAGES = ["TODO-package==1.0.0"]
+# имена модулей для проверки импортом (порядок — как в PACKAGES)
+MODULES = ["TODO_module"]
+MIN_PYTHON = (3, 9)
+
+
+def deps_home() -> Path:
+    override = os.environ.get("{{env}}_HOME")
+    if override:
+        return Path(override).expanduser()
+    if os.name == "nt":
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        return base / "agent-skills" / "{{name}}"
+    return Path.home() / ".cache" / "agent-skills" / "{{name}}"
+
+
+def venv_python(home: Path) -> Path:
+    return home / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+
+
+def check(home: Path) -> bool:
+    py = venv_python(home)
+    if not py.exists():
+        print(f"  ✗ нет окружения в {home}")
+        return False
+    ok = True
+    for mod in MODULES:
+        r = subprocess.run([str(py), "-c", f"import {mod}"], capture_output=True)
+        print(f"  {'✓' if r.returncode == 0 else '✗'} {mod}")
+        ok = ok and r.returncode == 0
+    if ok:
+        print(f"  python: {py}")
+    return ok
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Зависимости скилла {{name}}")
+    ap.add_argument("--check", action="store_true", help="только проверить, ничего не ставить")
+    a = ap.parse_args()
+
+    print("{{name}}: зависимости")
+    if sys.version_info < MIN_PYTHON:
+        print(f"  ✗ нужен Python {'.'.join(map(str, MIN_PYTHON))}+, сейчас {sys.version.split()[0]}")
+        return 1
+    home = deps_home()
+    if a.check:
+        return 0 if check(home) else 1
+
+    if not venv_python(home).exists():
+        print(f"→ venv в {home}")
+        venv.create(home, with_pip=True)
+    print("→ pip install " + " ".join(PACKAGES))
+    r = subprocess.run([str(venv_python(home)), "-m", "pip", "install", "-q", *PACKAGES])
+    if r.returncode != 0:
+        print("  ✗ pip install упал — см. вывод выше")
+        return 1
+    return 0 if check(home) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

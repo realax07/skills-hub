@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+// Установщик зависимостей скилла {{name}} (идемпотентный).
+//
+//   node scripts/setup.mjs           поставить (повторный запуск ничего не ломает)
+//   node scripts/setup.mjs --check   только проверить: код 0 — всё есть, 1 — чего-то не хватает
+//
+// Ставит npm-пакеты вне папки скилла (скилл бывает симлинком в git-репо или read-only копией):
+//   macOS/Linux: ~/.cache/agent-skills/{{name}}
+//   Windows:     %LOCALAPPDATA%\agent-skills\{{name}}
+// Переопределить: {{env}}_HOME=<dir>.
+//
+// Скрипты скилла грузят пакеты так:
+//   createRequire(join(depsHome(), "package.json"))("<пакет>")
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// TODO: пиннованные зависимости — одинаковое поведение на всех машинах
+const PACKAGES = { "TODO-package": "1.0.0" };
+const isWin = process.platform === "win32";
+
+export function depsHome() {
+  if (process.env.{{env}}_HOME) return process.env.{{env}}_HOME;
+  if (isWin) return join(process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"), "agent-skills", "{{name}}");
+  return join(homedir(), ".cache", "agent-skills", "{{name}}");
+}
+
+function check(home) {
+  const req = createRequire(join(home, "package.json"));
+  let ok = true;
+  for (const name of Object.keys(PACKAGES)) {
+    try {
+      req.resolve(name);
+      console.log(`  ✓ ${name}`);
+    } catch {
+      console.log(`  ✗ ${name} не найден в ${home}`);
+      ok = false;
+    }
+  }
+  return ok;
+}
+
+function main() {
+  console.log("{{name}}: зависимости");
+  const [major] = process.versions.node.split(".").map(Number);
+  if (major < 18) {
+    console.log(`  ✗ нужен Node.js 18+, сейчас ${process.versions.node}. Установи с https://nodejs.org`);
+    return 1;
+  }
+  const home = depsHome();
+  if (process.argv.includes("--check")) return check(home) ? 0 : 1;
+
+  mkdirSync(home, { recursive: true });
+  const pkg = join(home, "package.json");
+  if (!existsSync(pkg)) writeFileSync(pkg, JSON.stringify({ name: "{{name}}-deps", private: true }, null, 2));
+  const specs = Object.entries(PACKAGES).map(([n, v]) => `${n}@${v}`);
+  console.log(`→ npm install ${specs.join(" ")} в ${home}`);
+  const r = spawnSync(isWin ? "npm.cmd" : "npm", ["install", "--no-audit", "--no-fund", "--loglevel=error", ...specs], {
+    cwd: home, stdio: "inherit", shell: isWin,
+  });
+  if (r.status !== 0) {
+    console.log("  ✗ npm install упал — см. вывод выше");
+    return 1;
+  }
+  return check(home) ? 0 : 1;
+}
+
+// запускать main только при прямом вызове, чтобы другие скрипты могли импортировать depsHome()
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) process.exit(main());

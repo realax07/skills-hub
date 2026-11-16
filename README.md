@@ -19,6 +19,7 @@ skills-hub/
   _template/skill-name/  # шаблон скилла
   design-sites/      # тема: дизайн и вёрстка сайтов
     skills/<skill-name>/
+  skill-authoring/   # тема: создание и улучшение скиллов
 ```
 
 Устройство одного скилла:
@@ -36,6 +37,7 @@ skills-hub/
 | Тема | Что внутри |
 |---|---|
 | [design-sites](design-sites/) | дизайн и вёрстка сайтов |
+| [skill-authoring](skill-authoring/) | создание и улучшение скиллов: каркас, правила, тесты, валидация |
 
 ## Поддерживаемые агенты
 
@@ -98,7 +100,7 @@ irm https://raw.githubusercontent.com/realax07/skills-hub/main/install.ps1 | iex
 
 ## Добавить скилл
 
-Подробно — в [docs/skill-guide.md](docs/skill-guide.md).
+Подробно — в [docs/skill-guide.md](docs/skill-guide.md). Или попроси агента с установленным скиллом `skill-author` — он сделает всю структуру сам.
 
 ```bash
 python3 tools/new_skill.py design-sites hero-section     # каркас со всей структурой + строка в README темы
