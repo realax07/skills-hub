@@ -1,22 +1,26 @@
 #!/usr/bin/env node
-// Снимает статические HTML-мокапы по плану: страницы целиком, отдельные компоненты, модалки и состояния.
+// Снимает статические HTML-мокапы по плану и раскладывает их деревом разделов сайта.
 //
 //   node scripts/capture.mjs <out>/plan.json
-//   node scripts/capture.mjs plan.json --only home,login-modal --no-screenshots
+//   node scripts/capture.mjs plan.json --only home,login --no-screenshots
+//   node scripts/capture.mjs plan.json --clean        (удалить прошлый результат и кэш, снять заново)
+//   node scripts/capture.mjs plan.json --keep-video   (скачивать файлы видео; по умолчанию у <video> только poster)
 //
 // Формат плана — references/plan-format.md. Относительные пути в плане (out, serve, storageState)
-// считаются от папки plan.json. Результат:
-//   pages/<id>.html  components/<group>/<id>.html  modals/<id>.html
-//   assets/css/*.css  assets/media/*  screenshots/**.png
-//   tokens.json  tokens.css  manifest.json  index.html (каталог)  README.md  capture-log.json
+// считаются от папки plan.json. Результат — дерево, повторяющее URL сайта (корень = главная):
+//   index.html [index--mobile.html] index.png      страница раздела
+//   _states/  _modals/  _components/<группа>/       состояния, модалки, компоненты этой страницы
+//   _css/  _media/                                  общее для раздела и подразделов
+//   <подраздел>/...                                 то же самое глубже
+//   README.md в каждом разделе, tokens.json/css, manifest.json, _catalog.html, capture-log.json
 // Код выхода 1, если хоть один снимок не удался (остальные всё равно сохраняются).
-import { readFileSync, existsSync, rmSync } from "node:fs";
+import { readFileSync, existsSync, rmSync, unlinkSync } from "node:fs";
 import { join, dirname, resolve, relative, extname, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadPlaywright, parseArgs, writeFile, readJson, hash, ensureDir } from "./lib/runtime.mjs";
 import { serveDir } from "./lib/serve.mjs";
 import { runSteps } from "./lib/steps.mjs";
-import { buildCatalog } from "./lib/catalog.mjs";
+import { build, MARK } from "./lib/build.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERIALIZE = readFileSync(join(HERE, "lib/page-serialize.js"), "utf8");
@@ -24,7 +28,8 @@ const TOKENS = readFileSync(join(HERE, "lib/page-tokens.js"), "utf8");
 const SERVICE_STYLE_ID = "__mockup_service__";
 
 const args = parseArgs(process.argv.slice(2), {
-  only: {}, "no-screenshots": { type: "bool" }, clean: { type: "bool" }, help: { alias: "h", type: "bool" },
+  only: {}, "no-screenshots": { type: "bool" }, clean: { type: "bool" }, "keep-video": { type: "bool" },
+  help: { alias: "h", type: "bool" },
 });
 if (args.help || !args._[0]) {
   console.log(readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").filter((l) => l.startsWith("//")).map((l) => l.slice(3)).join("\n"));
@@ -35,9 +40,10 @@ const planPath = resolve(args._[0]);
 const planDir = dirname(planPath);
 const plan = readJson(planPath);
 const OUT = resolve(planDir, plan.out || ".");
+const CACHE = join(OUT, ".mockup-cache");
 const only = args.only ? new Set(args.only.split(",")) : null;
 const D = {
-  waitUntil: "load", settle: 600, disableAnimations: true, lazyScroll: true, hide: [], steps: [], timeout: 8000,
+  waitUntil: "load", navTimeout: 45000, settle: 600, disableAnimations: true, lazyScroll: true, hide: [], steps: [], timeout: 8000,
   screenshots: !args["no-screenshots"], ...(plan.defaults || {}),
 };
 const viewports = plan.viewports || { desktop: { width: 1440, height: 900 } };
@@ -47,37 +53,59 @@ const log = { startedAt: new Date().toISOString(), errors: [], warnings: [] };
 const manifest = [];
 const tokenRuns = [];
 
-// ---------- ассеты ----------
-const assetMap = new Map(); // abs url -> path from OUT (posix)
-const cssMap = new Map(); // content hash -> path
-let context;
+// ---------- разделы: URL-путь → папка ----------
+const slug = (s) => decodeURIComponent(s).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[-.]+|-+$/g, "") || "x";
+function sectionOf(path) {
+  const u = new URL(path || "/", "http://x");
+  const segs = u.pathname.split("/").filter(Boolean).map(slug).map((s) => (s.startsWith("_") ? "x" + s : s));
+  if (u.search) segs.push((segs.pop() || "index") + "--" + slug(u.search.slice(1)));
+  return segs.join("/");
+}
+function pagePathOf(ref) {
+  const p = (plan.pages || []).find((x) => x.id === ref);
+  return p ? p.path || "/" : ref || "/";
+}
+const sub = (folder, rest) => (folder ? `${folder}/${rest}` : rest);
 
+// ---------- кэш: CSS и ассеты по одному экземпляру ----------
+const assetMap = new Map(); // abs url -> ключ блоба (или null)
+const blobFile = (k) => join(CACHE, "blobs", k);
+let context;
 const EXT_BY_TYPE = { "image/svg+xml": ".svg", "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif", "image/avif": ".avif", "font/woff2": ".woff2", "font/woff": ".woff", "font/ttf": ".ttf", "font/otf": ".otf", "video/mp4": ".mp4", "image/x-icon": ".ico" };
+// Читаемое имя: исходное имя файла + короткий хэш (logo-3fa2c1d0.svg).
+const nameFor = (src, salt, ext) => {
+  let b = "";
+  try { b = posix.basename(new URL(src).pathname).replace(/\.[^.]+$/, ""); } catch { b = String(src); }
+  b = b.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "asset";
+  return `${b}-${hash(salt, 8)}${ext}`;
+};
 
 async function download(url) {
   if (assetMap.has(url)) return assetMap.get(url);
-  let rel = null;
+  let key = null;
   try {
     const r = await context.request.get(url, { timeout: 20000 });
     if (!r.ok()) throw new Error("HTTP " + r.status());
     const body = await r.body();
+    const type = (r.headers()["content-type"] || "").split(";")[0].trim();
+    // Многие сайты на несуществующий файл отвечают 200 и HTML-страницей (SPA-фолбэк) — это не ассет.
+    if (type === "text/html" || /^\s*<(!doctype|html)/i.test(body.subarray(0, 64).toString("utf8"))) throw new Error("вместо файла пришла HTML-страница");
     let ext = extname(new URL(url).pathname).toLowerCase();
-    if (!ext || ext.length > 6) ext = EXT_BY_TYPE[(r.headers()["content-type"] || "").split(";")[0]] || ".bin";
-    if (ext === ".css") {
-      rel = await saveCss(body.toString("utf8"), url, "", null);
-    } else {
-      rel = `assets/media/${hash(url)}${ext}`;
-      writeFile(join(OUT, rel), body);
+    if (!ext || ext.length > 6) ext = EXT_BY_TYPE[type] || ".bin";
+    if (ext === ".css") key = await saveCss(body.toString("utf8"), url, "", null);
+    else {
+      key = nameFor(url, body, ext); // хэш от содержимого: тот же файл — то же имя при любом адресе
+      if (!existsSync(blobFile(key))) writeFile(blobFile(key), body);
     }
   } catch (e) {
     log.warnings.push(`ассет не скачан: ${url} (${e.message})`);
-    rel = null;
+    key = null;
   }
-  assetMap.set(url, rel);
-  return rel;
+  assetMap.set(url, key);
+  return key;
 }
 
-// Заменить токены/URL в CSS на локальные пути (относительно assets/css/)
+// url() в CSS → метки блобов (пути расставит сборка)
 async function rewriteCss(text, base, tokenAssets) {
   if (!tokenAssets) {
     // CSS, скачанный раннером: url() ещё не токенизированы
@@ -89,17 +117,12 @@ async function rewriteCss(text, base, tokenAssets) {
       try { return `@import url("__RAW__${new URL(u, base).href}__RAW__")${media};`; } catch { return m; }
     });
   }
-  const resolveOne = async (abs) => {
-    const p = await download(abs);
-    return p ? posix.relative("assets/css", p) : abs;
-  };
   const parts = [];
   let last = 0;
-  const re = /__MOCKUP_ASSET_(\d+)__|__RAW__(.+?)__RAW__/g;
-  for (const m of text.matchAll(re)) {
+  for (const m of text.matchAll(/__MOCKUP_ASSET_(\d+)__|__RAW__(.+?)__RAW__/g)) {
     parts.push(text.slice(last, m.index));
-    const abs = m[1] !== undefined ? tokenAssets[+m[1]] : m[2];
-    parts.push(await resolveOne(abs));
+    const k = await download(m[1] !== undefined ? tokenAssets[+m[1]] : m[2]);
+    parts.push(k ? `__MOCKUP_BLOB_${k}__` : "");
     last = m.index + m[0].length;
   }
   parts.push(text.slice(last));
@@ -109,52 +132,69 @@ async function rewriteCss(text, base, tokenAssets) {
 async function saveCss(text, base, media, tokenAssets) {
   const css = await rewriteCss(text, base, tokenAssets);
   const finalCss = media ? `@media ${media} {\n${css}\n}` : css;
-  const h = hash(finalCss, 12);
-  if (!cssMap.has(h)) {
-    const rel = `assets/css/${h}.css`;
-    writeFile(join(OUT, rel), finalCss);
-    cssMap.set(h, rel);
-  }
-  return cssMap.get(h);
+  const key = nameFor(base && /^https?:/.test(base) && /\.css(\?|$)/.test(base) ? base : "inline", finalCss, ".css");
+  if (!existsSync(blobFile(key))) writeFile(blobFile(key), finalCss);
+  return key;
 }
 
 // ---------- снимок ----------
 async function snapshot(page, opts, fileRel) {
-  const res = await page.evaluate(`(${SERIALIZE})(${JSON.stringify({ ...opts, skipStyleIds: [SERVICE_STYLE_ID] })})`);
+  // Видео на паузу: кадр в мокапе и скриншот оригинала должны совпасть.
+  await page.evaluate(() => document.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch {} }));
+  const res = await page.evaluate(`(${SERIALIZE})(${JSON.stringify({ ...opts, videoFrames: !args["keep-video"], media: plan.media, skipStyleIds: [SERVICE_STYLE_ID] })})`);
   if (!res.ok) throw new Error(res.error);
-  const fileDir = posix.dirname(fileRel);
-  // CSS
-  const cssFiles = [];
+  const cssKeys = [];
   for (const s of res.sheets) {
-    let rel;
+    let k = null;
     if (s.text === null && s.href) {
       try {
         const r = await context.request.get(s.href, { timeout: 20000 });
-        rel = r.ok() ? await saveCss(await r.text(), s.href, s.media, null) : null;
-      } catch { rel = null; }
-      if (!rel) log.warnings.push(`CSS не получен: ${s.href}`);
-    } else if (s.text) rel = await saveCss(s.text, s.href || page.url(), s.media, res.assets);
-    if (rel && !cssFiles.includes(rel)) cssFiles.push(rel);
+        k = r.ok() ? await saveCss(await r.text(), s.href, s.media, null) : null;
+      } catch { k = null; }
+      if (!k) log.warnings.push(`CSS не получен: ${s.href}`);
+    } else if (s.text) k = await saveCss(s.text, s.href || "inline", s.media, res.assets);
+    if (k && !cssKeys.includes(k)) cssKeys.push(k);
   }
-  // HTML-ассеты
   let html = res.html;
-  const idx = [...new Set([...html.matchAll(/__MOCKUP_ASSET_(\d+)__/g)].map((m) => +m[1]))];
-  const local = {};
-  for (const i of idx) {
-    const p = await download(res.assets[i]);
-    local[i] = p ? posix.relative(fileDir, p) : res.assets[i];
+  const idx = [...new Set([...html.matchAll(/__MOCKUP_(?:CSS)?ASSET_(\d+)__/g)].map((m) => +m[1]))];
+  const keys = {};
+  for (const i of idx) keys[i] = await download(res.assets[i]);
+  // Не скачалось — пустое значение (URL есть в capture-log.json): внешняя ссылка сломала бы офлайн-мокап.
+  html = html.replace(/__MOCKUP_ASSET_(\d+)__/g, (m, i) => (keys[i] ? `__MOCKUP_BLOB_${keys[i]}__` : ""))
+    .replace(/__MOCKUP_CSSASSET_(\d+)__/g, (m, i) => (keys[i] ? `__MOCKUP_BLOBCSS_${keys[i]}__` : ""));
+  // Кадры фоновых видео: скриншот области документа (clip + fullPage не скроллит страницу).
+  const frameKeys = {};
+  for (const [i, f] of (res.frames || []).entries()) {
+    try {
+      const clip = { x: Math.max(0, Math.floor(f.x)), y: Math.max(0, Math.floor(f.y)), width: Math.max(1, Math.round(f.width)), height: Math.max(1, Math.round(f.height)) };
+      const png = await page.screenshot({ fullPage: true, clip });
+      const k = `video-frame-${hash(png, 10)}.png`;
+      if (!existsSync(blobFile(k))) writeFile(blobFile(k), png);
+      frameKeys[i] = k;
+    } catch (e) {
+      log.warnings.push(`кадр видео не снят (${fileRel}): ${String(e.message).split("\n")[0]}`);
+    }
   }
-  html = html.replace(/__MOCKUP_ASSET_(\d+)__/g, (m, i) => local[i]);
-  const links = cssFiles.map((c) => `<link rel="stylesheet" href="${posix.relative(fileDir, c)}">`).join("\n");
+  html = html.replace(/__MOCKUP_FRAME_(\d+)__/g, (m, i) => (frameKeys[i] ? `__MOCKUP_BLOB_${frameKeys[i]}__` : ""));
+  const links = cssKeys.map((k) => `<link rel="stylesheet" href="__MOCKUP_BLOB_${k}__">`).join("\n");
   const meta = `<meta charset="utf-8">\n<meta name="mockup-source" content="${page.url().replace(/"/g, "&quot;")}">\n`;
   html = html.replace(/<head([^>]*)>/i, `<head$1>\n${meta}`).replace(/<\/head>/i, `${links}\n</head>`);
   html = html.replace(/<meta charset="[^"]*">\s*(?=[\s\S]*<meta charset)/i, "");
-  writeFile(join(OUT, fileRel), html);
-  return { rect: res.rect, title: res.title, bytes: html.length };
+  // Сайт раздавался из папки на временном порту — адрес бессмыслен, оставляем пути от корня сайта.
+  if (plan.serve) html = html.split(new URL(plan.baseUrl).origin).join("");
+  writeFile(join(CACHE, "raw", fileRel), html);
+  return { rect: res.rect, title: res.title, placeholders: res.placeholders };
 }
 
 async function preparePage(page, url) {
-  await page.goto(url, { waitUntil: D.waitUntil, timeout: 30000 });
+  // Медленные сайты иногда не укладываются в таймаут — одна повторная попытка.
+  for (let attempt = 1; ; attempt++) {
+    try { await page.goto(url, { waitUntil: D.waitUntil, timeout: D.navTimeout }); break; }
+    catch (e) {
+      if (attempt >= 2 || !/Timeout/i.test(String(e.message))) throw e;
+      log.warnings.push(`повторная загрузка после таймаута: ${url}`);
+    }
+  }
   await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
   if (D.disableAnimations) {
     await page.addStyleTag({ content: "*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}" })
@@ -177,29 +217,35 @@ async function preparePage(page, url) {
   await page.waitForTimeout(D.settle);
 }
 
-function pageUrl(ref) {
-  const p = (plan.pages || []).find((x) => x.id === ref);
-  const path = p ? p.path : ref || "/";
-  return new URL(path, plan.baseUrl).href;
-}
-
 const suffix = (vp) => (vp === vpNames[0] ? "" : `--${vp}`);
 
-async function captureItem(page, item, vp, kind) {
-  const base = kind === "page" ? `pages/${item.id}` : kind === "modal" ? `modals/${item.id}` : `components/${item.group || "misc"}/${item.id}`;
+// Куда кладётся элемент внутри папки своего раздела
+function fileFor(item, vp, variant) {
+  const folder = sectionOf(item.pagePath);
+  const v = variant ? `--${variant}` : "";
+  const name =
+    item.kind === "page" ? `index${suffix(vp)}` :
+    item.kind === "state" ? `_states/${item.id}${suffix(vp)}` :
+    item.kind === "modal" ? `_modals/${item.id}${v}${suffix(vp)}` :
+    `_components/${item.group || "misc"}/${item.id}${v}${suffix(vp)}`;
+  return { folder, file: sub(folder, `${name}.html`) };
+}
+
+async function captureItem(page, item, vp) {
+  const isPageLike = item.kind === "page" || item.kind === "state";
   const variants = item.all ? Math.min(await page.locator(item.selector).count(), item.limit || 12) : 1;
   if (item.all && !variants) throw new Error(`не найдено ни одного элемента: ${item.selector}`);
   for (let v = 0; v < variants; v++) {
     const id = item.all ? `${item.id}--${v + 1}` : item.id;
-    const fileRel = `${item.all ? base + "--" + (v + 1) : base}${suffix(vp)}.html`;
-    const opts = kind === "page" ? {} : { selector: item.selector, index: item.all ? v : item.index || 0, fitSize: item.fitSize ?? item.fitWidth };
-    const info = await snapshot(page, opts, fileRel);
+    const { folder, file } = fileFor(item, vp, item.all ? v + 1 : 0);
+    const opts = isPageLike ? {} : { selector: item.selector, index: item.all ? v : item.index || 0, fitSize: item.fitSize ?? item.fitWidth };
+    const info = await snapshot(page, opts, file);
     let shot = null;
     if (D.screenshots) {
-      shot = fileRel.replace(/\.html$/, ".png").replace(/^/, "screenshots/");
+      shot = file.replace(/\.html$/, ".png");
       ensureDir(dirname(join(OUT, shot)));
       try {
-        if (kind === "page") await page.screenshot({ path: join(OUT, shot), fullPage: true });
+        if (isPageLike) await page.screenshot({ path: join(OUT, shot), fullPage: true });
         else await page.locator(item.selector).nth(opts.index).screenshot({ path: join(OUT, shot), timeout: 5000 });
       } catch (e) {
         log.warnings.push(`${id}: скриншот не снят (${String(e.message).split("\n")[0]})`);
@@ -207,13 +253,30 @@ async function captureItem(page, item, vp, kind) {
       }
     }
     manifest.push({
-      id: id + suffix(vp), baseId: item.id, kind, group: kind === "page" ? "pages" : kind === "modal" ? item.group || "modals" : item.group || "misc",
-      title: item.title || (kind === "page" ? info.title : item.id), viewport: vp, file: fileRel, screenshot: shot,
-      sourceUrl: page.url(), selector: item.selector, steps: item.steps, notes: item.notes,
-      size: info.rect ? { width: Math.round(info.rect.width), height: Math.round(info.rect.height) } : null, bytes: info.bytes,
+      id: id + suffix(vp), baseId: item.id, kind: item.kind, variant: item.all ? v + 1 : undefined,
+      group: item.kind === "component" ? item.group || "misc" : item.kind === "modal" ? item.group || "modals" : item.kind === "state" ? "states" : "pages",
+      title: item.title || (item.kind === "page" ? info.title : item.id), viewport: vp, section: folder, pagePath: item.pagePath,
+      file, screenshot: shot, sourceUrl: plan.serve ? new URL(page.url()).pathname : page.url(), selector: item.selector, steps: item.steps, notes: item.notes,
+      size: info.rect ? { width: Math.round(info.rect.width), height: Math.round(info.rect.height) } : null,
+      placeholders: info.placeholders && (info.placeholders.image || info.placeholders.video) ? info.placeholders : undefined,
     });
-    console.log(`  + ${fileRel}`);
+    console.log(`  + ${file}`);
   }
+}
+
+// Удалить всё, что генерировала прошлая сборка (по манифесту), и кэш. Чужие файлы не трогаем.
+function cleanPrevious() {
+  const mf = join(OUT, "manifest.json");
+  if (existsSync(mf)) {
+    for (const f of readJson(mf).generated || []) {
+      const p = join(OUT, f);
+      if (!existsSync(p)) continue;
+      if (f.endsWith("README.md") && !readFileSync(p, "utf8").startsWith(MARK)) continue;
+      unlinkSync(p);
+    }
+    unlinkSync(mf);
+  }
+  rmSync(CACHE, { recursive: true, force: true });
 }
 
 async function main() {
@@ -225,16 +288,23 @@ async function main() {
     console.log(`→ раздаю ${plan.serve} на ${server.url}`);
   }
   if (!plan.baseUrl) throw new Error("в плане нужен baseUrl или serve");
-  if (args.clean) for (const d of ["pages", "components", "modals", "assets", "screenshots"]) rmSync(join(OUT, d), { recursive: true, force: true });
+  if (args.clean) cleanPrevious();
   ensureDir(OUT);
 
   const browser = await chromium.launch();
   const items = [
-    ...(plan.pages || []).map((x) => ({ ...x, kind: "page", pageRef: x.id })),
-    ...(plan.components || []).map((x) => ({ ...x, kind: "component", pageRef: x.page })),
-    ...(plan.modals || []).map((x) => ({ ...x, kind: "modal", pageRef: x.page })),
+    // страница со steps — это состояние страницы: кладётся в _states/ раздела
+    ...(plan.pages || []).map((x) => ({ ...x, kind: x.steps && x.steps.length ? "state" : "page", pageRef: x.id, pagePath: x.path || "/" })),
+    ...(plan.components || []).map((x) => ({ ...x, kind: "component", pageRef: x.page, pagePath: pagePathOf(x.page) })),
+    ...(plan.modals || []).map((x) => ({ ...x, kind: "modal", pageRef: x.page, pagePath: pagePathOf(x.page) })),
   ].filter((x) => !only || only.has(x.id));
-  for (const x of items) if (!x.id || (x.kind !== "page" && !x.selector)) throw new Error(`элементу плана нужны id и selector: ${JSON.stringify(x)}`);
+  for (const x of items) if (!x.id || (x.kind === "component" || x.kind === "modal") && !x.selector) throw new Error(`элементу плана нужны id и selector: ${JSON.stringify(x)}`);
+  const seenPage = new Map();
+  for (const x of items.filter((i) => i.kind === "page")) {
+    const f = sectionOf(x.pagePath);
+    if (seenPage.has(f)) throw new Error(`страницы «${seenPage.get(f)}» и «${x.id}» попадают в одну папку раздела «${f || "/"}» — для второй задай другой path или сделай её состоянием (steps)`);
+    seenPage.set(f, x.id);
+  }
 
   for (const vp of vpNames) {
     const cfg = viewports[vp];
@@ -249,12 +319,12 @@ async function main() {
     // Без шагов — снимаем пачкой с одной загрузки страницы; с шагами — каждую в свежей вкладке.
     const groups = new Map();
     for (const x of mine) {
-      const key = x.steps && x.steps.length ? `__solo__${x.kind}:${x.id}` : x.pageRef || "/";
+      const key = x.steps && x.steps.length ? `__solo__${x.kind}:${x.id}` : x.pagePath;
       (groups.get(key) || groups.set(key, []).get(key)).push(x);
     }
     for (const [key, list] of groups) {
       const page = await context.newPage();
-      const url = pageUrl(list[0].pageRef);
+      const url = new URL(list[0].pagePath, plan.baseUrl).href;
       try {
         await preparePage(page, url);
         if (vp === vpNames[0] && !key.startsWith("__solo__") && list.some((x) => x.kind === "page")) {
@@ -264,7 +334,7 @@ async function main() {
           try {
             if (x.steps) await runSteps(page, x.steps, url, D.timeout);
             if (x.steps) await page.waitForTimeout(x.settle ?? 300);
-            await captureItem(page, x, vp, x.kind);
+            await captureItem(page, x, vp);
           } catch (e) {
             log.errors.push({ id: x.id, viewport: vp, error: String(e.message).split("\n")[0] });
             console.log(`  ✗ ${x.id} [${vp}]: ${String(e.message).split("\n")[0]}`);
@@ -291,35 +361,44 @@ async function main() {
       for (const [v, n] of Object.entries(vals)) stats[cat][v] = (stats[cat][v] || 0) + n;
     }
   }
-  // Токены собираются со страниц плана. При частичной пересъёмке (--only) или если страниц
-  // в прогоне не было, оставляем прежние tokens.json/tokens.css — иначе затрём их пустыми.
-  let tokens = { source: plan.baseUrl, cssVariables: vars };
+  // При частичной пересъёмке (--only) или если страниц в прогоне не было — прежние токены.
+  let tokens = { source: plan.serve ? `папка ${plan.serve}` : plan.baseUrl, cssVariables: vars };
   for (const [cat, vals] of Object.entries(stats)) {
     tokens[cat] = Object.entries(vals).sort((a, b) => b[1] - a[1]).slice(0, cat === "fontFamily" ? 10 : 30).map(([value, count]) => ({ value, count }));
   }
   const tokensFile = join(OUT, "tokens.json");
-  if ((only || !tokenRuns.length) && existsSync(tokensFile)) {
-    tokens = readJson(tokensFile);
-    if (!tokenRuns.length && !only) log.warnings.push("токены не собраны: в плане нет страниц без steps");
-  } else {
+  if ((only || !tokenRuns.length) && existsSync(tokensFile)) tokens = readJson(tokensFile);
+  else {
     if (!tokenRuns.length) log.warnings.push("токены не собраны: в плане нет страниц без steps");
     writeFile(tokensFile, JSON.stringify(tokens, null, 2));
     const rootVars = Object.entries(vars).filter(([k]) => !k.includes(" @ "));
     writeFile(join(OUT, "tokens.css"), `/* CSS-переменные сайта (собраны site-mockups) */\n:root {\n${rootVars.map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}\n`);
   }
 
-  // ---------- манифест, каталог ----------
-  const prev = existsSync(join(OUT, "manifest.json")) && only ? readJson(join(OUT, "manifest.json")).items || [] : [];
+  // ---------- сборка дерева ----------
+  const mf = join(OUT, "manifest.json");
+  const prevDoc = existsSync(mf) ? readJson(mf) : {};
   const ids = new Set(manifest.map((m) => m.id));
-  const all = [...prev.filter((m) => !ids.has(m.id)), ...manifest];
-  const doc = { generator: "site-mockups", source: plan.baseUrl, createdAt: new Date().toISOString(), viewports, items: all };
-  writeFile(join(OUT, "manifest.json"), JSON.stringify(doc, null, 2));
-  buildCatalog(OUT, doc, tokens);
+  const prevItems = only ? (prevDoc.items || []).filter((m) => !ids.has(m.id) && !only.has(m.baseId)) : [];
+  const doc = {
+    generator: "site-mockups", layout: "sections", source: plan.serve ? `папка ${plan.serve} (локальный сервер)` : plan.baseUrl, createdAt: new Date().toISOString(),
+    viewports, primaryViewport: vpNames[0], cssBundle: plan.cssBundle !== false, items: [...prevItems, ...manifest], generated: prevDoc.generated || [],
+  };
+  build(OUT, doc, tokens, log);
+  writeFile(mf, JSON.stringify(doc, null, 2));
   log.finishedAt = new Date().toISOString();
-  writeFile(join(OUT, "capture-log.json"), JSON.stringify(log, null, 2));
+  // При частичной пересъёмке дописываем лог: предупреждения полного прогона не должны пропасть.
+  const logFile = join(OUT, "capture-log.json");
+  if (only && existsSync(logFile)) {
+    const prevLog = readJson(logFile);
+    log.errors = [...(prevLog.errors || []).filter((e) => !only.has(e.id)), ...log.errors];
+    log.warnings = [...new Set([...(prevLog.warnings || []), ...log.warnings])];
+    log.startedAt = prevLog.startedAt || log.startedAt;
+  }
+  writeFile(logFile, JSON.stringify(log, null, 2));
 
   const shown = relative(process.cwd(), OUT);
-  console.log(`\nГотово: ${manifest.length} снимков → ${shown && !shown.startsWith("..") ? shown : OUT}/index.html`);
+  console.log(`\nГотово: ${manifest.length} снимков, ${doc.sections.length} разделов → ${shown && !shown.startsWith("..") ? shown : OUT}/README.md (каталог: _catalog.html)`);
   if (log.warnings.length) console.log(`Предупреждений: ${log.warnings.length} (capture-log.json)`);
   if (log.errors.length) {
     console.log(`Ошибок: ${log.errors.length}:`);

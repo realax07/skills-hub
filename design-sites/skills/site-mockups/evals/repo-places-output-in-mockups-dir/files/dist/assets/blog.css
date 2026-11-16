@@ -1,0 +1,7 @@
+.post { max-width: 720px; margin: 40px auto; padding: 0 32px; }
+.post h1 { font-size: 36px; margin-bottom: 8px; }
+.post .meta { color: #6b7280; font-size: 14px; }
+.post img { width: 100%; height: auto; border-radius: 12px; margin: 24px 0; }
+.post-list { list-style: none; padding: 0 32px; max-width: 720px; margin: 40px auto; }
+.post-list li { border-bottom: 1px solid #e5e7eb; padding: 16px 0; }
+.post-list a { font-size: 20px; color: var(--color-text); }

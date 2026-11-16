@@ -3,7 +3,9 @@ name: static-site-full-catalog
 context:
   scaffold_script: place-files.sh
 expected_outcome: |
-  В mockups/ лежит каталог мокапов: pages/ с главной и страницей «О компании», components/ с шапкой,
-  карточкой, кнопкой и другими элементами, modals/ с окном входа (открывается кнопкой «Войти»)
-  и выпадающим меню «Ещё», а также manifest.json, index.html, README.md, tokens.json, plan.json.
-  Мокапы открываются без JS и совпадают с оригиналом (verify пройден). Агент сообщает, где результат и что снято.
+  В mockups/ лежит дерево мокапов, повторяющее разделы сайта: главная в корне (index.html),
+  about/, blog/ со статьями в blog/first-post/ и blog/second-post/, products/ с подразделами.
+  Общие компоненты (шапка, футер, карточки) — в _components/ корня, окно входа и меню «Ещё» — в _modals/,
+  главная с открытым окном — в _states/. Стили блога лежат в blog/_css/, общие — в _css/ корня.
+  В каждом разделе README.md, в корне карта, manifest.json, _catalog.html, tokens.json, plan.json.
+  Фото в статьях заменены заглушками. verify пройден, агент сообщает карту разделов.

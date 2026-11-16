@@ -8,17 +8,17 @@
 ## Ход работы
 
 1. `node scripts/setup.mjs --check` — ок.
-2. Куда класть: в репозитории есть `docs/design/` → результат в `docs/design/mockups/`.
+2. Куда класть: работаем в репозитории сайта → `mockups/` в корне репозитория.
 3. Пользователь сам запустил dev-сервер. Разведка:
    ```bash
-   node scripts/discover.mjs --url http://localhost:5173 --src apps/web/src --out docs/design/mockups/discovery.json
+   node scripts/discover.mjs --url http://localhost:5173 --src apps/web/src --out mockups/discovery.json
    ```
    Нашлись 7 страниц: `/`, `/pricing`, `/features`, `/blog`, `/blog/<3 статьи>`, `/contact`.
    В исходниках: `<Dialog>` в `DemoRequestDialog.tsx`, `<Sheet>` в `MobileNav.tsx`, `toast()` в `ContactForm.tsx`.
 4. Чтение кода: `DemoRequestDialog` открывает `setDemoOpen(true)` из кнопки «Запросить демо» в hero и в шапке;
    `MobileNav` — бургер `aria-label="Меню"`, только на мобиле; тост — после успешной отправки контактной формы
    (без бэкенда не открыть → отмечено как пропуск).
-5. План (`docs/design/mockups/plan.json`), сокращённо:
+5. План (`mockups/plan.json`), сокращённо:
    ```json
    {
      "baseUrl": "http://localhost:5173",
@@ -49,24 +49,25 @@
      ]
    }
    ```
-6. `node scripts/capture.mjs docs/design/mockups/plan.json` → 1 ошибка: `mobile-nav` — бургер перекрыт
+6. `node scripts/capture.mjs mockups/plan.json` → 1 ошибка: `mobile-nav` — бургер перекрыт
    cookie-баннером в шаге. `defaults.hide` удаляет баннер только перед снимком, поэтому добавил в `defaults.steps`
    `{ "click": "#cookie-consent button" }` → `--only mobile-nav` → ок.
-7. `node scripts/verify.mjs docs/design/mockups` → 41/42; `footer`: «картинка не загрузилась: assets/media/….svg» —
+7. `node scripts/verify.mjs mockups` → 41/42; `footer`: «картинка не загрузилась: _media/….svg» —
    иконка соцсети с внешнего CDN, который отдаёт её только своему домену. В `capture-log.json` тот же warning.
    Обойти со своей стороны нельзя — не подделывал, указал в отчёте как известный пропуск.
 
 ## Результат (сообщение пользователю)
 
 ```
-Мокапы в docs/design/mockups/ — каталог: docs/design/mockups/index.html
+Мокапы в mockups/ — карта разделов: mockups/README.md, каталог: mockups/_catalog.html
+Разделы: / (главная), pricing/, features/, blog/ (+ launch-week/), contact/
 - 7 страниц (+ главная с открытым «Запросить демо»), desktop и mobile
 - 14 компонентов: layout, sections, content, controls, forms
 - 3 состояния: окно запроса демо, мобильное меню, ошибки контактной формы
 - tokens.json: 12 CSS-переменных, палитра из 9 цветов, шрифт Inter
 Не снято: тост после отправки формы — нужен ответ бэкенда.
 verify: 41/42 — в футере не загрузилась иконка соцсети с внешнего CDN (CORS).
-Переснять: node <skill>/scripts/capture.mjs docs/design/mockups/plan.json
+Переснять: node <skill>/scripts/capture.mjs mockups/plan.json
 ```
 
 ## Почему так

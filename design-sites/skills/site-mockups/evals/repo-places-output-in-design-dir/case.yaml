@@ -1,8 +1,0 @@
-schema_version: "1.1"
-name: repo-places-output-in-design-dir
-context:
-  scaffold_script: place-files.sh
-expected_outcome: |
-  Агент замечает существующую папку design/ и кладёт результат в design/mockups/, не создавая отдельных
-  папок в корне и не трогая dist/ и src/. В design/mockups/ есть страницы, компоненты, модалка входа,
-  manifest.json и index.html. Агент сообщает пользователю выбранный путь.

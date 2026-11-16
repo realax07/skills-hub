@@ -8,18 +8,23 @@
 //   index        — какой из найденных элементов брать (по умолчанию 0)
 //   skipStyleIds — id <style>, которые не надо забирать (служебные стили раннера)
 //   fitSize      — зафиксировать ширину и высоту элемента как на странице (по умолчанию true)
+//   videoFrames  — у <video> не тянуть файл видео, poster = кадр или заглушка (по умолчанию true)
+//   media        — { mode: "placeholder"|"keep", design:[sel], content:[sel], iconMax: 64 }:
+//                  картинки/видео-контент заменяются заглушками, дизайн скачивается
 //
-// Возвращает { ok, html, sheets:[{href,text}], assets:[url], title, lang, rect, error }
+// Возвращает { ok, html, sheets:[{href,text}], assets:[url], frames:[{x,y,width,height}], title, lang, rect, error }
+// Токены __MOCKUP_FRAME_<n>__ в html — места для кадров видео (frames[n], координаты документа).
 // В html и CSS все внешние URL заменены токенами __MOCKUP_ASSET_<n>__ (индекс в assets).
 (opts) => {
   opts = opts || {};
   const skip = new Set(opts.skipStyleIds || []);
   const assets = [];
   const assetIndex = new Map();
+  const frames = []; // кадры видео: области страницы для скриншота
   const token = (raw, base) => {
     if (!raw) return raw;
     const v = raw.trim();
-    if (!v || v.startsWith("data:") || v.startsWith("#") || v.startsWith("%23") || v.startsWith("about:") || v.startsWith("javascript:")) return raw;
+    if (!v || v.startsWith("__MOCKUP_") || v.startsWith("data:") || v.startsWith("#") || v.startsWith("%23") || v.startsWith("about:") || v.startsWith("javascript:")) return raw;
     let abs;
     try { abs = new URL(v, base || document.baseURI).href; } catch { return raw; }
     if (!/^https?:/.test(abs)) return raw;
@@ -75,6 +80,44 @@
     rect = { x: r.x, y: r.y, width: r.width, height: r.height };
   }
 
+  // ---------- медиа: дизайн или контент ----------
+  // Дизайн (скачиваем): логотипы, иконки, SVG, фоны из CSS, картинки шапки/навигации/футера,
+  // мелкие картинки, декоративные фоновые видео. Контент (не скачиваем, ставим заглушку):
+  // фото и иллюстрации в теле страницы, обычные видео. Переопределение — opts.media.
+  const media = Object.assign({ mode: "placeholder", design: [], content: [], iconMax: 64 }, opts.media || {});
+  const placeholders = { image: 0, video: 0 };
+  const abs = (u) => { try { return new URL(u, document.baseURI).href; } catch { return u; } };
+  const closestAny = (el, sels) => sels.some((sel) => { try { return !!el.closest(sel); } catch { return false; } });
+  const isContent = (el) => {
+    if (media.mode === "keep") return false;
+    if (closestAny(el, media.content)) return true;
+    if (closestAny(el, media.design)) return false;
+    if (el.closest("header, nav, footer, [role=banner], [role=navigation], [role=contentinfo]")) return false;
+    if (el.tagName === "VIDEO") return !(el.autoplay && el.muted && el.loop && !el.controls); // фоновое видео — дизайн
+    const src = el.currentSrc || el.getAttribute("src") || "";
+    if (/^data:/.test(src) || /\.svg(\?|#|$)/i.test(src)) return false;
+    const hint = `${src} ${el.className} ${el.alt || ""} ${el.id}`;
+    if (/logo|icon|brand|wordmark|sprite|emblem|favicon/i.test(hint)) return false;
+    const r = el.getBoundingClientRect();
+    const nw = el.naturalWidth || +el.getAttribute("width") || 0, nh = el.naturalHeight || +el.getAttribute("height") || 0;
+    // Скрытая картинка (другой вьюпорт, карусель) с lazy-загрузкой: размера не узнать — растровая,
+    // значит контент. Иконки почти всегда SVG или имеют логотипное имя — они отсеяны выше.
+    if (!r.width && !r.height && !nw && !nh) return true;
+    const w = r.width || nw, h = r.height || nh;
+    // Иконка — маленькая и на экране, и по исходному размеру. Фото 512×512, показанное
+    // аватаркой 20px, — контент.
+    const small = (a, b) => a <= media.iconMax && b <= media.iconMax;
+    if (small(w, h) && (!nw || small(nw / 4, nh / 4))) return false;
+    return true;
+  };
+  const placeholder = (w, h) => {
+    w = Math.max(1, Math.round(w || 16)); h = Math.max(1, Math.round(h || 9));
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">` +
+      `<rect width="${w}" height="${h}" fill="#8a8f98" fill-opacity=".22"/>` +
+      `<path d="M0 0L${w} ${h}M${w} 0L0 ${h}" stroke="#8a8f98" stroke-opacity=".45" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>`;
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  };
+
   // Копируем живое состояние форм в атрибуты, чтобы оно пережило сериализацию.
   const freeze = (orig, clone) => {
     const o = orig.querySelectorAll ? [orig, ...orig.querySelectorAll("*")] : [orig];
@@ -90,6 +133,48 @@
         [...b.options].forEach((opt, k) => (a.options[k] && a.options[k].selected ? opt.setAttribute("selected", "") : opt.removeAttribute("selected")));
       } else if (tag === "DETAILS") a.open ? b.setAttribute("open", "") : b.removeAttribute("open");
       else if (tag === "DIALOG" && a.open) b.setAttribute("open", "");
+      else if (tag === "VIDEO" && opts.videoFrames !== false) {
+        // <video> остаётся в разметке как есть (классы, атрибуты, вложенные <source>) —
+        // мокап используется «как есть» и для валидации дизайна. Файл видео не тянем,
+        // исходный URL — в data-mockup-src. В poster:
+        //   декоративное фоновое видео (часть дизайна) — кадр, который был на экране
+        //     (его снимает раннер скриншотом области — работает и для чужих CDN);
+        //   видео-контент — заглушка тех же пропорций.
+        // Видео целиком: capture.mjs --keep-video.
+        const r = a.getBoundingClientRect();
+        const cs = getComputedStyle(a);
+        const visible = r.width > 0 && r.height > 0 && cs.visibility !== "hidden";
+        if (isContent(a)) {
+          b.setAttribute("poster", placeholder(a.videoWidth || r.width, a.videoHeight || r.height));
+          b.setAttribute("data-mockup-placeholder", "video");
+          placeholders.video++;
+        } else if (visible) {
+          frames.push({ x: r.x + window.scrollX, y: r.y + window.scrollY, width: r.width, height: r.height });
+          b.setAttribute("poster", `__MOCKUP_FRAME_${frames.length - 1}__`);
+        }
+        const src = a.currentSrc || a.getAttribute("src");
+        if (src) b.setAttribute("data-mockup-src", abs(src));
+        b.removeAttribute("src");
+        b.querySelectorAll("source[src]").forEach((so) => { so.setAttribute("data-mockup-src", abs(so.getAttribute("src"))); so.removeAttribute("src"); });
+        b.setAttribute("preload", "none");
+        // crossorigin без удалённого источника бессмыслен, а при открытии мокапа с диска (file://)
+        // ломает загрузку poster как CORS-запрос. Исходное значение сохраняем.
+        if (b.hasAttribute("crossorigin")) { b.setAttribute("data-mockup-crossorigin", b.getAttribute("crossorigin")); b.removeAttribute("crossorigin"); }
+      }
+      else if (tag === "IMG" && isContent(a)) {
+        // Картинка-контент (фото, иллюстрация статьи, скриншот продукта): не скачиваем.
+        // Тег и атрибуты остаются, src — заглушка тех же пропорций, чтобы вёрстка не съехала.
+        const r = a.getBoundingClientRect();
+        const src = a.currentSrc || a.getAttribute("src");
+        if (src) b.setAttribute("data-mockup-src", abs(src));
+        if (b.hasAttribute("srcset")) { b.setAttribute("data-mockup-srcset", b.getAttribute("srcset")); b.removeAttribute("srcset"); }
+        b.removeAttribute("sizes");
+        const pic = b.parentElement && b.parentElement.tagName === "PICTURE" ? b.parentElement : null;
+        if (pic) pic.querySelectorAll("source[srcset]").forEach((so) => { so.setAttribute("data-mockup-srcset", so.getAttribute("srcset")); so.removeAttribute("srcset"); });
+        b.setAttribute("src", placeholder(a.naturalWidth || r.width, a.naturalHeight || r.height));
+        b.setAttribute("data-mockup-placeholder", "image");
+        placeholders.image++;
+      }
       else if (tag === "CANVAS") {
         try {
           const img = document.createElement("img");
@@ -157,7 +242,7 @@
   }
 
   // Чистка: скрипты, обработчики, внешние стили (CSS собран отдельно), служебное.
-  clone.querySelectorAll("script, noscript, link[rel~=stylesheet], link[rel=preload], link[rel=modulepreload], link[rel=prefetch], link[rel=dns-prefetch], link[rel=preconnect], style, base, meta[http-equiv]").forEach((n) => n.remove());
+  clone.querySelectorAll("script, noscript, link[rel~=stylesheet], link[rel=preload], link[rel=modulepreload], link[rel=prefetch], link[rel=dns-prefetch], link[rel=preconnect], link[rel=manifest], style, base, meta[http-equiv]").forEach((n) => n.remove());
   clone.querySelectorAll("*").forEach((el) => {
     for (const at of [...el.attributes]) if (/^on/i.test(at.name)) el.removeAttribute(at.name);
     if (el.getAttribute("loading") === "lazy") el.removeAttribute("loading");
@@ -177,7 +262,16 @@
       if (v && !v.startsWith("#")) el.setAttribute(attr, token(v));
     }
   });
-  clone.querySelectorAll("[style]").forEach((el) => el.setAttribute("style", tokenCssUrls(el.getAttribute("style"))));
+  // url() внутри CSS-переменной (--bg: url(...)) браузер разрешает не от HTML, а от CSS-файла,
+  // где переменная используется через var(). Такие ссылки помечаем отдельным токеном —
+  // раннер посчитает путь от папки CSS.
+  clone.querySelectorAll("[style]").forEach((el) => {
+    const decls = el.getAttribute("style").split(/;(?![^(]*\))/);
+    el.setAttribute("style", decls.map((d) => {
+      const t = tokenCssUrls(d);
+      return /^\s*--/.test(d) ? t.replace(/__MOCKUP_ASSET_(\d+)__/g, "__MOCKUP_CSSASSET_$1__") : t;
+    }).join(";"));
+  });
   // Ссылки не скачиваем. Внутренние — путь от корня сайта (/about): адрес съёмки бывает
   // временным (локальный сервер на случайном порту, стейдж), а путь — это структура сайта.
   // Внешние — абсолютные.
@@ -194,6 +288,8 @@
   const doctype = document.doctype ? `<!DOCTYPE ${document.doctype.name}>` : "<!DOCTYPE html>";
   return {
     ok: true,
+    frames,
+    placeholders,
     html: doctype + "\n" + clone.outerHTML,
     sheets,
     assets,

@@ -48,10 +48,10 @@ curl https://app.example.com/dashboard > dashboard.html   # «мокап» ст�
 
 ## Результат
 
-`modals/profile-menu.html` — меню в потоке, с атрибутом
+`dashboard/_modals/profile-menu.html` — меню в потоке, с атрибутом
 `data-mockup-position="absolute; top:48px; right:0px; …"` (исходное позиционирование);
-расположение относительно страницы видно на `pages/dashboard--profile-open.html`, если его добавить.
-`modals/invite-member.html` — скелет `html > body > #modal-root > диалог`, стили портала сохранены.
+расположение относительно страницы видно на `dashboard/_states/dashboard--profile-open.html`, если его добавить.
+`team/_modals/invite-member.html` — скелет `html > body > #modal-root > диалог`, стили портала сохранены.
 
 ## Почему так
 

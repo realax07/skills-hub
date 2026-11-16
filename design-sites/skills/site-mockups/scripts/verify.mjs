@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Проверка мокапов: открывает каждый HTML из manifest.json БЕЗ JavaScript и БЕЗ сети,
+// Проверка мокапов: открывает каждый HTML из manifest.json без сети (скриптов в мокапах нет),
 // снимает скриншот и сравнивает с оригинальным скриншотом сайта.
 //
 //   node scripts/verify.mjs <out>                 все снимки
@@ -9,6 +9,7 @@
 // Две группы проверок:
 //   1) прямые: не загрузились картинки, CSS, шрифты; мокап ходит во внешнюю сеть;
 //   2) пиксельные: расхождение с оригиналом (YIQ + игнор сглаживания + сдвиг до 1px) и размер.
+//      Заглушки контента (data-mockup-placeholder) из сравнения исключаются.
 // Пишет <out>/verify-report.json. Код выхода 1, если хоть одна проверка не прошла.
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
@@ -28,12 +29,20 @@ const only = args.only ? new Set(args.only.split(",")) : null;
 const threshold = parseFloat(args.threshold);
 
 // Сравнение двух PNG в браузере через canvas — без внешних зависимостей.
-const DIFF = async ([a, b]) => {
+const DIFF = async ([a, b, masks]) => {
   const load = (src) => new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = src; });
   const [ia, ib] = await Promise.all([load(a), load(b)]);
   const w = Math.max(ia.width, ib.width), h = Math.max(ia.height, ib.height);
   const px = (img) => { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0); return x.getImageData(0, 0, w, h).data; };
   const da = px(ia), db = px(ib);
+  // Заглушки контента (data-mockup-placeholder) намеренно отличаются от оригинала — не сравниваем.
+  const mask = new Uint8Array(w * h);
+  for (const m of masks || []) {
+    for (let y = Math.max(0, Math.floor(m.y)); y < Math.min(h, Math.ceil(m.y + m.height)); y++)
+      for (let x = Math.max(0, Math.floor(m.x)); x < Math.min(w, Math.ceil(m.x + m.width)); x++) mask[y * w + x] = 1;
+  }
+  let masked = 0;
+  for (let k = 0; k < mask.length; k++) masked += mask[k];
   // Сравнение по схеме pixelmatch: разница цвета в YIQ (близко к восприятию) и игнор пикселей
   // сглаживания. Элементы на дробных координатах в оригинале и на целых в мокапе растеризуются
   // по-разному (края букв, скругления) — это не ошибка мокапа. Плюс лучший из сдвигов до 1px:
@@ -83,7 +92,7 @@ const DIFF = async ([a, b]) => {
       if (yb < 0 || yb >= h) continue;
       for (let x = E; x < w - E; x++) {
         const xb = x + sx;
-        if (xb < 0 || xb >= w) continue;
+        if (xb < 0 || xb >= w || mask[y * w + x]) continue;
         const i = at(x, y), j = at(xb, yb);
         if (delta(da, i, db, j) <= MAX) continue;
         if (antialiased(da, x, y, db) || antialiased(db, xb, yb, da)) continue;
@@ -94,7 +103,8 @@ const DIFF = async ([a, b]) => {
   };
   let best = count(0, 0);
   if (best > 0) for (const [sx, sy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { best = Math.min(best, count(sx, sy)); if (!best) break; }
-  return { diffPct: (best / ((w - 2 * E) * (h - 2 * E))) * 100, size: [ia.width, ia.height, ib.width, ib.height] };
+  const area = Math.max(1, (w - 2 * E) * (h - 2 * E) - masked);
+  return { diffPct: (best / area) * 100, maskedPct: (masked / (w * h)) * 100, size: [ia.width, ia.height, ib.width, ib.height] };
 };
 
 async function main() {
@@ -113,12 +123,22 @@ async function main() {
     const ctx = await browser.newContext({
       viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.deviceScaleFactor || 1,
       isMobile: !!vp.isMobile, hasTouch: !!vp.isMobile, userAgent: vp.userAgent, colorScheme: vp.colorScheme,
-      javaScriptEnabled: false,
+      // Скриптов в мокапах нет, но JS включён: без него Chrome рисует у <video> нативные
+      // кнопки плеера, которых в обычном просмотре нет.
+      javaScriptEnabled: true,
     });
     await ctx.route(/^https?:/, (route) => { r.external.push(route.request().url()); route.abort(); });
     const page = await ctx.newPage();
     const failed = [];
-    page.on("requestfailed", (req) => { if (req.url().startsWith("file:")) failed.push(req.url().replace(pathToFileURL(OUT).href + "/", "")); });
+    // Браузер отменяет загрузки (ERR_ABORTED) — например, видео и постеры при закрытии страницы.
+    // Ошибка — только если файла действительно нет на диске.
+    page.on("requestfailed", (req) => {
+      const u = req.url();
+      if (!u.startsWith("file:")) return;
+      let exists = false;
+      try { exists = existsSync(fileURLToPath(u.split("#")[0].split("?")[0])); } catch {}
+      if (!exists) failed.push(u.replace(pathToFileURL(OUT).href + "/", ""));
+    });
     await page.goto(pathToFileURL(file).href, { waitUntil: "load" });
     await page.evaluate(() => document.fonts && document.fonts.ready);
     // Прямые проверки типичных сбоев съёмки — пиксельное сравнение их почти не видит:
@@ -137,7 +157,7 @@ async function main() {
     ];
     let shot;
     try {
-      shot = it.kind === "page"
+      shot = it.kind === "page" || it.kind === "state"
         ? await page.screenshot({ fullPage: true })
         : await page.locator("[data-mockup-root]").first().screenshot({ timeout: 5000 });
     } catch (e) {
@@ -145,10 +165,20 @@ async function main() {
       console.log(`  ✗ ${it.id}: не отрисовался (${r.error})`);
       await ctx.close(); continue;
     }
+    // Области заглушек в координатах скриншота (страница — от начала документа, компонент — от его рамки).
+    const masks = await page.evaluate(([isPage, dpr]) => {
+      const root = isPage ? null : document.querySelector("[data-mockup-root]");
+      const o = root ? root.getBoundingClientRect() : { x: -window.scrollX, y: -window.scrollY };
+      return [...document.querySelectorAll("[data-mockup-placeholder]")].map((el) => {
+        const r = el.getBoundingClientRect();
+        return { x: (r.x - o.x) * dpr, y: (r.y - o.y) * dpr, width: r.width * dpr, height: r.height * dpr };
+      }).filter((m) => m.width > 0 && m.height > 0);
+    }, [it.kind === "page" || it.kind === "state", vp.deviceScaleFactor || 1]);
     await ctx.close();
     if (!it.screenshot || !existsSync(join(OUT, it.screenshot))) { r.status = "no-reference"; console.log(`  ? ${it.id}: нет оригинального скриншота`); continue; }
     const ref = readFileSync(join(OUT, it.screenshot));
-    const d = await cmp.evaluate(DIFF, ["data:image/png;base64," + shot.toString("base64"), "data:image/png;base64," + ref.toString("base64")]);
+    const d = await cmp.evaluate(DIFF, ["data:image/png;base64," + shot.toString("base64"), "data:image/png;base64," + ref.toString("base64"), masks]);
+    if (d.maskedPct > 0.5) r.maskedPct = +d.maskedPct.toFixed(1);
     r.diffPct = +d.diffPct.toFixed(2);
     r.sizeMockup = d.size.slice(0, 2); r.sizeOriginal = d.size.slice(2);
     // Недостающая область при сравнении заливается белым и почти не влияет на процент,
@@ -157,7 +187,7 @@ async function main() {
     r.sizeMismatch = off(d.size[0], d.size[2]) || off(d.size[1], d.size[3]);
     r.status = r.diffPct > threshold || r.sizeMismatch || r.problems.length ? "mismatch" : "ok";
     const mark = r.status === "ok" ? "✓" : "✗";
-    console.log(`  ${mark} ${it.id}: расхождение ${r.diffPct}%${r.sizeMockup.join() !== r.sizeOriginal.join() ? ` (размер ${r.sizeMockup.join("×")} vs ${r.sizeOriginal.join("×")})` : ""}`);
+    console.log(`  ${mark} ${it.id}: расхождение ${r.diffPct}%${r.maskedPct ? ` (заглушки контента не сравнивались: ${r.maskedPct}% площади)` : ""}${r.sizeMockup.join() !== r.sizeOriginal.join() ? ` (размер ${r.sizeMockup.join("×")} vs ${r.sizeOriginal.join("×")})` : ""}`);
     for (const pr of r.problems.slice(0, 5)) console.log(`      ! ${pr}`);
   }
   await browser.close();
