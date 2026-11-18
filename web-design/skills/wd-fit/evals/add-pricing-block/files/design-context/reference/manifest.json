@@ -1,0 +1,915 @@
+{
+  "generator": "wd-scan",
+  "layout": "context",
+  "source": "сборка ../site",
+  "createdAt": "2026-11-18T08:54:51.798Z",
+  "plan": "plan.json",
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 900
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "isMobile": true,
+      "deviceScaleFactor": 2
+    }
+  },
+  "primaryViewport": "desktop",
+  "cssBundle": true,
+  "items": [
+    {
+      "id": "home",
+      "baseId": "home",
+      "kind": "page",
+      "group": "pages",
+      "title": "Главная",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "index.html",
+      "screenshot": "index.jpg",
+      "sourceUrl": "/",
+      "notes": "Лендинг: hero с CTA + сетка карточек (#cards рендерится из app.js)",
+      "size": null
+    },
+    {
+      "id": "header",
+      "baseId": "header",
+      "kind": "component",
+      "group": "layout",
+      "title": "header",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/layout/header.html",
+      "screenshot": "_components/layout/header.png",
+      "sourceUrl": "/",
+      "selector": "header.site-header",
+      "notes": "Логотип + nav + дропдаун «Ещё» + кнопка «Войти»; одинаков на всех страницах",
+      "size": {
+        "width": 1440,
+        "height": 74
+      }
+    },
+    {
+      "id": "footer",
+      "baseId": "footer",
+      "kind": "component",
+      "group": "layout",
+      "title": "footer",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/layout/footer.html",
+      "screenshot": "_components/layout/footer.png",
+      "sourceUrl": "/",
+      "selector": "footer.site-footer",
+      "notes": "Тёмный футер",
+      "size": {
+        "width": 1440,
+        "height": 67
+      }
+    },
+    {
+      "id": "hero",
+      "baseId": "hero",
+      "kind": "component",
+      "group": "sections",
+      "title": "hero",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/sections/hero.html",
+      "screenshot": "_components/sections/hero.png",
+      "sourceUrl": "/",
+      "selector": "section.hero",
+      "notes": "Фон hero.svg, h1 44px, подзаголовок, CTA .btn-primary",
+      "size": {
+        "width": 1440,
+        "height": 268
+      }
+    },
+    {
+      "id": "cards",
+      "baseId": "cards",
+      "kind": "component",
+      "group": "sections",
+      "title": "cards",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/sections/cards.html",
+      "screenshot": "_components/sections/cards.png",
+      "sourceUrl": "/",
+      "selector": "#cards",
+      "notes": "Сетка 3 колонки (1 на мобильном), карточки из app.js",
+      "size": {
+        "width": 1440,
+        "height": 260
+      }
+    },
+    {
+      "id": "card",
+      "baseId": "card",
+      "kind": "component",
+      "group": "content",
+      "title": "card",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/content/card.html",
+      "screenshot": "_components/content/card.png",
+      "sourceUrl": "/",
+      "selector": "#cards > article.card",
+      "notes": "Бейдж + h3 + текст + .btn-ghost",
+      "size": {
+        "width": 445,
+        "height": 196
+      }
+    },
+    {
+      "id": "about",
+      "baseId": "about",
+      "kind": "page",
+      "group": "pages",
+      "title": "О компании",
+      "viewport": "desktop",
+      "section": "about",
+      "pagePath": "/about",
+      "file": "about/index.html",
+      "screenshot": "about/index.jpg",
+      "sourceUrl": "/about",
+      "notes": "Тот же шаблон, что главная",
+      "size": null
+    },
+    {
+      "id": "blog",
+      "baseId": "blog",
+      "kind": "page",
+      "group": "pages",
+      "title": "Блог — список статей",
+      "viewport": "desktop",
+      "section": "blog",
+      "pagePath": "/blog",
+      "file": "blog/index.html",
+      "screenshot": "blog/index.jpg",
+      "sourceUrl": "/blog",
+      "notes": "Список .post-list + карточки; доп. стили blog.css",
+      "size": null
+    },
+    {
+      "id": "post-list",
+      "baseId": "post-list",
+      "kind": "component",
+      "group": "content",
+      "title": "post-list",
+      "viewport": "desktop",
+      "section": "blog",
+      "pagePath": "/blog",
+      "file": "blog/_components/content/post-list.html",
+      "screenshot": "blog/_components/content/post-list.png",
+      "sourceUrl": "/blog",
+      "selector": "ul.post-list",
+      "notes": "Список статей с разделителями",
+      "size": {
+        "width": 784,
+        "height": 110
+      }
+    },
+    {
+      "id": "blog-post",
+      "baseId": "blog-post",
+      "kind": "page",
+      "group": "pages",
+      "title": "Статья блога",
+      "viewport": "desktop",
+      "section": "blog/first-post",
+      "pagePath": "/blog/first-post",
+      "file": "blog/first-post/index.html",
+      "screenshot": "blog/first-post/index.jpg",
+      "sourceUrl": "/blog/first-post",
+      "notes": "article.post: h1, .meta, фото, текст; blog.css",
+      "size": null,
+      "placeholders": {
+        "image": 1,
+        "video": 0
+      }
+    },
+    {
+      "id": "post",
+      "baseId": "post",
+      "kind": "component",
+      "group": "content",
+      "title": "post",
+      "viewport": "desktop",
+      "section": "blog/first-post",
+      "pagePath": "/blog/first-post",
+      "file": "blog/first-post/_components/content/post.html",
+      "screenshot": "blog/first-post/_components/content/post.png",
+      "sourceUrl": "/blog/first-post",
+      "selector": "article.post",
+      "notes": "Тело статьи, ширина 720px",
+      "size": {
+        "width": 784,
+        "height": 532
+      },
+      "placeholders": {
+        "image": 1,
+        "video": 0
+      }
+    },
+    {
+      "id": "product",
+      "baseId": "product",
+      "kind": "page",
+      "group": "pages",
+      "title": "Страница продукта",
+      "viewport": "desktop",
+      "section": "products/analytics",
+      "pagePath": "/products/analytics",
+      "file": "products/analytics/index.html",
+      "screenshot": "products/analytics/index.jpg",
+      "sourceUrl": "/products/analytics",
+      "notes": "hero без CTA + карточки; тот же шаблон у /products/integrations",
+      "size": null
+    },
+    {
+      "id": "home--login-open",
+      "baseId": "home--login-open",
+      "kind": "state",
+      "group": "states",
+      "title": "Главная, открыто окно входа",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_states/home--login-open.html",
+      "screenshot": "_states/home--login-open.jpg",
+      "sourceUrl": "/",
+      "steps": [
+        {
+          "click": "[data-open=login]"
+        },
+        {
+          "waitFor": "[role=dialog]"
+        }
+      ],
+      "size": null
+    },
+    {
+      "id": "home--more-open",
+      "baseId": "home--more-open",
+      "kind": "state",
+      "group": "states",
+      "title": "Главная, открыто меню «Ещё»",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_states/home--more-open.html",
+      "screenshot": "_states/home--more-open.jpg",
+      "sourceUrl": "/",
+      "steps": [
+        {
+          "click": ".dropdown > button"
+        },
+        {
+          "waitFor": ".dropdown-menu"
+        }
+      ],
+      "size": null
+    },
+    {
+      "id": "more-menu",
+      "baseId": "more-menu",
+      "kind": "modal",
+      "group": "modals",
+      "title": "Выпадающее меню «Ещё»",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_modals/more-menu.html",
+      "screenshot": "_modals/more-menu.png",
+      "sourceUrl": "/",
+      "selector": ".dropdown-menu",
+      "steps": [
+        {
+          "click": ".dropdown > button"
+        },
+        {
+          "waitFor": ".dropdown-menu"
+        }
+      ],
+      "notes": "Кнопка «Ещё ▾» в шапке; открывается toggle класса .open на .dropdown, закрывается повторным кликом",
+      "size": {
+        "width": 162,
+        "height": 80
+      }
+    },
+    {
+      "id": "home--mobile",
+      "baseId": "home",
+      "kind": "page",
+      "group": "pages",
+      "title": "Главная",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "index.html",
+      "sameMarkupAs": "index.html",
+      "screenshot": "index--mobile.jpg",
+      "sourceUrl": "/",
+      "notes": "Лендинг: hero с CTA + сетка карточек (#cards рендерится из app.js)",
+      "size": null
+    },
+    {
+      "id": "header--mobile",
+      "baseId": "header",
+      "kind": "component",
+      "group": "layout",
+      "title": "header",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/layout/header--mobile.html",
+      "screenshot": "_components/layout/header--mobile.png",
+      "sourceUrl": "/",
+      "selector": "header.site-header",
+      "notes": "Логотип + nav + дропдаун «Ещё» + кнопка «Войти»; одинаков на всех страницах",
+      "size": {
+        "width": 980,
+        "height": 74
+      }
+    },
+    {
+      "id": "footer--mobile",
+      "baseId": "footer",
+      "kind": "component",
+      "group": "layout",
+      "title": "footer",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/layout/footer--mobile.html",
+      "screenshot": "_components/layout/footer--mobile.png",
+      "sourceUrl": "/",
+      "selector": "footer.site-footer",
+      "notes": "Тёмный футер",
+      "size": {
+        "width": 980,
+        "height": 67
+      }
+    },
+    {
+      "id": "hero--mobile",
+      "baseId": "hero",
+      "kind": "component",
+      "group": "sections",
+      "title": "hero",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/sections/hero--mobile.html",
+      "screenshot": "_components/sections/hero--mobile.png",
+      "sourceUrl": "/",
+      "selector": "section.hero",
+      "notes": "Фон hero.svg, h1 44px, подзаголовок, CTA .btn-primary",
+      "size": {
+        "width": 980,
+        "height": 268
+      }
+    },
+    {
+      "id": "cards--mobile",
+      "baseId": "cards",
+      "kind": "component",
+      "group": "sections",
+      "title": "cards",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/sections/cards--mobile.html",
+      "screenshot": "_components/sections/cards--mobile.png",
+      "sourceUrl": "/",
+      "selector": "#cards",
+      "notes": "Сетка 3 колонки (1 на мобильном), карточки из app.js",
+      "size": {
+        "width": 980,
+        "height": 260
+      }
+    },
+    {
+      "id": "card--mobile",
+      "baseId": "card",
+      "kind": "component",
+      "group": "content",
+      "title": "card",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_components/content/card--mobile.html",
+      "screenshot": "_components/content/card--mobile.png",
+      "sourceUrl": "/",
+      "selector": "#cards > article.card",
+      "notes": "Бейдж + h3 + текст + .btn-ghost",
+      "size": {
+        "width": 292,
+        "height": 196
+      }
+    },
+    {
+      "id": "about--mobile",
+      "baseId": "about",
+      "kind": "page",
+      "group": "pages",
+      "title": "О компании",
+      "viewport": "mobile",
+      "section": "about",
+      "pagePath": "/about",
+      "file": "about/index.html",
+      "sameMarkupAs": "about/index.html",
+      "screenshot": "about/index--mobile.jpg",
+      "sourceUrl": "/about",
+      "notes": "Тот же шаблон, что главная",
+      "size": null
+    },
+    {
+      "id": "blog--mobile",
+      "baseId": "blog",
+      "kind": "page",
+      "group": "pages",
+      "title": "Блог — список статей",
+      "viewport": "mobile",
+      "section": "blog",
+      "pagePath": "/blog",
+      "file": "blog/index.html",
+      "sameMarkupAs": "blog/index.html",
+      "screenshot": "blog/index--mobile.jpg",
+      "sourceUrl": "/blog",
+      "notes": "Список .post-list + карточки; доп. стили blog.css",
+      "size": null
+    },
+    {
+      "id": "post-list--mobile",
+      "baseId": "post-list",
+      "kind": "component",
+      "group": "content",
+      "title": "post-list",
+      "viewport": "mobile",
+      "section": "blog",
+      "pagePath": "/blog",
+      "file": "blog/_components/content/post-list--mobile.html",
+      "screenshot": "blog/_components/content/post-list--mobile.png",
+      "sourceUrl": "/blog",
+      "selector": "ul.post-list",
+      "notes": "Список статей с разделителями",
+      "size": {
+        "width": 784,
+        "height": 110
+      }
+    },
+    {
+      "id": "blog-post--mobile",
+      "baseId": "blog-post",
+      "kind": "page",
+      "group": "pages",
+      "title": "Статья блога",
+      "viewport": "mobile",
+      "section": "blog/first-post",
+      "pagePath": "/blog/first-post",
+      "file": "blog/first-post/index.html",
+      "sameMarkupAs": "blog/first-post/index.html",
+      "screenshot": "blog/first-post/index--mobile.jpg",
+      "sourceUrl": "/blog/first-post",
+      "notes": "article.post: h1, .meta, фото, текст; blog.css",
+      "size": null,
+      "placeholders": {
+        "image": 1,
+        "video": 0
+      }
+    },
+    {
+      "id": "post--mobile",
+      "baseId": "post",
+      "kind": "component",
+      "group": "content",
+      "title": "post",
+      "viewport": "mobile",
+      "section": "blog/first-post",
+      "pagePath": "/blog/first-post",
+      "file": "blog/first-post/_components/content/post--mobile.html",
+      "screenshot": "blog/first-post/_components/content/post--mobile.png",
+      "sourceUrl": "/blog/first-post",
+      "selector": "article.post",
+      "notes": "Тело статьи, ширина 720px",
+      "size": {
+        "width": 784,
+        "height": 532
+      },
+      "placeholders": {
+        "image": 1,
+        "video": 0
+      }
+    },
+    {
+      "id": "product--mobile",
+      "baseId": "product",
+      "kind": "page",
+      "group": "pages",
+      "title": "Страница продукта",
+      "viewport": "mobile",
+      "section": "products/analytics",
+      "pagePath": "/products/analytics",
+      "file": "products/analytics/index.html",
+      "sameMarkupAs": "products/analytics/index.html",
+      "screenshot": "products/analytics/index--mobile.jpg",
+      "sourceUrl": "/products/analytics",
+      "notes": "hero без CTA + карточки; тот же шаблон у /products/integrations",
+      "size": null
+    },
+    {
+      "id": "home--login-open--mobile",
+      "baseId": "home--login-open",
+      "kind": "state",
+      "group": "states",
+      "title": "Главная, открыто окно входа",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_states/home--login-open--mobile.html",
+      "screenshot": "_states/home--login-open--mobile.jpg",
+      "sourceUrl": "/",
+      "steps": [
+        {
+          "click": "[data-open=login]"
+        },
+        {
+          "waitFor": "[role=dialog]"
+        }
+      ],
+      "size": null
+    },
+    {
+      "id": "home--more-open--mobile",
+      "baseId": "home--more-open",
+      "kind": "state",
+      "group": "states",
+      "title": "Главная, открыто меню «Ещё»",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_states/home--more-open--mobile.html",
+      "screenshot": "_states/home--more-open--mobile.jpg",
+      "sourceUrl": "/",
+      "steps": [
+        {
+          "click": ".dropdown > button"
+        },
+        {
+          "waitFor": ".dropdown-menu"
+        }
+      ],
+      "size": null
+    },
+    {
+      "id": "more-menu--mobile",
+      "baseId": "more-menu",
+      "kind": "modal",
+      "group": "modals",
+      "title": "Выпадающее меню «Ещё»",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_modals/more-menu--mobile.html",
+      "screenshot": "_modals/more-menu--mobile.png",
+      "sourceUrl": "/",
+      "selector": ".dropdown-menu",
+      "steps": [
+        {
+          "click": ".dropdown > button"
+        },
+        {
+          "waitFor": ".dropdown-menu"
+        }
+      ],
+      "notes": "Кнопка «Ещё ▾» в шапке; открывается toggle класса .open на .dropdown, закрывается повторным кликом",
+      "size": {
+        "width": 162,
+        "height": 80
+      }
+    },
+    {
+      "id": "login",
+      "baseId": "login",
+      "kind": "modal",
+      "group": "modals",
+      "title": "Окно входа",
+      "viewport": "desktop",
+      "section": "",
+      "pagePath": "/",
+      "file": "_modals/login.html",
+      "screenshot": "_modals/login.png",
+      "sourceUrl": "/",
+      "selector": "[role=dialog]",
+      "steps": [
+        {
+          "click": "[data-open=login]"
+        },
+        {
+          "waitFor": "[role=dialog]"
+        }
+      ],
+      "notes": "Кнопка «Войти» в шапке ([data-open=login]); модалка (.modal-backdrop > .modal[role=dialog]) создаётся в body из app.js, фон rgba(17,24,39,.5) — см. состояние home--login-open; закрывается кликом по фону (Esc не обрабатывается)",
+      "size": {
+        "width": 436,
+        "height": 322
+      }
+    },
+    {
+      "id": "login--mobile",
+      "baseId": "login",
+      "kind": "modal",
+      "group": "modals",
+      "title": "Окно входа",
+      "viewport": "mobile",
+      "section": "",
+      "pagePath": "/",
+      "file": "_modals/login--mobile.html",
+      "screenshot": "_modals/login--mobile.png",
+      "sourceUrl": "/",
+      "selector": "[role=dialog]",
+      "steps": [
+        {
+          "click": "[data-open=login]"
+        },
+        {
+          "waitFor": "[role=dialog]"
+        }
+      ],
+      "notes": "Кнопка «Войти» в шапке ([data-open=login]); модалка (.modal-backdrop > .modal[role=dialog]) создаётся в body из app.js, фон rgba(17,24,39,.5) — см. состояние home--login-open; закрывается кликом по фону (Esc не обрабатывается)",
+      "size": {
+        "width": 436,
+        "height": 322
+      }
+    }
+  ],
+  "generated": [
+    "README.md",
+    "_catalog.html",
+    "_components/content/card--mobile.html",
+    "_components/content/card--mobile.png",
+    "_components/content/card.html",
+    "_components/content/card.png",
+    "_components/layout/footer--mobile.html",
+    "_components/layout/footer--mobile.png",
+    "_components/layout/footer.html",
+    "_components/layout/footer.png",
+    "_components/layout/header--mobile.html",
+    "_components/layout/header--mobile.png",
+    "_components/layout/header.html",
+    "_components/layout/header.png",
+    "_components/sections/cards--mobile.html",
+    "_components/sections/cards--mobile.png",
+    "_components/sections/cards.html",
+    "_components/sections/cards.png",
+    "_components/sections/hero--mobile.html",
+    "_components/sections/hero--mobile.png",
+    "_components/sections/hero.html",
+    "_components/sections/hero.png",
+    "_css/styles.css",
+    "_media/hero-55949c65.svg",
+    "_media/logo-cfbc9f29.svg",
+    "_modals/login--mobile.html",
+    "_modals/login--mobile.png",
+    "_modals/login.html",
+    "_modals/login.png",
+    "_modals/more-menu--mobile.html",
+    "_modals/more-menu--mobile.png",
+    "_modals/more-menu.html",
+    "_modals/more-menu.png",
+    "_states/home--login-open--mobile.html",
+    "_states/home--login-open--mobile.jpg",
+    "_states/home--login-open.html",
+    "_states/home--login-open.jpg",
+    "_states/home--more-open--mobile.html",
+    "_states/home--more-open--mobile.jpg",
+    "_states/home--more-open.html",
+    "_states/home--more-open.jpg",
+    "about/README.md",
+    "about/index--mobile.jpg",
+    "about/index.html",
+    "about/index.jpg",
+    "blog/README.md",
+    "blog/_components/content/post-list--mobile.html",
+    "blog/_components/content/post-list--mobile.png",
+    "blog/_components/content/post-list.html",
+    "blog/_components/content/post-list.png",
+    "blog/_css/styles.css",
+    "blog/first-post/README.md",
+    "blog/first-post/_components/content/post--mobile.html",
+    "blog/first-post/_components/content/post--mobile.png",
+    "blog/first-post/_components/content/post.html",
+    "blog/first-post/_components/content/post.png",
+    "blog/first-post/index--mobile.jpg",
+    "blog/first-post/index.html",
+    "blog/first-post/index.jpg",
+    "blog/index--mobile.jpg",
+    "blog/index.html",
+    "blog/index.jpg",
+    "index--mobile.jpg",
+    "index.html",
+    "index.jpg",
+    "products/README.md",
+    "products/analytics/README.md",
+    "products/analytics/index--mobile.jpg",
+    "products/analytics/index.html",
+    "products/analytics/index.jpg"
+  ],
+  "contextGenerated": [
+    "GUIDE.md",
+    "assets/logos/logo-cfbc9f29.svg",
+    "assets/tokens.css",
+    "compositions/about.md",
+    "compositions/blog--first-post.md",
+    "compositions/blog.md",
+    "compositions/home.md",
+    "compositions/products--analytics.md",
+    "foundations.md",
+    "parts/badges.md",
+    "parts/buttons.md",
+    "parts/cards.md",
+    "parts/components.md",
+    "parts/inputs.md",
+    "parts/links.md",
+    "parts/overlays.md",
+    "source.md"
+  ],
+  "sections": [
+    {
+      "folder": ".",
+      "path": "/",
+      "title": "Главная",
+      "url": "/",
+      "parent": null,
+      "children": [
+        "about",
+        "blog",
+        "products"
+      ],
+      "readme": "README.md",
+      "captured": true,
+      "counts": {
+        "pages": 2,
+        "states": 4,
+        "modals": 4,
+        "components": 10,
+        "css": 3,
+        "media": 2
+      }
+    },
+    {
+      "folder": "about",
+      "path": "/about",
+      "title": "О компании",
+      "url": "/about",
+      "parent": ".",
+      "children": [],
+      "readme": "about/README.md",
+      "captured": true,
+      "counts": {
+        "pages": 2,
+        "states": 0,
+        "modals": 0,
+        "components": 0,
+        "css": 0,
+        "media": 0
+      }
+    },
+    {
+      "folder": "blog",
+      "path": "/blog",
+      "title": "Блог — список статей",
+      "url": "/blog",
+      "parent": ".",
+      "children": [
+        "blog/first-post"
+      ],
+      "readme": "blog/README.md",
+      "captured": true,
+      "counts": {
+        "pages": 2,
+        "states": 0,
+        "modals": 0,
+        "components": 2,
+        "css": 1,
+        "media": 0
+      }
+    },
+    {
+      "folder": "blog/first-post",
+      "path": "/blog/first-post",
+      "title": "Статья блога",
+      "url": "/blog/first-post",
+      "parent": "blog",
+      "children": [],
+      "readme": "blog/first-post/README.md",
+      "captured": true,
+      "counts": {
+        "pages": 2,
+        "states": 0,
+        "modals": 0,
+        "components": 2,
+        "css": 0,
+        "media": 0
+      }
+    },
+    {
+      "folder": "products",
+      "path": "/products",
+      "title": null,
+      "url": null,
+      "parent": ".",
+      "children": [
+        "products/analytics"
+      ],
+      "readme": "products/README.md",
+      "captured": false,
+      "counts": {
+        "pages": 0,
+        "states": 0,
+        "modals": 0,
+        "components": 0,
+        "css": 0,
+        "media": 0
+      }
+    },
+    {
+      "folder": "products/analytics",
+      "path": "/products/analytics",
+      "title": "Страница продукта",
+      "url": "/products/analytics",
+      "parent": "products",
+      "children": [],
+      "readme": "products/analytics/README.md",
+      "captured": true,
+      "counts": {
+        "pages": 2,
+        "states": 0,
+        "modals": 0,
+        "components": 0,
+        "css": 0,
+        "media": 0
+      }
+    }
+  ],
+  "hasSource": true,
+  "stats": {
+    "pages": 9,
+    "noise": {
+      "цвета текста": {
+        "variants": 6,
+        "for80": 3
+      },
+      "фоны": {
+        "variants": 5,
+        "for80": 3
+      },
+      "типографика": {
+        "variants": 8,
+        "for80": 2
+      },
+      "Кнопки": {
+        "variants": 3,
+        "for80": 2
+      },
+      "Поля ввода": {
+        "variants": 1,
+        "for80": 1
+      },
+      "Ссылки": {
+        "variants": 3,
+        "for80": 1
+      },
+      "Бейджи и метки": {
+        "variants": 1,
+        "for80": 1
+      },
+      "Карточки": {
+        "variants": 1,
+        "for80": 1
+      }
+    },
+    "parts": {
+      "buttons": 3,
+      "inputs": 1,
+      "links": 3,
+      "badges": 1,
+      "cards": 1
+    },
+    "icons": 0,
+    "fonts": 0
+  },
+  "context": [
+    "../AGENTS.md"
+  ]
+}

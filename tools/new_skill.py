@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Создать новый скилл из шаблона _template/skill-name.
 
-  python3 tools/new_skill.py design-sites hero-section
+  python3 tools/new_skill.py web-design wd-hero
   python3 tools/new_skill.py new-topic my-skill --title "My Skill"
 
 Создаёт <тема>/skills/<имя>/ со всей структурой (SKILL.md, references/, examples/,
@@ -36,7 +36,7 @@ TODO: о чём эта тема.
 
 def main():
     ap = argparse.ArgumentParser(description="Создать скилл из шаблона")
-    ap.add_argument("topic", help="тема (папка верхнего уровня), например design-sites")
+    ap.add_argument("topic", help="тема (папка верхнего уровня), например web-design")
     ap.add_argument("name", help="имя скилла, kebab-case, уникально во всём репо")
     ap.add_argument("--title", help="заголовок в SKILL.md (по умолчанию из имени)")
     a = ap.parse_args()

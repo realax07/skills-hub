@@ -39,7 +39,7 @@ Commands:
 
 Options:
   -a, --agent LIST     claude,codex,... | all | auto (по умолчанию: auto = найденные)
-  -t, --topic LIST     только эти темы (design-sites,...)
+  -t, --topic LIST     только эти темы (web-design,...)
   -s, --skill LIST     только эти скиллы
   -p, --project DIR    ставить в проект DIR, а не глобально
       --copy           копировать вместо симлинка
@@ -52,9 +52,9 @@ Options:
 Examples:
   ./install.sh list
   ./install.sh install
-  ./install.sh install -a claude,codex -t design-sites
+  ./install.sh install -a claude,codex -t web-design
   ./install.sh install -a all -p ~/code/my-site --copy
-  ./install.sh install --deps -s web-design-context
+  ./install.sh install --deps -s wd-scan
   ./install.sh deps --check
   ./install.sh uninstall -a all
 EOF
@@ -171,6 +171,21 @@ is_ours() { # путь установлен из этого репо?
   [ -f "$d/$MARKER" ]
 }
 
+# Убрать из папки агента наши установки скиллов, которых в хабе больше нет (переименованы или удалены):
+# битая ссылка на старую папку хаба или копия с меткой. Чужие папки не трогаются.
+prune_stale() { # prune_stale root layout
+  local names e
+  names=" $(all_skills | cut -d'|' -f2 | tr '\n' ' ') "
+  for e in "$1"/* "$1"/*/*; do
+    [ -e "$e" ] || [ -L "$e" ] || continue
+    [ "$2" = "category" ] || [ "$(dirname "$e")" = "$1" ] || continue
+    is_ours "$e" || continue
+    case "$names" in *" $(basename "$e") "*) continue ;; esac
+    run rm -rf "$e"; echo "  - $(basename "$e") (в хабе такого скилла больше нет — убран)"
+  done
+  return 0
+}
+
 # --- команды
 cmd_list() {
   local t s d desc last=""
@@ -200,6 +215,7 @@ cmd_install() {
     root="$(root_for "$u" "$p")"
     [ -z "$root" ] && { echo "~ $id: project-скиллы не поддерживаются, пропуск"; continue; }
     echo "> $id -> ${root/#$HOME/~}"
+    [ -d "$root" ] && prune_stale "$root" "$l"
     while IFS='|' read -r t s d; do
       dest="$(dest_for "$root" "$l" "$t" "$s")"
       if [ -e "$dest" ] || [ -L "$dest" ]; then

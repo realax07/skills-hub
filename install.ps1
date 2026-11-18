@@ -86,6 +86,20 @@ function Is-Ours($d) {
   if ($item.LinkType) { return ([string]$item.Target).StartsWith($Repo) }
   return Test-Path (Join-Path $d $Marker)
 }
+# Убрать из папки агента наши установки скиллов, которых в хабе больше нет (переименованы или удалены):
+# битая ссылка на старую папку хаба или копия с меткой. Чужие папки не трогаются.
+function Prune-Stale($root, $a) {
+  if (-not (Test-Path $root)) { return }
+  $names = @(All-Skills | ForEach-Object { $_.Skill })
+  $items = @(Get-ChildItem $root -Force -ErrorAction SilentlyContinue)
+  if ($a.Layout -eq "category") { $items = @($items | ForEach-Object { Get-ChildItem $_.FullName -Force -ErrorAction SilentlyContinue }) }
+  foreach ($i in $items) {
+    if ((Is-Ours $i.FullName) -and ($names -notcontains $i.Name)) {
+      Do-It { Remove-Dest $i.FullName } "remove $($i.FullName)"
+      Write-Host "  - $($i.Name) (в хабе такого скилла больше нет — убран)"
+    }
+  }
+}
 function Remove-Dest($d) {
   $item = Get-Item $d -Force
   if ($item.LinkType) { $item.Delete() } else { Remove-Item $d -Recurse -Force }
@@ -117,6 +131,7 @@ function Cmd-Install {
     $root = Root-For $a
     if (-not $root) { Write-Host "~ $($a.Id): project-скиллы не поддерживаются, пропуск"; continue }
     Write-Host "> $($a.Id) -> $root"
+    Prune-Stale $root $a
     foreach ($s in $skills) {
       $dest = Dest-For $root $a $s
       if (Get-Item $dest -Force -ErrorAction SilentlyContinue) {

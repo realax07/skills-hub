@@ -108,7 +108,7 @@
 
 Хаб знает это соглашение: `./install.sh install --deps` ставит скиллы вместе с зависимостями,
 `./install.sh deps [--check]` — только зависимости. После `install` хаб сам запускает `setup --check` каждого скилла
-и подсказывает `deps` только тем, у кого проверка не прошла. Пример — `project-context/skills/web-design-context`.
+и подсказывает `deps` только тем, у кого проверка не прошла. Пример — `web-design/skills/wd-scan`.
 
 ## Тесты (`evals/`)
 

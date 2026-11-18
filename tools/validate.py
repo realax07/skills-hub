@@ -2,8 +2,8 @@
 """Проверка скиллов skills-hub: frontmatter, структура, ссылки, evals, уникальность имён.
 
   python3 tools/validate.py                      # все скиллы репо + шаблон
-  python3 tools/validate.py design-sites         # одна тема
-  python3 tools/validate.py design-sites/skills/hero-section
+  python3 tools/validate.py web-design         # одна тема
+  python3 tools/validate.py web-design/skills/wd-hero
   python3 tools/validate.py --strict             # TODO-заглушки = ошибка
 
 Только стандартная библиотека. Правила взяты из спецификации Agent Skills

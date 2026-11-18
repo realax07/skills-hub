@@ -18,10 +18,8 @@ skills-hub/
     validate.py      # проверить скиллы
     sync_shared.py   # общий код скиллов: копии по shared.conf
   _template/skill-name/  # шаблон скилла
-  design-sites/      # тема: дизайн и вёрстка сайтов
+  web-design/        # тема: набор wd-* — дизайн веб-проектов (собрать, дорабатывать, создать)
     skills/<skill-name>/
-  project-context/   # тема: контекст существующих проектов для агентной разработки
-  project-dev/       # тема: разработка существующих проектов агентами по этому контексту
   skill-authoring/   # тема: создание и улучшение скиллов
 ```
 
@@ -39,9 +37,7 @@ skills-hub/
 
 | Тема | Что внутри |
 |---|---|
-| [design-sites](design-sites/) | дизайн и вёрстка сайтов |
-| [project-context](project-context/) | подготовка существующего проекта к агентной разработке: дизайн-контекст (дальше — архитектура, API, домен) |
-| [project-dev](project-dev/) | разработка существующего проекта агентами по собранному контексту: доработка интерфейса в существующем дизайне с проверкой |
+| [web-design](web-design/) | набор wd-*: wd-scan — дизайн-контекст существующего сайта, wd-fit — доработка в нём с проверкой, wd-forge — новый дизайн (в работе) |
 | [skill-authoring](skill-authoring/) | создание и улучшение скиллов: каркас, правила, тесты, валидация |
 
 ## Поддерживаемые агенты
@@ -89,7 +85,7 @@ irm https://raw.githubusercontent.com/realax07/skills-hub/main/install.ps1 | iex
 ```bash
 ./install.sh list                                  # темы и скиллы
 ./install.sh agents                                # какие агенты найдены
-./install.sh install -a claude,codex -t design-sites
+./install.sh install -a claude,codex -t web-design
 ./install.sh install -a all -p ~/code/site --copy  # в проект, копией
 ./install.sh status
 ./install.sh deps                                  # зависимости скиллов (Playwright и т.п.)
@@ -108,8 +104,8 @@ irm https://raw.githubusercontent.com/realax07/skills-hub/main/install.ps1 | iex
 Подробно — в [docs/skill-guide.md](docs/skill-guide.md). Или попроси агента с установленным скиллом `skill-author` — он сделает всю структуру сам.
 
 ```bash
-python3 tools/new_skill.py design-sites hero-section     # каркас со всей структурой + строка в README темы
-python3 tools/validate.py design-sites/skills/hero-section --strict
+python3 tools/new_skill.py web-design wd-hero          # каркас со всей структурой + строка в README темы
+python3 tools/validate.py web-design/skills/wd-hero --strict
 ./install.sh install -s hero-section
 ```
 
