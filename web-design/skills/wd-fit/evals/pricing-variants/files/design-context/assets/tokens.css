@@ -1,0 +1,17 @@
+/* CSS-переменные сайта (собраны wd-scan) */
+:root {
+  --color-primary: #3b5bdb;
+  --color-text: #1f2328;
+  --color-bg: #ffffff;
+  --color-border: #e5e7eb;
+  --radius-md: 10px;
+  --space-4: 16px;
+}
+
+/* тема dark: класс `dark` на <html> */
+:root.dark {
+  --color-primary: #7c9cff;
+  --color-text: #e6e8eb;
+  --color-bg: #0f1115;
+  --color-border: #2a2f37;
+}

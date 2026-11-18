@@ -1,0 +1,974 @@
+{
+ "pages": [
+  {
+   "id": "about",
+   "url": "/about"
+  },
+  {
+   "id": "blog-post",
+   "url": "/blog/first-post"
+  },
+  {
+   "id": "blog",
+   "url": "/blog"
+  },
+  {
+   "id": "home--login-open",
+   "url": "/"
+  },
+  {
+   "id": "home--more-open",
+   "url": "/"
+  },
+  {
+   "id": "home",
+   "url": "/"
+  },
+  {
+   "id": "login",
+   "url": "/"
+  },
+  {
+   "id": "more-menu",
+   "url": "/"
+  },
+  {
+   "id": "product",
+   "url": "/products/analytics"
+  }
+ ],
+ "colors": {
+  "text": [
+   {
+    "color": "#1f2328",
+    "n": 118,
+    "vars": [
+     "--color-text"
+    ]
+   },
+   {
+    "color": "#3b5bdb",
+    "n": 36,
+    "vars": [
+     "--color-primary"
+    ]
+   },
+   {
+    "color": "#7c5e00",
+    "n": 27,
+    "vars": []
+   },
+   {
+    "color": "#ffffff",
+    "n": 17,
+    "vars": [
+     "--color-bg"
+    ]
+   },
+   {
+    "color": "#9ca3af",
+    "n": 9,
+    "vars": []
+   },
+   {
+    "color": "#6b7280",
+    "n": 1,
+    "vars": []
+   }
+  ],
+  "background": [
+   {
+    "color": "#fff3bf",
+    "n": 27,
+    "vars": []
+   },
+   {
+    "color": "#3b5bdb",
+    "n": 17,
+    "vars": [
+     "--color-primary"
+    ]
+   },
+   {
+    "color": "#111827",
+    "n": 9,
+    "vars": []
+   },
+   {
+    "color": "#ffffff",
+    "n": 8,
+    "vars": [
+     "--color-bg"
+    ]
+   },
+   {
+    "color": "rgba(17, 24, 39, 0.5)",
+    "n": 2,
+    "vars": []
+   }
+  ],
+  "border": [
+   {
+    "color": "#3b5bdb",
+    "n": 36,
+    "vars": [
+     "--color-primary"
+    ]
+   },
+   {
+    "color": "#e5e7eb",
+    "n": 29,
+    "vars": [
+     "--color-border"
+    ]
+   },
+   {
+    "color": "#d1d5db",
+    "n": 4,
+    "vars": []
+   }
+  ],
+  "icon": []
+ },
+ "type": [
+  {
+   "key": "Georgia|16px|400|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "16px",
+   "weight": "400",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 141,
+   "ex": [
+    {
+     "tag": "a",
+     "text": "Главная"
+    },
+    {
+     "tag": "a",
+     "text": "О нас"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|12px|400|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "12px",
+   "weight": "400",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 27,
+   "ex": [
+    {
+     "tag": "span",
+     "text": "новое"
+    },
+    {
+     "tag": "span",
+     "text": "новое"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|18.72px|700|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "18.72px",
+   "weight": "700",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 27,
+   "ex": [
+    {
+     "tag": "h3",
+     "text": "Аналитика"
+    },
+    {
+     "tag": "h3",
+     "text": "Интеграции"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|44px|700|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "44px",
+   "weight": "700",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 7,
+   "ex": [
+    {
+     "tag": "h1",
+     "text": "О компании"
+    },
+    {
+     "tag": "h1",
+     "text": "Инструменты для команд"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|20px|400|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "20px",
+   "weight": "400",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 2,
+   "ex": [
+    {
+     "tag": "a",
+     "text": "Как мы строим продукт"
+    },
+    {
+     "tag": "a",
+     "text": "Новый офис"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|24px|700|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "24px",
+   "weight": "700",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 2,
+   "ex": [
+    {
+     "tag": "h2",
+     "text": "Вход"
+    },
+    {
+     "tag": "h2",
+     "text": "Вход"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|36px|700|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "36px",
+   "weight": "700",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 1,
+   "ex": [
+    {
+     "tag": "h1",
+     "text": "Как мы строим продукт"
+    }
+   ]
+  },
+  {
+   "key": "Georgia|14px|400|normal|normal|none|normal",
+   "family": "Georgia",
+   "size": "14px",
+   "weight": "400",
+   "lineHeight": "normal",
+   "letterSpacing": "normal",
+   "transform": "none",
+   "style": "normal",
+   "n": 1,
+   "ex": [
+    {
+     "tag": "p",
+     "text": "12 ноября 2026"
+    }
+   ]
+  }
+ ],
+ "spacing": [
+  {
+   "v": "16px",
+   "n": 85
+  },
+  {
+   "v": "20px",
+   "n": 72
+  },
+  {
+   "v": "10px",
+   "n": 61
+  },
+  {
+   "v": "18.72px",
+   "n": 54
+  },
+  {
+   "v": "18px",
+   "n": 53
+  },
+  {
+   "v": "32px",
+   "n": 45
+  },
+  {
+   "v": "8px",
+   "n": 34
+  },
+  {
+   "v": "2px",
+   "n": 27
+  },
+  {
+   "v": "24px",
+   "n": 11
+  },
+  {
+   "v": "64px",
+   "n": 7
+  },
+  {
+   "v": "12px",
+   "n": 7
+  },
+  {
+   "v": "14px",
+   "n": 6
+  },
+  {
+   "v": "40px",
+   "n": 4
+  },
+  {
+   "v": "28px",
+   "n": 4
+  },
+  {
+   "v": "19.92px",
+   "n": 4
+  },
+  {
+   "v": "6px",
+   "n": 4
+  },
+  {
+   "v": "24.12px",
+   "n": 1
+  }
+ ],
+ "radius": [
+  {
+   "v": "10px",
+   "n": 80
+  },
+  {
+   "v": "999px",
+   "n": 27
+  },
+  {
+   "v": "8px",
+   "n": 6
+  },
+  {
+   "v": "14px",
+   "n": 2
+  },
+  {
+   "v": "12px",
+   "n": 1
+  }
+ ],
+ "shadow": [
+  {
+   "v": "rgba(0, 0, 0, 0.06) 0px 2px 8px 0px",
+   "n": 27
+  }
+ ],
+ "fonts": [
+  {
+   "family": "Georgia",
+   "n": 208
+  }
+ ],
+ "fontFaces": [],
+ "cssVars": 6,
+ "motion": {
+  "transitions": [],
+  "animations": [],
+  "keyframes": [],
+  "js": {
+   "gsap": 0,
+   "framerMotion": 0,
+   "lottie": 0,
+   "canvas": 0,
+   "webgl": 0,
+   "video": 0,
+   "threeJs": 0
+  }
+ },
+ "icons": [],
+ "logos": [
+  {
+   "id": "/assets/logo.svg",
+   "src": "http://127.0.0.1:51733/assets/logo.svg",
+   "alt": "Acme",
+   "w": 96,
+   "h": 24,
+   "blob": "logo-cfbc9f29.svg"
+  }
+ ],
+ "parts": {
+  "buttons": [
+   {
+    "id": "dfvh5f",
+    "sig": "- · #3b5bdb · #3b5bdb · 10px · 16px · 400 · 12/20 ·  · ",
+    "n": 36,
+    "kit": "k1",
+    "html": "<button class=\"btn btn-ghost\">Ещё ▾</button>",
+    "w": 84,
+    "h": 41,
+    "text": "Ещё ▾",
+    "style": {
+     "background": "rgba(0, 0, 0, 0)",
+     "color": "rgb(59, 91, 219)",
+     "border": "1px solid rgb(59, 91, 219)",
+     "radius": "10px",
+     "font": "400 16px/normal Georgia",
+     "padding": "10px 18px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/buttons-dfvh5f.png",
+    "pages": [
+     "/about",
+     "/blog/first-post",
+     "/blog",
+     "/",
+     "/products/analytics"
+    ]
+   },
+   {
+    "id": "1vyvupb",
+    "sig": "#3b5bdb · #ffffff · - · 10px · 16px · 400 · 12/20 ·  · ",
+    "n": 11,
+    "kit": "k2",
+    "html": "<button class=\"btn btn-primary\">Войти</button>",
+    "w": 82,
+    "h": 39,
+    "text": "Войти",
+    "style": {
+     "background": "rgb(59, 91, 219)",
+     "color": "rgb(255, 255, 255)",
+     "border": "0px none rgb(255, 255, 255)",
+     "radius": "10px",
+     "font": "400 16px/normal Georgia",
+     "padding": "10px 18px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/buttons-1vyvupb.png",
+    "pages": [
+     "/about",
+     "/blog/first-post",
+     "/blog",
+     "/",
+     "/products/analytics"
+    ]
+   },
+   {
+    "id": "19h5clt",
+    "sig": "#3b5bdb · #ffffff · - · 10px · 16px · 400 · 12/20 ·  · underline",
+    "n": 6,
+    "kit": "k3",
+    "html": "<a class=\"btn btn-primary\" href=\"/about\">Узнать больше</a>",
+    "w": 147,
+    "h": 39,
+    "text": "Узнать больше",
+    "style": {
+     "background": "rgb(59, 91, 219)",
+     "color": "rgb(255, 255, 255)",
+     "border": "0px none rgb(255, 255, 255)",
+     "radius": "10px",
+     "font": "400 16px/normal Georgia",
+     "padding": "10px 18px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/buttons-19h5clt.png",
+    "pages": [
+     "/about",
+     "/"
+    ]
+   }
+  ],
+  "inputs": [
+   {
+    "id": "17mnphw",
+    "sig": "#ffffff · #000000 · #d1d5db · 8px · 13px · 400 · 12/12 ·  · ",
+    "n": 4,
+    "kit": "k6",
+    "html": "<input type=\"email\" placeholder=\"you@acme.io\">",
+    "w": 380,
+    "h": 37,
+    "text": "you@acme.io",
+    "style": {
+     "background": "rgb(255, 255, 255)",
+     "color": "rgb(0, 0, 0)",
+     "border": "1px solid rgb(209, 213, 219)",
+     "radius": "8px",
+     "font": "400 13.3333px/normal Arial",
+     "padding": "10px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/inputs-17mnphw.png",
+    "pages": [
+     "/"
+    ]
+   }
+  ],
+  "links": [
+   {
+    "id": "2o2hpd",
+    "sig": "- · #1f2328 · - · 0px · 16px · 400 · 0/0 ·  · ",
+    "n": 36,
+    "kit": "k0",
+    "html": "<a href=\"/\">Главная</a>",
+    "w": 62,
+    "h": 19,
+    "text": "Главная",
+    "style": {
+     "background": "rgba(0, 0, 0, 0)",
+     "color": "rgb(31, 35, 40)",
+     "border": "0px none rgb(31, 35, 40)",
+     "radius": "0px",
+     "font": "400 16px/normal Georgia",
+     "padding": "0px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/links-2o2hpd.png",
+    "pages": [
+     "/about",
+     "/blog/first-post",
+     "/blog",
+     "/",
+     "/products/analytics"
+    ]
+   },
+   {
+    "id": "fdeuxs",
+    "sig": "- · #1f2328 · - · 0px · 16px · 400 · 8/16 ·  · ",
+    "n": 4,
+    "kit": "k2",
+    "html": "<a href=\"#\">Блог</a>",
+    "w": 144,
+    "h": 31,
+    "text": "Блог",
+    "style": {
+     "background": "rgba(0, 0, 0, 0)",
+     "color": "rgb(31, 35, 40)",
+     "border": "0px none rgb(31, 35, 40)",
+     "radius": "0px",
+     "font": "400 16px/normal Georgia",
+     "padding": "6px 14px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/links-fdeuxs.png",
+    "pages": [
+     "/"
+    ]
+   },
+   {
+    "id": "142cdks",
+    "sig": "- · #1f2328 · - · 0px · 20px · 400 · 0/0 ·  · underline",
+    "n": 2,
+    "kit": "k3",
+    "html": "<a href=\"/blog/first-post\">Как мы строим продукт</a>",
+    "w": 222,
+    "h": 22,
+    "text": "Как мы строим продукт",
+    "style": {
+     "background": "rgba(0, 0, 0, 0)",
+     "color": "rgb(31, 35, 40)",
+     "border": "0px none rgb(31, 35, 40)",
+     "radius": "0px",
+     "font": "400 20px/normal Georgia",
+     "padding": "0px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/links-142cdks.png",
+    "pages": [
+     "/blog"
+    ]
+   }
+  ],
+  "badges": [
+   {
+    "id": "1kw5ogi",
+    "sig": "#fff3bf · #7c5e00 · - · pill · 12px · 400 · 4/8 ·  · ",
+    "n": 27,
+    "kit": "k5",
+    "html": "<span class=\"badge\">новое</span>",
+    "w": 48,
+    "h": 18,
+    "text": "новое",
+    "style": {
+     "background": "rgb(255, 243, 191)",
+     "color": "rgb(124, 94, 0)",
+     "border": "0px none rgb(124, 94, 0)",
+     "radius": "999px",
+     "font": "400 12px/normal Georgia",
+     "padding": "2px 8px",
+     "shadow": "",
+     "transition": ""
+    },
+    "crop": "parts/badges-1kw5ogi.png",
+    "pages": [
+     "/about",
+     "/blog/first-post",
+     "/blog",
+     "/",
+     "/products/analytics"
+    ]
+   }
+  ],
+  "cards": [
+   {
+    "id": "h8huo5",
+    "sig": "- · #1f2328 · #e5e7eb · 10px · 16px · 400 · 20/20 · shadow · ",
+    "n": 27,
+    "kit": "k4",
+    "html": "<article class=\"card\"><span class=\"badge\">новое</span><h3>Аналитика</h3><p>Отчёты в реальном времени</p><button class=\"btn btn-ghost\">Подробнее</button></article>",
+    "w": 445,
+    "h": 196,
+    "text": "новое Аналитика Отчёты в реальном времен",
+    "style": {
+     "background": "rgba(0, 0, 0, 0)",
+     "color": "rgb(31, 35, 40)",
+     "border": "1px solid rgb(229, 231, 235)",
+     "radius": "10px",
+     "font": "400 16px/normal Georgia",
+     "padding": "20px",
+     "shadow": "rgba(0, 0, 0, 0.06) 0px 2px 8px 0px",
+     "transition": ""
+    },
+    "crop": "parts/cards-h8huo5.png",
+    "pages": [
+     "/about",
+     "/blog/first-post",
+     "/blog",
+     "/",
+     "/products/analytics"
+    ]
+   }
+  ]
+ },
+ "themes": {
+  "dark": {
+   "how": {
+    "htmlClass": "dark"
+   },
+   "vars": {
+    "--color-primary": {
+     "light": "#3b5bdb",
+     "value": "#7c9cff"
+    },
+    "--color-text": {
+     "light": "#1f2328",
+     "value": "#e6e8eb"
+    },
+    "--color-bg": {
+     "light": "#ffffff",
+     "value": "#0f1115"
+    },
+    "--color-border": {
+     "light": "#e5e7eb",
+     "value": "#2a2f37"
+    }
+   },
+   "colors": {
+    "text": [
+     {
+      "color": "#e6e8eb",
+      "n": 60,
+      "vars": [
+       "--color-text"
+      ]
+     },
+     {
+      "color": "#7c9cff",
+      "n": 20,
+      "vars": [
+       "--color-primary"
+      ]
+     },
+     {
+      "color": "#7c5e00",
+      "n": 15,
+      "vars": []
+     },
+     {
+      "color": "#ffffff",
+      "n": 7,
+      "vars": []
+     },
+     {
+      "color": "#9ca3af",
+      "n": 5,
+      "vars": []
+     },
+     {
+      "color": "#6b7280",
+      "n": 1,
+      "vars": []
+     }
+    ],
+    "background": [
+     {
+      "color": "#fff3bf",
+      "n": 15,
+      "vars": []
+     },
+     {
+      "color": "#7c9cff",
+      "n": 7,
+      "vars": [
+       "--color-primary"
+      ]
+     },
+     {
+      "color": "#111827",
+      "n": 5,
+      "vars": []
+     }
+    ],
+    "border": [
+     {
+      "color": "#7c9cff",
+      "n": 20,
+      "vars": [
+       "--color-primary"
+      ]
+     },
+     {
+      "color": "#2a2f37",
+      "n": 15,
+      "vars": [
+       "--color-border"
+      ]
+     }
+    ],
+    "icon": []
+   },
+   "fonts": [
+    {
+     "family": "Georgia",
+     "n": 108
+    }
+   ],
+   "parts": {
+    "buttons": [
+     {
+      "id": "z58cqj",
+      "sig": "- · #7c9cff · #7c9cff · 10px · 16px · 400 · 12/20 ·  · ",
+      "n": 20,
+      "kit": "k1",
+      "html": "<button class=\"btn btn-ghost\">Ещё ▾</button>",
+      "w": 84,
+      "h": 41,
+      "text": "Ещё ▾",
+      "style": {
+       "background": "rgba(0, 0, 0, 0)",
+       "color": "rgb(124, 156, 255)",
+       "border": "1px solid rgb(124, 156, 255)",
+       "radius": "10px",
+       "font": "400 16px/normal Georgia",
+       "padding": "10px 18px",
+       "shadow": "",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/about",
+       "http://127.0.0.1:51733/blog/first-post",
+       "http://127.0.0.1:51733/blog",
+       "http://127.0.0.1:51733/",
+       "http://127.0.0.1:51733/products/analytics"
+      ]
+     },
+     {
+      "id": "cuzhj5",
+      "sig": "#7c9cff · #ffffff · - · 10px · 16px · 400 · 12/20 ·  · ",
+      "n": 5,
+      "kit": "k2",
+      "html": "<button class=\"btn btn-primary\">Войти</button>",
+      "w": 82,
+      "h": 39,
+      "text": "Войти",
+      "style": {
+       "background": "rgb(124, 156, 255)",
+       "color": "rgb(255, 255, 255)",
+       "border": "0px none rgb(255, 255, 255)",
+       "radius": "10px",
+       "font": "400 16px/normal Georgia",
+       "padding": "10px 18px",
+       "shadow": "",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/about",
+       "http://127.0.0.1:51733/blog/first-post",
+       "http://127.0.0.1:51733/blog",
+       "http://127.0.0.1:51733/",
+       "http://127.0.0.1:51733/products/analytics"
+      ]
+     },
+     {
+      "id": "g6rmaj",
+      "sig": "#7c9cff · #ffffff · - · 10px · 16px · 400 · 12/20 ·  · underline",
+      "n": 2,
+      "kit": "k3",
+      "html": "<a class=\"btn btn-primary\" href=\"/about\">Узнать больше</a>",
+      "w": 147,
+      "h": 39,
+      "text": "Узнать больше",
+      "style": {
+       "background": "rgb(124, 156, 255)",
+       "color": "rgb(255, 255, 255)",
+       "border": "0px none rgb(255, 255, 255)",
+       "radius": "10px",
+       "font": "400 16px/normal Georgia",
+       "padding": "10px 18px",
+       "shadow": "",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/about",
+       "http://127.0.0.1:51733/"
+      ]
+     }
+    ],
+    "inputs": [],
+    "links": [
+     {
+      "id": "1ma7qho",
+      "sig": "- · #e6e8eb · - · 0px · 16px · 400 · 0/0 ·  · ",
+      "n": 20,
+      "kit": "k0",
+      "html": "<a href=\"/\">Главная</a>",
+      "w": 62,
+      "h": 19,
+      "text": "Главная",
+      "style": {
+       "background": "rgba(0, 0, 0, 0)",
+       "color": "rgb(230, 232, 235)",
+       "border": "0px none rgb(230, 232, 235)",
+       "radius": "0px",
+       "font": "400 16px/normal Georgia",
+       "padding": "0px",
+       "shadow": "",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/about",
+       "http://127.0.0.1:51733/blog/first-post",
+       "http://127.0.0.1:51733/blog",
+       "http://127.0.0.1:51733/",
+       "http://127.0.0.1:51733/products/analytics"
+      ]
+     },
+     {
+      "id": "1c01gdf",
+      "sig": "- · #e6e8eb · - · 0px · 20px · 400 · 0/0 ·  · underline",
+      "n": 2,
+      "kit": "k3",
+      "html": "<a href=\"/blog/first-post\">Как мы строим продукт</a>",
+      "w": 222,
+      "h": 22,
+      "text": "Как мы строим продукт",
+      "style": {
+       "background": "rgba(0, 0, 0, 0)",
+       "color": "rgb(230, 232, 235)",
+       "border": "0px none rgb(230, 232, 235)",
+       "radius": "0px",
+       "font": "400 20px/normal Georgia",
+       "padding": "0px",
+       "shadow": "",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/blog"
+      ]
+     }
+    ],
+    "badges": [
+     {
+      "id": "1kw5ogi",
+      "sig": "#fff3bf · #7c5e00 · - · pill · 12px · 400 · 4/8 ·  · ",
+      "n": 15,
+      "kit": "k5",
+      "html": "<span class=\"badge\">новое</span>",
+      "w": 48,
+      "h": 18,
+      "text": "новое",
+      "style": {
+       "background": "rgb(255, 243, 191)",
+       "color": "rgb(124, 94, 0)",
+       "border": "0px none rgb(124, 94, 0)",
+       "radius": "999px",
+       "font": "400 12px/normal Georgia",
+       "padding": "2px 8px",
+       "shadow": "",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/about",
+       "http://127.0.0.1:51733/blog/first-post",
+       "http://127.0.0.1:51733/blog",
+       "http://127.0.0.1:51733/",
+       "http://127.0.0.1:51733/products/analytics"
+      ]
+     }
+    ],
+    "cards": [
+     {
+      "id": "1gmsnv0",
+      "sig": "- · #e6e8eb · #2a2f37 · 10px · 16px · 400 · 20/20 · shadow · ",
+      "n": 15,
+      "kit": "k4",
+      "html": "<article class=\"card\"><span class=\"badge\">новое</span><h3>Аналитика</h3><p>Отчёты в реальном времени</p><button class=\"btn btn-ghost\">Подробнее</button></article>",
+      "w": 445,
+      "h": 196,
+      "text": "новое Аналитика Отчёты в реальном времен",
+      "style": {
+       "background": "rgba(0, 0, 0, 0)",
+       "color": "rgb(230, 232, 235)",
+       "border": "1px solid rgb(42, 47, 55)",
+       "radius": "10px",
+       "font": "400 16px/normal Georgia",
+       "padding": "20px",
+       "shadow": "rgba(0, 0, 0, 0.06) 0px 2px 8px 0px",
+       "transition": ""
+      },
+      "pages": [
+       "http://127.0.0.1:51733/about",
+       "http://127.0.0.1:51733/blog/first-post",
+       "http://127.0.0.1:51733/blog",
+       "http://127.0.0.1:51733/",
+       "http://127.0.0.1:51733/products/analytics"
+      ]
+     }
+    ]
+   },
+   "pages": 5
+  }
+ }
+}

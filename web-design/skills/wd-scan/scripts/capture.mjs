@@ -19,10 +19,10 @@ import { join, dirname, resolve, relative, extname, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadPlaywright, parseArgs, writeFile, readJson, hash, ensureDir } from "./lib/runtime.mjs";
 import { serveDir } from "./lib/serve.mjs";
-import { runSteps } from "./lib/steps.mjs";
+import { runSteps, themeBefore, themeAfter, readVars } from "./lib/steps.mjs";
 import { build, MARK, isGenerated } from "./lib/build.mjs";
 import { linkContext } from "./lib/guide.mjs";
-import { buildContext } from "./lib/context.mjs";
+import { buildContext, themeHow } from "./lib/context.mjs";
 import { scanDesignSource, toJson } from "./lib/source-scan.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -58,6 +58,7 @@ const vpNames = Object.keys(viewports);
 const log = { startedAt: new Date().toISOString(), errors: [], warnings: [] };
 const manifest = [];
 const tokenRuns = [];
+const themeRuns = {}; // имя темы → { how, vars: {имя: {light, value}}, pages }
 
 // ---------- разделы: URL-путь → папка ----------
 const slug = (s) => decodeURIComponent(s).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[-.]+|-+$/g, "") || "x";
@@ -339,6 +340,62 @@ function cleanPrevious() {
   rmSync(join(REF, "parts"), { recursive: true, force: true });
 }
 
+// ---------- темы (plan.themes) ----------
+// Каждая страница без steps открывается в каждой теме на основном вьюпорте: извлекаются цвета (кэш themes/<тема>/),
+// действующие значения CSS-переменных (сравниваются со светлой) и скриншот первого экрана (reference/_themes/<тема>/).
+async function captureThemes(browser) {
+  const themes = Object.entries(plan.themes || {});
+  if (!themes.length) return;
+  const cfg = viewports[vpNames[0]];
+  const pages = (plan.pages || []).filter((p) => !(p.steps && p.steps.length) && (!only || only.has(p.id)));
+  if (!pages.length) return;
+  const prevTok = existsSync(join(REF, "tokens.json")) ? readJson(join(REF, "tokens.json")) : {};
+  const names = [...new Set([...tokenRuns.flatMap((t) => Object.keys(t.vars)), ...Object.keys(prevTok.cssVariables || {})].map((k) => k.split(" @ ")[0]))];
+  const newCtx = (scheme) => browser.newContext({
+    viewport: { width: cfg.width, height: cfg.height }, deviceScaleFactor: cfg.deviceScaleFactor || 1, isMobile: !!cfg.isMobile, hasTouch: !!cfg.isMobile,
+    userAgent: cfg.userAgent, storageState: plan.storageState ? resolve(planDir, plan.storageState) : undefined, locale: plan.locale, colorScheme: scheme,
+  });
+  // светлые (основные) действующие значения переменных — с первой страницы, тем же способом, что и в теме
+  let base = {};
+  if (names.length) {
+    const ctx = await newCtx(cfg.colorScheme || plan.colorScheme);
+    const page = await ctx.newPage();
+    try { await preparePage(page, new URL(pages[0].path || "/", plan.baseUrl).href); base = await readVars(page, names); } catch {}
+    await ctx.close();
+  }
+  for (const [name, how] of themes) {
+    console.log(`> тема ${name}`);
+    const run = (themeRuns[name] = { how, vars: {}, pages: 0 });
+    const ctx = await newCtx(how.colorScheme || cfg.colorScheme || plan.colorScheme);
+    for (const p of pages) {
+      const page = await ctx.newPage();
+      const url = new URL(p.path || "/", plan.baseUrl).href;
+      try {
+        await themeBefore(page, how);
+        await preparePage(page, url);
+        await themeAfter(page, how, url, D.timeout);
+        const r = await page.evaluate(`(${EXTRACT})(${JSON.stringify({ serviceStyleId: SERVICE_STYLE_ID, iconMax: plan.media && plan.media.iconMax })})`);
+        await page.evaluate(() => document.querySelectorAll("[data-kit-id]").forEach((e) => e.removeAttribute("data-kit-id")));
+        writeFile(join(CACHE, "themes", slug(name), `${p.id}.json`), JSON.stringify({ id: p.id, url, theme: name, ...r, logos: [], icons: [] }));
+        if (names.length) {
+          const vals = await readVars(page, names);
+          for (const [k, v] of Object.entries(vals)) if (!run.vars[k] && base[k] !== undefined && base[k] !== v) run.vars[k] = { light: base[k], value: v };
+        }
+        if (D.screenshots) await page.screenshot({ path: join(REF, "_themes", slug(name), `${p.id}.jpg`), type: "jpeg", quality: 80 });
+        run.pages++;
+        console.log(`  + ${p.id} [${name}]`);
+      } catch (e) {
+        log.errors.push({ id: p.id, viewport: `тема ${name}`, error: String(e.message).split("\n")[0] });
+        console.log(`  ✗ ${p.id} [тема ${name}]: ${String(e.message).split("\n")[0]}`);
+      }
+      await page.close();
+    }
+    await ctx.close();
+    if (run.pages && names.length && !Object.keys(run.vars).length)
+      log.warnings.push(`тема ${name}: значения CSS-переменных не изменились — тема не включилась? Проверь способ в plan.themes (references/plan-format.md, «Темы»)`);
+  }
+}
+
 // Извлечение основ и деталей со страницы (основной вьюпорт) + вырезки примеров деталей.
 async function extractPage(page, id) {
   const r = await page.evaluate(`(${EXTRACT})(${JSON.stringify({ serviceStyleId: SERVICE_STYLE_ID, iconMax: plan.media && plan.media.iconMax })})`);
@@ -438,6 +495,7 @@ async function main() {
     }
     await context.close();
   }
+  await captureThemes(browser);
   await browser.close();
   if (server) server.close();
   return finish(false);
@@ -459,14 +517,35 @@ async function finish(rebuild) {
   for (const [cat, vals] of Object.entries(stats)) {
     tokens[cat] = Object.entries(vals).sort((a, b) => b[1] - a[1]).slice(0, cat === "fontFamily" ? 10 : 30).map(([value, count]) => ({ value, count }));
   }
+  const hints = [...new Set(tokenRuns.flatMap((t) => t.themeHints || []))];
+  if (hints.length) tokens.themeHints = hints;
   const tokensFile = join(REF, "tokens.json");
   if ((only || rebuild || !tokenRuns.length) && existsSync(tokensFile)) tokens = readJson(tokensFile);
-  else {
-    if (!tokenRuns.length) log.warnings.push("токены не собраны: в плане нет страниц без steps");
-    writeFile(tokensFile, JSON.stringify(tokens, null, 2));
+  else if (!tokenRuns.length) log.warnings.push("токены не собраны: в плане нет страниц без steps");
+  // темы: свежий прогон заменяет тему целиком (при --only дополняет); темы, которых нет в плане, убираем
+  tokens.themes = Object.fromEntries(Object.keys(plan.themes || {}).map((n) => {
+    const prev = (tokens.themes || {})[n] || {}, cur = themeRuns[n];
+    return [n, cur ? { how: cur.how, vars: only ? { ...(prev.vars || {}), ...cur.vars } : cur.vars } : { ...prev, how: plan.themes[n] }];
+  }));
+  if (!Object.keys(tokens.themes).length) delete tokens.themes;
+  if (!rebuild) writeFile(tokensFile, JSON.stringify(tokens, null, 2));
+  if ((tokens.themeHints || []).length && !plan.themes) {
+    const m = `на сайте есть вторая (тёмная) тема: ${tokens.themeHints.join(", ")} — добавь в план "themes" и пересними (references/plan-format.md, «Темы»), иначе агенты не узнают её цвета`;
+    if (!log.warnings.includes(m)) log.warnings.push(m);
+    console.log("! " + m);
   }
   const rootVars = Object.entries(tokens.cssVariables || {}).filter(([k]) => !k.includes(" @ "));
   const tokensCss = `/* CSS-переменные сайта (собраны wd-scan) */\n:root {\n${rootVars.map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}\n`;
+  const themeCss = Object.entries(tokens.themes || {}).filter(([, t]) => Object.keys(t.vars || {}).length).map(([n, t]) => {
+    const h = t.how || {};
+    const sel = h.htmlClass ? ":root." + String(h.htmlClass).trim().split(/\s+/).join(".") : h.htmlAttr ? ":root" + Object.entries(h.htmlAttr).map(([k, v]) => `[${k}="${v}"]`).join("") : null;
+    const body = Object.entries(t.vars).map(([k, v]) => `  ${k}: ${v.value};`).join("\n");
+    const note = `/* тема ${n}: ${themeHow(h)} */\n`;
+    if (sel) return `${note}${sel} {\n${body}\n}\n`;
+    if (h.colorScheme) return `${note}@media (prefers-color-scheme: ${h.colorScheme}) {\n:root {\n${body}\n}\n}\n`;
+    return `${note}:root[data-theme="${n}"] {\n${body}\n}\n`;
+  }).join("\n");
+  const tokensCssAll = themeCss ? tokensCss + "\n" + themeCss : tokensCss;
 
   // ---------- эталон ----------
   const mf = join(REF, "manifest.json");
@@ -501,7 +580,7 @@ async function finish(rebuild) {
     }
   }
   doc.hasSource = !!source;
-  const { files, noise } = buildContext({ OUT, REF, CACHE, doc, plan, log, tokensCss, source });
+  const { files, noise } = buildContext({ OUT, REF, CACHE, doc, plan, log, tokensCss: tokensCssAll, source, themes: tokens.themes });
   // Указатель на гайд в файле инструкций проекта (AGENTS.md, CLAUDE.md…) — куда, решает пользователь (plan.context).
   const ctx = [].concat(plan.context || []).map((f) => resolve(planDir, f));
   if (ctx.length) {

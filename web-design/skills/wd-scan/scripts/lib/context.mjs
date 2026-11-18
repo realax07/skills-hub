@@ -21,6 +21,17 @@ const ORDER = { canon: 0, variant: 1, unreviewed: 2, noise: 3 };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const fence = (lang, s) => "```" + lang + "\n" + s + "\n```";
 
+// Как тема включается на сайте — одной строкой для людей и агентов
+export function themeHow(h = {}) {
+  const w = [];
+  if (h.htmlClass) w.push(`класс \`${h.htmlClass}\` на <html>`);
+  for (const [k, v] of Object.entries(h.htmlAttr || {})) w.push(`атрибут \`${k}="${v}"\` на <html>`);
+  if (h.colorScheme) w.push(`системная настройка prefers-color-scheme: ${h.colorScheme}`);
+  for (const [k, v] of Object.entries(h.localStorage || {})) w.push(`localStorage \`${k}=${typeof v === "string" ? v : JSON.stringify(v)}\``);
+  if (h.steps && h.steps.length) w.push(`действие на странице ${JSON.stringify(h.steps)}`);
+  return w.join(" + ") || "способ не указан";
+}
+
 // ---------- слияние извлечений со всех страниц ----------
 export function mergeExtracts(list) {
   const sumBy = (target, items, key, extra) => { for (const x of items || []) { const k = x[key]; const t = target.get(k); if (t) { t.n += x.n; if (extra) extra(t, x); } else target.set(k, { ...x }); } };
@@ -89,7 +100,33 @@ function writeIf(OUT, rel, text, generated) {
   return true;
 }
 
-function foundationsMd(K, noise, warnings) {
+function themesMd(K, hints) {
+  const T = Object.entries(K.themes || {});
+  if (!T.length) {
+    if (!(hints || []).length) return [];
+    return ["## Темы", "", `**На сайте есть вторая тема** (${hints.map((h) => "`" + h + "`").join(", ")}), но она не снята: цвета выше — только основной темы.`,
+      "Пока не пересняли (поле `themes` в плане): в новом коде цвета только через CSS-переменные — тогда они переключатся вместе с темой.", ""];
+  }
+  const L = ["## Темы", "", "Кроме основной, на сайте есть темы — ниже, как каждая включается и какие переменные в ней меняются.",
+    "**Цвета в новом коде — только через эти переменные**: тогда они переключаются вместе с темой. Литерал цвета верен только в одной теме.", ""];
+  for (const [name, t] of T) {
+    const vars = Object.entries(t.vars || {});
+    L.push(`### ${name} — ${themeHow(t.how)}`, "");
+    if (vars.length) {
+      L.push(`| Переменная | Основная | ${name} |`, "|---|---|---|");
+      for (const [k, v] of vars.slice(0, 40)) L.push(`| \`${k}\` | \`${v.light}\` | \`${v.value}\` |`);
+      if (vars.length > 40) L.push(`| …ещё ${vars.length - 40} | | |`);
+      L.push("");
+    } else L.push("Значения CSS-переменных в теме не отличаются (или переменных нет): тема задана прямо в стилях элементов — цвета ниже.", "");
+    const top = (role) => ((t.colors || {})[role] || []).slice(0, 8).map((c) => `\`${c.color}\`${(c.vars || []).length ? ` (${c.vars[0]})` : ""} ${c.n}`).join(", ") || "—";
+    L.push(`- **Текст:** ${top("text")}`, `- **Фоны:** ${top("background")}`, `- **Границы:** ${top("border")}`,
+      `- Скриншоты: \`reference/_themes/${slugName(name)}/\`; переменные файлом — \`assets/tokens.css\`.`, "");
+  }
+  return L;
+}
+const slugName = (s) => String(s).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[-.]+|-+$/g, "") || "x";
+
+function foundationsMd(K, noise, warnings, hints) {
   const L = [MARK, "# Основы дизайна", "", `Собрано с ${K.pages.length} страниц. Частота — сколько видимых элементов используют значение.`,
     "Переменная — CSS-переменная сайта с тем же значением: в новом коде используй её, а не литерал.", ""];
   const roles = { text: "Текст", background: "Фоны", border: "Границы", icon: "Иконки (fill)" };
@@ -102,6 +139,7 @@ function foundationsMd(K, noise, warnings) {
     if (list.length > 16) L.push(`| …ещё ${list.length - 16} редких | | ${list.slice(16).reduce((a, x) => a + x.n, 0)} |`);
     L.push("");
   }
+  L.push(...themesMd(K, hints));
   L.push("## Типографика", "", "| Шрифт | Размер / интерлиньяж | Вес | Трекинг | Регистр | Частота | Пример |", "|---|---|---|---|---|---|---|");
   for (const t of K.type.slice(0, 24)) {
     const ex = (t.ex || [])[0];
@@ -303,6 +341,7 @@ function guideMd(doc, K, noise, files, plan) {
     "Грузи только нужное: каждый файл самодостаточен.", "",
     "| Задача | Файл |", "|---|---|",
     "| Цвета, типографика, отступы, движение | [`foundations.md`](foundations.md) |",
+    ...(K.themes && Object.keys(K.themes).length ? [`| Тёмная или другая тема (${Object.keys(K.themes).join(", ")}): как включается, какие переменные меняются | [\`foundations.md\`](foundations.md), раздел «Темы» |`] : []),
     "| Нужна кнопка, поле, ссылка, бейдж, карточка | `parts/<группа>.md` — сначала «канон» |",
     "| Нужен готовый блок: шапка, футер, форма, секция | [`parts/components.md`](parts/components.md) |",
     "| Модалка, меню, поповер | [`parts/overlays.md`](parts/overlays.md) |",
@@ -349,18 +388,31 @@ ${Object.entries(K.parts).map(([g, l]) => `<h2>${GROUPS[g] || g}: ${l.length}</h
 }
 
 // ---------- главная функция ----------
-export function buildContext({ OUT, REF, CACHE, doc, plan, log, tokensCss, source }) {
+export function buildContext({ OUT, REF, CACHE, doc, plan, log, tokensCss, source, themes }) {
   const generated = new Set();
   const extracts = existsSync(join(CACHE, "extract")) ? readdirSync(join(CACHE, "extract")).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(CACHE, "extract", f), "utf8"))) : [];
   const outlines = {};
   if (existsSync(join(CACHE, "outline"))) for (const f of readdirSync(join(CACHE, "outline"))) outlines[f.replace(/\.txt$/, "")] = readFileSync(join(CACHE, "outline", f), "utf8");
   const K = mergeExtracts(extracts);
+  // темы: извлечения из кэша themes/<тема>/ → цвета каждой темы; переменные — из tokens.json
+  const tokFile = join(REF, "tokens.json");
+  const tok = existsSync(tokFile) ? JSON.parse(readFileSync(tokFile, "utf8")) : {};
+  const themeDir = join(CACHE, "themes");
+  if (themes && Object.keys(themes).length) {
+    K.themes = {};
+    for (const [name, t] of Object.entries(themes)) {
+      const dir = join(themeDir, slugName(name));
+      const list = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8"))) : [];
+      const M = mergeExtracts(list);
+      K.themes[name] = { how: t.how || {}, vars: t.vars || {}, colors: M.colors, fonts: M.fonts, parts: M.parts, pages: M.pages.length };
+    }
+  }
   const labels = plan.parts || {};
   const noise = { "цвета текста": cover(K.colors.text || []), "фоны": cover(K.colors.background || []), "типографика": cover(K.type), ...Object.fromEntries(Object.entries(K.parts).map(([g, l]) => [GROUPS[g] || g, cover(l)])) };
   // предупреждения съёмки: текущего прогона и прошлого полного (при --rebuild/--only текущий лог неполный)
   let prevWarn = [];
   try { prevWarn = JSON.parse(readFileSync(join(REF, "capture-log.json"), "utf8")).warnings || []; } catch {}
-  writeIf(OUT, "foundations.md", foundationsMd(K, noise, [...new Set([...(log ? log.warnings : []), ...prevWarn])]), generated);
+  writeIf(OUT, "foundations.md", foundationsMd(K, noise, [...new Set([...(log ? log.warnings : []), ...prevWarn])], tok.themeHints), generated);
   writeFileSync(join(REF, "kit.json"), JSON.stringify(K, null, 1));
 
   const files = { parts: [], compositions: [], fonts: 0, icons: 0, logos: 0, source: !!source };

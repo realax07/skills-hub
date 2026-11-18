@@ -29,3 +29,44 @@ export async function runSteps(page, steps = [], baseUrl, timeout = 8000) {
     }
   }
 }
+
+// Тема из плана (plan.themes.<имя>): как включить её на странице. Поля сочетаются:
+//   colorScheme: "dark"            — медиа prefers-color-scheme (сайты на @media)
+//   localStorage: {"theme":"dark"} — до загрузки страницы (next-themes, самописные переключатели)
+//   htmlClass: "dark"              — класс на <html> после загрузки (Tailwind darkMode: "class")
+//   htmlAttr: {"data-theme":"dark"} — атрибут на <html> после загрузки
+//   steps: [{"click":"…"}]         — шаги после загрузки (кнопка переключения темы)
+// Порядок: themeBefore(page, theme) → page.goto → themeAfter(page, theme, url).
+export async function themeBefore(page, theme = {}) {
+  if (theme.colorScheme) await page.emulateMedia({ colorScheme: theme.colorScheme });
+  if (theme.localStorage) {
+    await page.addInitScript((kv) => {
+      try { for (const [k, v] of Object.entries(kv)) localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v)); } catch {}
+    }, theme.localStorage);
+  }
+}
+
+export async function themeAfter(page, theme = {}, baseUrl, timeout = 8000) {
+  const mark = (t) => {
+    const h = document.documentElement;
+    for (const c of String(t.htmlClass || "").split(/\s+/).filter(Boolean)) h.classList.add(c);
+    for (const [k, v] of Object.entries(t.htmlAttr || {})) h.setAttribute(k, v);
+  };
+  const plain = { htmlClass: theme.htmlClass, htmlAttr: theme.htmlAttr };
+  if (theme.htmlClass || theme.htmlAttr) await page.evaluate(mark, plain);
+  if (theme.steps && theme.steps.length) await runSteps(page, theme.steps, baseUrl, timeout);
+  await page.waitForTimeout(300);
+  // фреймворк мог сбросить класс при гидратации — ставим ещё раз
+  if (theme.htmlClass || theme.htmlAttr) await page.evaluate(mark, plain);
+  await page.evaluate(() => document.fonts && document.fonts.ready);
+}
+
+// Действующие значения CSS-переменных (с учётом темы): имена → значения на <html>.
+export async function readVars(page, names) {
+  return page.evaluate((list) => {
+    const s = getComputedStyle(document.documentElement);
+    const out = {};
+    for (const n of list) { const v = s.getPropertyValue(n).trim(); if (v) out[n] = v; }
+    return out;
+  }, names);
+}

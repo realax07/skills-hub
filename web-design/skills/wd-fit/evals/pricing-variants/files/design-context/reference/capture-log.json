@@ -1,0 +1,12 @@
+{
+  "startedAt": "2026-11-18T20:35:15.138Z",
+  "errors": [],
+  "warnings": [
+    "нет <meta name=\"viewport\">: на мобильном (390px) страница рисуется шириной 980px — /",
+    "нет <meta name=\"viewport\">: на мобильном (390px) страница рисуется шириной 980px — /about",
+    "нет <meta name=\"viewport\">: на мобильном (390px) страница рисуется шириной 980px — /blog",
+    "нет <meta name=\"viewport\">: на мобильном (390px) страница рисуется шириной 980px — /blog/first-post",
+    "нет <meta name=\"viewport\">: на мобильном (390px) страница рисуется шириной 980px — /products/analytics"
+  ],
+  "finishedAt": "2026-11-18T20:35:57.010Z"
+}

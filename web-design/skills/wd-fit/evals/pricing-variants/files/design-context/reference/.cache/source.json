@@ -1,0 +1,97 @@
+{
+ "roots": [
+  "../site/src",
+  "../site/assets"
+ ],
+ "files": 5,
+ "truncated": false,
+ "stack": {},
+ "configs": [],
+ "cssVars": [
+  {
+   "name": "--color-primary",
+   "value": "#3b5bdb",
+   "scope": ":root",
+   "file": "../site/assets/site.css",
+   "line": 1
+  },
+  {
+   "name": "--color-text",
+   "value": "#1f2328",
+   "scope": ":root",
+   "file": "../site/assets/site.css",
+   "line": 1
+  },
+  {
+   "name": "--color-bg",
+   "value": "#ffffff",
+   "scope": ":root",
+   "file": "../site/assets/site.css",
+   "line": 1
+  },
+  {
+   "name": "--color-border",
+   "value": "#e5e7eb",
+   "scope": ":root",
+   "file": "../site/assets/site.css",
+   "line": 1
+  },
+  {
+   "name": "--radius-md",
+   "value": "10px",
+   "scope": ":root",
+   "file": "../site/assets/site.css",
+   "line": 1
+  },
+  {
+   "name": "--space-4",
+   "value": "16px",
+   "scope": ":root",
+   "file": "../site/assets/site.css",
+   "line": 1
+  },
+  {
+   "name": "--color-bg",
+   "value": "#0f1115",
+   "scope": ":root.dark",
+   "file": "../site/assets/site.css",
+   "line": 22
+  },
+  {
+   "name": "--color-text",
+   "value": "#e6e8eb",
+   "scope": ":root.dark",
+   "file": "../site/assets/site.css",
+   "line": 22
+  },
+  {
+   "name": "--color-primary",
+   "value": "#7c9cff",
+   "scope": ":root.dark",
+   "file": "../site/assets/site.css",
+   "line": 22
+  },
+  {
+   "name": "--color-border",
+   "value": "#2a2f37",
+   "scope": ":root.dark",
+   "file": "../site/assets/site.css",
+   "line": 22
+  }
+ ],
+ "preVars": [],
+ "themes": [],
+ "variants": [],
+ "keyframes": [],
+ "motion": {},
+ "icons": {},
+ "fonts": [],
+ "components": [],
+ "packages": [],
+ "duplicates": [
+  [
+   "/private/tmp/claude-501/-Users-ekotov-AI-skills-hub/815ada09-3abc-4748-9e84-4d6344ca4cdb/scratchpad/fx/site/assets/app.js",
+   "/private/tmp/claude-501/-Users-ekotov-AI-skills-hub/815ada09-3abc-4748-9e84-4d6344ca4cdb/scratchpad/fx/site/src/app.js"
+  ]
+ ]
+}

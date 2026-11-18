@@ -1,0 +1,84 @@
+{
+ "dfvh5f": [
+  {
+   "file": "site/assets/site.css",
+   "line": 7,
+   "how": "CSS",
+   "cls": ".btn"
+  },
+  {
+   "file": "site/assets/site.css",
+   "line": 9,
+   "how": "CSS",
+   "cls": ".btn-ghost"
+  },
+  {
+   "file": "site/src/app.js",
+   "line": 6,
+   "how": "те же классы в коде (возможно, другой экземпляр)",
+   "cls": "2/2 классов"
+  }
+ ],
+ "1vyvupb": [
+  {
+   "file": "site/assets/site.css",
+   "line": 7,
+   "how": "CSS",
+   "cls": ".btn"
+  },
+  {
+   "file": "site/assets/site.css",
+   "line": 8,
+   "how": "CSS",
+   "cls": ".btn-primary"
+  },
+  {
+   "file": "site/src/app.js",
+   "line": 11,
+   "how": "классы и текст в коде",
+   "cls": "2/2 классов"
+  }
+ ],
+ "19h5clt": [
+  {
+   "file": "site/assets/site.css",
+   "line": 7,
+   "how": "CSS",
+   "cls": ".btn"
+  },
+  {
+   "file": "site/assets/site.css",
+   "line": 8,
+   "how": "CSS",
+   "cls": ".btn-primary"
+  },
+  {
+   "file": "site/src/app.js",
+   "line": 11,
+   "how": "те же классы в коде (возможно, другой экземпляр)",
+   "cls": "2/2 классов"
+  }
+ ],
+ "1kw5ogi": [
+  {
+   "file": "site/src/app.js",
+   "line": 6,
+   "how": "классы и текст в коде",
+   "cls": "1/1 классов"
+  }
+ ],
+ "h8huo5": [
+  {
+   "file": "site/assets/site.css",
+   "line": 11,
+   "how": "CSS",
+   "cls": ".card"
+  },
+  {
+   "file": "site/src/app.js",
+   "line": 6,
+   "how": "те же классы в коде (возможно, другой экземпляр)",
+   "cls": "1/1 классов"
+  }
+ ]
+}

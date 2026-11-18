@@ -42,6 +42,8 @@ const GROUPS = { buttons: "Кнопки", inputs: "Поля", links: "Ссылк
 const statusOf = (id) => (labels[id] || {}).status || "unreviewed";
 const ST = { canon: "канон", variant: "вариант", unreviewed: "не разобрано", noise: "шум" };
 
+const howText = (h = {}) => [h.htmlClass && `класс ${h.htmlClass} на <html>`, ...Object.entries(h.htmlAttr || {}).map(([k, v]) => `${k}="${v}" на <html>`),
+  h.colorScheme && `prefers-color-scheme: ${h.colorScheme}`, ...Object.entries(h.localStorage || {}).map(([k, v]) => `localStorage ${k}=${v}`), h.steps && h.steps.length && "действие на странице"].filter(Boolean).join(" + ") || "способ не указан";
 const out = { context: rel("."), stance: plan.stance || null, createdAt: doc.createdAt, source: doc.source };
 
 // ---------- свежесть: коммиты в исходниках после съёмки ----------
@@ -64,6 +66,10 @@ out.shadow = (K.shadow || []).slice(0, 3).map((x) => x.v);
 out.spacing = (K.spacing || []).slice(0, 10).map((x) => x.v);
 const tf = join(REF, "tokens.json");
 out.cssVariables = existsSync(tf) ? Object.keys(readJson(tf).cssVariables || {}).length : 0;
+// темы: как включается и какие переменные меняются; признаки неснятой темы
+const tok = existsSync(tf) ? readJson(tf) : {};
+out.themes = Object.entries(K.themes || {}).map(([name, t]) => ({ name, how: t.how || {}, vars: Object.entries(t.vars || {}).slice(0, 12).map(([k, v]) => `${k}: ${v.light} → ${v.value}`) }));
+out.themeHints = !out.themes.length ? tok.themeHints || [] : [];
 
 // ---------- детали ----------
 const wanted = args.groups ? args.groups.split(",").map((s) => s.trim()) : Object.keys(GROUPS);
@@ -119,6 +125,11 @@ const cl = (rows) => rows.map((c) => `\`${c.color}\`${c.vars.length ? ` var(${c.
 L.push(`- Текст: ${cl(out.colors.text)}`, `- Фоны: ${cl(out.colors.background)}`, `- Границы: ${cl(out.colors.border)}`,
   `- Шрифты: ${out.fonts.join(", ") || "—"}`, `- Радиусы: ${out.radius.join(", ") || "—"} · Тени: ${out.shadow.map((s) => "`" + s + "`").join(", ") || "нет"}`,
   `- Отступы (частые): ${out.spacing.join(", ") || "—"}`, `- CSS-переменных на сайте: ${out.cssVariables} (\`${rel("assets/tokens.css")}\`) — в новом коде переменные, не литералы`, "");
+if (out.themes.length) {
+  L.push("## Темы", "", "Новый блок должен работать во всех темах: цвета — только через переменные ниже (они переключаются сами), литералы и цвета не из переменных сломают одну из тем. check.mjs проверяет каждую тему.", "");
+  for (const t of out.themes) L.push(`- **${t.name}** (${howText(t.how)}): ${t.vars.map((v) => "`" + v + "`").join(", ") || "переменные не меняются — тема задана в стилях элементов"}`);
+  L.push("");
+} else if (out.themeHints.length) L.push(`⚠ На сайте есть тёмная тема (${out.themeHints.join(", ")}), но в контексте она не снята: цвета — только через CSS-переменные; предложи пересъёмку wd-scan с \`themes\` в плане.`, "");
 L.push("Типографика (частые сочетания):", "", ...out.type.map((t) => `- ${t.font}${t.ex ? ` — ${t.ex}` : ""}`), "");
 L.push("## Детали", "");
 for (const [g, d] of Object.entries(out.parts)) {

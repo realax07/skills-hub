@@ -12,6 +12,8 @@
 //
 // Флаги: --viewport desktop|mobile (из плана контекста; по умолчанию первый)  --storage-state auth.json
 //        --changed [--base HEAD]  --shot <файл.png> (скриншот; клади во временную папку, не в проект)  --json  --strict (предупреждения = ошибки)
+//        --theme all|none|<имя> — темы из контекста (foundations.md, «Темы»): по умолчанию all — страница проверяется ещё раз
+//        в каждой теме, цвета сравниваются с палитрой этой темы
 // Код выхода: 0 — нарушений нет; 1 — есть нарушения (или предупреждения при --strict); 2 — ошибка запуска.
 // Как читать отчёт и что исправлять — references/rules.md, «Проверка».
 import { readFileSync, existsSync } from "node:fs";
@@ -20,12 +22,12 @@ import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { loadPlaywright, parseArgs, readJson } from "./lib/runtime.mjs";
 import { serveDir } from "./lib/serve.mjs";
-import { runSteps } from "./lib/steps.mjs";
+import { runSteps, themeBefore, themeAfter } from "./lib/steps.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const args = parseArgs(process.argv.slice(2), {
   context: { default: "design-context" }, url: {}, serve: {}, path: { default: "/" }, selector: {}, steps: {},
-  viewport: {}, "storage-state": {}, changed: { type: "bool" }, base: { default: "HEAD" }, shot: {},
+  viewport: {}, theme: { default: "all" }, "storage-state": {}, changed: { type: "bool" }, base: { default: "HEAD" }, shot: {},
   json: { type: "bool" }, strict: { type: "bool" }, help: { alias: "h", type: "bool" },
 });
 if (args.help) {
@@ -86,6 +88,9 @@ function compareFoundations(E) {
       const nb = nearest(c.color, role);
       if (!nb) continue;
       if (nb.d < 1) { R.ok.push(`цвет ${title} ${hex(c.color)}`); continue; }
+      // значение CSS-переменной сайта (например фон страницы на <body>) — законный цвет, даже если элементы его не рисуют
+      const tv = Object.entries(tokens).find(([k, v]) => !k.includes(" @ ") && dist(v, c.color) < 1);
+      if (tv) { R.ok.push(`цвет ${title} ${hex(c.color)} = var(${tv[0]})`); continue; }
       const any = nearest(c.color);
       if (any && any.d < 1) { R.ok.push(`цвет ${title} ${hex(c.color)} (есть на сайте в роли «${roles[any.role]}»)`); continue; }
       const ref = any && any.d < nb.d ? any : nb;
@@ -114,6 +119,30 @@ function compareFoundations(E) {
   scale("радиус", "radius", "радиусы сайта, ближайшие");
   const shadows = new Set((K.shadow || []).map((x) => x.v));
   for (const x of E.foundations.shadow || []) if (!shadows.has(x.v)) W(`тень \`${x.v.slice(0, 60)}\` не встречается на сайте — ${x.n} эл.`, shadows.size ? `тени сайта: ${[...shadows].slice(0, 3).map((s) => "`" + s.slice(0, 60) + "`").join(", ")}` : "на сайте теней нет — убери");
+}
+
+// Тема: цвета страницы против палитры этой темы. Главный дефект — цвет основной темы, который в теме не изменился:
+// это литерал (или переменная, которую тема не переопределяет) — в одной из тем блок выбьется.
+function compareThemeColors(E, name) {
+  const T = (K.themes || {})[name] || {};
+  const pal = [];
+  for (const [role, list] of Object.entries(T.colors || {})) for (const c of list) pal.push({ ...c, role });
+  const tvars = Object.entries(T.vars || {});
+  const roles = { text: "текст", background: "фон", border: "граница", icon: "иконка" };
+  const tag = `[тема ${name}]`;
+  for (const [role, title] of Object.entries(roles)) {
+    for (const c of E.foundations.colors[role] || []) {
+      const hit = pal.map((p) => ({ ...p, d: dist(p.color, c.color) })).sort((a, b) => a.d - b.d)[0];
+      if (hit && hit.d < 1) { R.ok.push(`${tag} цвет ${title} ${hex(c.color)}`); continue; }
+      const own = tvars.find(([, v]) => dist(v.value, c.color) < 1);
+      if (own) { R.ok.push(`${tag} цвет ${title} ${hex(c.color)} = var(${own[0]})`); continue; }
+      const stuck = tvars.find(([, v]) => dist(v.light, c.color) < 1);
+      if (stuck) { V(`${tag} цвет (${title}) ${hex(c.color)} остался как в основной теме — ${c.n} эл.`, `это значение ${stuck[0]}: в коде литерал вместо var(${stuck[0]}) — тогда в теме ${name} станет \`${stuck[1].value}\``); continue; }
+      if (!hit) { W(`${tag} у темы нет палитры в контексте`, "пересними контекст wd-scan с themes в плане"); return; }
+      const v = tvars.find(([, x]) => dist(x.value, hit.color) < 1);
+      (hit.d <= 8 ? W : V)(`${tag} цвет (${title}) ${hex(c.color)} не из палитры темы — ${c.n} эл.`, `в теме ${name} ${hit.d <= 8 ? "почти тот же" : "ближайший"} \`${hex(hit.color)}\`${v ? ` = var(${v[0]})` : ""}; цвета, разные в темах, — только через переменные`);
+    }
+  }
 }
 
 // подпись детали: фон · текст · граница · радиус · размер · вес · отступы · тень · декор
@@ -192,18 +221,16 @@ function checkChanged() {
 }
 
 // ---------- браузер ----------
-async function checkPage() {
-  const { chromium } = await loadPlaywright();
+async function checkPage(browser, server, theme) {
   const vps = doc.viewports || plan.viewports || { desktop: { width: 1440, height: 900 } };
   const vpName = args.viewport || doc.primaryViewport || Object.keys(vps)[0];
   const vp = vps[vpName];
   if (!vp) die(`нет вьюпорта ${vpName}; есть: ${Object.keys(vps).join(", ")}`);
-  let server, url = args.url;
-  if (args.serve) { server = await serveDir(resolve(args.serve)); url = server.url + args.path; }
-  const browser = await chromium.launch();
+  const url = server ? server.url + args.path : args.url;
+  const how = theme ? ((K.themes || {})[theme] || {}).how || (plan.themes || {})[theme] || {} : null;
+  const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.deviceScaleFactor || 1, isMobile: !!vp.isMobile, hasTouch: !!vp.isMobile,
+    storageState: args["storage-state"] ? resolve(args["storage-state"]) : undefined, locale: plan.locale, colorScheme: (how && how.colorScheme) || vp.colorScheme || plan.colorScheme });
   try {
-    const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.deviceScaleFactor || 1, isMobile: !!vp.isMobile, hasTouch: !!vp.isMobile,
-      storageState: args["storage-state"] ? resolve(args["storage-state"]) : undefined, locale: plan.locale, colorScheme: vp.colorScheme || plan.colorScheme });
     const page = await context.newPage();
     const jsErrors = [], consoleErrors = [];
     page.on("pageerror", (e) => jsErrors.push(String(e.message).split("\n")[0]));
@@ -213,17 +240,21 @@ async function checkPage() {
       if (/favicon\.ico/.test(at)) return; // браузер просит favicon сам — не ошибка страницы
       consoleErrors.push(/^Failed to load resource/.test(m.text()) ? `не загрузился ресурс ${at || "(адрес неизвестен)"}` : m.text().split("\n")[0]);
     });
+    if (how) await themeBefore(page, how);
     await page.goto(url, { waitUntil: "load", timeout: 45000 });
     await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
     await page.evaluate(() => document.fonts && document.fonts.ready);
+    if (how) await themeAfter(page, how, url, 8000);
     if (args.steps) { let st; try { st = JSON.parse(args.steps); } catch { die("--steps: нужен JSON-массив шагов"); } await runSteps(page, st, url, 8000); }
     await page.waitForTimeout(300);
     const E = await page.evaluate(`(${readFileSync(join(HERE, "lib/page-extract.js"), "utf8")})(${JSON.stringify({ root: args.selector, iconMax: 64 })})`);
     if (E.error) die(E.error + (args.selector ? " — проверь --selector (CSS)" : ""));
     if (args.shot) {
       const target = args.selector ? page.locator(args.selector).first() : page;
-      await target.screenshot({ path: resolve(args.shot), ...(args.selector ? {} : { fullPage: true }) });
+      const shot = theme ? resolve(args.shot).replace(/(\.\w+)?$/, (m) => `-${theme}${m || ".png"}`) : resolve(args.shot);
+      await target.screenshot({ path: shot, ...(args.selector ? {} : { fullPage: true }) });
     }
+    if (theme) { compareThemeColors(E, theme); (R.themes ||= []).push(theme); return; }
     R.page = { url, viewport: vpName, selector: args.selector || null, elements: E.elements };
     compareFoundations(E);
     compareParts(E);
@@ -231,19 +262,33 @@ async function checkPage() {
     for (const e of [...new Set(consoleErrors)].slice(0, 5)) W(`консоль: ${e.slice(0, 160)}`, "ресурс или скрипт с ошибкой — проверь путь; если это не из твоей правки, упомяни в отчёте");
     for (const e of [...new Set(jsErrors)].slice(0, 5)) V(`ошибка JS на странице: ${e.slice(0, 160)}`, "скрипт проекта упал — проверь, что новая разметка не сломала его (нет ожидаемого элемента, другой id); интерактив может не работать");
   } finally {
-    await browser.close();
-    if (server) server.close();
+    await context.close();
   }
 }
 
 async function main() {
-  if (args.url || args.serve) await checkPage();
+  if (args.url || args.serve) {
+    const all = Object.keys(K.themes || {});
+    const themes = args.theme === "none" ? [] : args.theme === "all" ? all : args.theme.split(",");
+    for (const t of themes) if (!all.includes(t)) die(`темы ${t} нет в контексте; есть: ${all.join(", ") || "нет тем"}`);
+    const { chromium } = await loadPlaywright();
+    const server = args.serve ? await serveDir(resolve(args.serve)) : null;
+    const browser = await chromium.launch();
+    try {
+      await checkPage(browser, server, null);
+      for (const t of themes) await checkPage(browser, server, t);
+    } finally {
+      await browser.close();
+      if (server) server.close();
+    }
+  }
   if (args.changed) checkChanged();
   const fail = R.violations.length || (args.strict && R.warnings.length);
   if (args.json) { console.log(JSON.stringify({ stance, ...R, pass: !fail }, null, 2)); process.exit(fail ? 1 : 0); }
   const st = stance === "preserve" ? "повторять как есть" : stance === "normalize" ? "приводить к канону" : "не задана (сравнение со всем, что есть на сайте)";
   console.log(`Проверка по ${relative(process.cwd(), CTX) || "."} · позиция: ${st}`);
   if (R.page) console.log(`Страница: ${R.page.url} [${R.page.viewport}]${R.page.selector ? ` внутри ${R.page.selector}` : ""} — элементов ${R.page.elements}`);
+  if (R.themes) console.log(`Темы: основная + ${R.themes.join(", ")} (цвета каждой темы — против её палитры)`);
   if (R.page && R.page.elements === 0) console.log("! видимых элементов нет — проверь --selector и что страница открылась");
   console.log("");
   for (const v of R.violations) console.log(`✗ ${v.what}\n    → ${v.fix}`);
