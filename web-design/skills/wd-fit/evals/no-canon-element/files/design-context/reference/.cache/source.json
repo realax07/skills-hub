@@ -48,8 +48,8 @@
  "packages": [],
  "duplicates": [
   [
-   "/private/tmp/claude-501/-Users-ekotov-AI-skills-hub/139a647e-8d53-471e-b44d-29fbc975d0e5/scratchpad/ev/static-site-design-context/claude/site/assets/app.js",
-   "/private/tmp/claude-501/-Users-ekotov-AI-skills-hub/139a647e-8d53-471e-b44d-29fbc975d0e5/scratchpad/ev/static-site-design-context/claude/site/src/app.js"
+   "../site/assets/app.js",
+   "../site/src/app.js"
   ]
  ]
 }

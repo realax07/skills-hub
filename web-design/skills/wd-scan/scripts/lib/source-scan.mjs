@@ -268,5 +268,6 @@ export function toJson(S, base) {
   const fix = (a) => a.map((x) => ({ ...x, file: rel(x.file) }));
   return { ...S, roots: S.roots.map(rel), packages: (S.packages || []).map(rel), configs: fix(S.configs), cssVars: fix(S.cssVars), preVars: fix(S.preVars),
     themes: fix(S.themes), variants: fix(S.variants), keyframes: fix(S.keyframes), fonts: fix(S.fonts), components: fix(S.components),
-    motion: Object.fromEntries(Object.entries(S.motion).map(([k, v]) => [k, v.map(rel)])) };
+    motion: Object.fromEntries(Object.entries(S.motion).map(([k, v]) => [k, v.map(rel)])),
+    duplicates: (S.duplicates || []).map((g) => (Array.isArray(g) ? g.map(rel) : g)) };
 }

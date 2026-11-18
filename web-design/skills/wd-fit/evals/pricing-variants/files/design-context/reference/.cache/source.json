@@ -90,8 +90,8 @@
  "packages": [],
  "duplicates": [
   [
-   "/private/tmp/claude-501/-Users-ekotov-AI-skills-hub/815ada09-3abc-4748-9e84-4d6344ca4cdb/scratchpad/fx/site/assets/app.js",
-   "/private/tmp/claude-501/-Users-ekotov-AI-skills-hub/815ada09-3abc-4748-9e84-4d6344ca4cdb/scratchpad/fx/site/src/app.js"
+   "../site/assets/app.js",
+   "../site/src/app.js"
   ]
  ]
 }
