@@ -9,8 +9,9 @@
   <link rel="stylesheet" href="base.css">
   <style>
     .wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4); }
-    /* Кнопки, ссылки меню, логотип — цель нажатия не меньше 44px на мобильном */
-    .btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4);
+    /* Кнопки, чипы, ссылки меню, логотип — цель нажатия не меньше 44×44px на мобильном */
+    .btn, nav a, .logo { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+    .btn { justify-content: center; padding: 0 var(--space-4);
       border-radius: var(--radius-md); background: var(--color-accent); color: var(--color-on-accent);
       text-decoration: none; font-family: var(--font-ui); transition: transform var(--dur) var(--ease); }
     /* Мобильная версия обязательна */

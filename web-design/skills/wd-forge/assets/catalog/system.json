@@ -150,7 +150,8 @@
         "condensed",
         "heavy-grotesk",
         "contrast-serif",
-        "soft-serif"
+        "soft-serif",
+        "mono"
       ]
     },
     "read": {
@@ -172,7 +173,8 @@
         "heavy-grotesk",
         "condensed",
         "round-geometric",
-        "expressive"
+        "expressive",
+        "mono"
       ]
     },
     "experience": {

@@ -52,7 +52,16 @@ async function main() {
       const V = (report.variants[d.letter] = { name: d.archetypeName, errors: 0, warnings: 0, screens: {}, plan: [], stats: null });
       const plan = join(DIR, d.letter, "PLAN.md");
       if (!existsSync(plan)) V.plan.push("нет PLAN.md");
-      else { const left = (readFileSync(plan, "utf8").match(/‹заполни›/g) || []).length; if (left) V.plan.push(`в PLAN.md не заполнено ${left} мест «‹заполни›»`); }
+      else {
+        const md = readFileSync(plan, "utf8");
+        const left = (md.match(/‹заполни›/g) || []).length;
+        if (left) V.plan.push(`в PLAN.md не заполнено ${left} мест «‹заполни›»`);
+        // минимальная содержательность: самопроверка и каркасы не должны быть отпиской
+        const sec = (t) => { const m = md.match(new RegExp(`^## ${t}[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m")); return m ? m[1].trim() : ""; };
+        if (!left && sec("Что тут дефолтное").replace(/\s+/g, " ").length < 80) V.plan.push("PLAN.md: раздел «Что тут дефолтное — и что изменено» слишком короткий — перечисли, что взялось по умолчанию и на что заменено");
+        const frames = [...md.matchAll(/```\n([\s\S]*?)```/g)].map((m) => m[1].trim().split("\n").length);
+        if (!left && frames.some((n) => n < 4)) V.plan.push("PLAN.md: ASCII-каркас экрана короче 4 строк — опиши зоны экрана сверху вниз");
+      }
       V.errors += V.plan.length;
       const tokens = tokenColors(d.letter);
       for (const s of d.screens) {
