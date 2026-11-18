@@ -54,7 +54,7 @@ export function mergeExtracts(list) {
       M.parts[g] ||= new Map();
       for (const p of items) {
         const t = M.parts[g].get(p.id);
-        if (t) { t.n += p.n; if (!t.pages.includes(e.url)) t.pages.push(e.url); if (!t.crop && p.crop) t.crop = p.crop; }
+        if (t) { t.n += p.n; if (!t.pages.includes(e.url)) t.pages.push(e.url); if (!t.crop && p.crop) t.crop = p.crop; if (!t.name && p.name) t.name = p.name; }
         else M.parts[g].set(p.id, { ...p, pages: [e.url] });
       }
     }

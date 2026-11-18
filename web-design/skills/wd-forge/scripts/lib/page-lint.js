@@ -57,7 +57,9 @@
     if (!el.matches("a[href],button,input:not([type=hidden]),select,textarea,[role=button],[role=tab],[role=menuitem]")) continue;
     const s = getComputedStyle(el);
     if (el.tagName === "A" && s.display === "inline" && el.parentElement && el.parentElement.closest("p,li,td,figcaption,blockquote")) continue;
-    const r = el.getBoundingClientRect();
+    // чекбокс и радио внутри <label>: нажимают по всей подписи — меряем её
+    const box = el.matches("input[type=checkbox],input[type=radio]") && el.closest("label") ? el.closest("label") : el;
+    const r = box.getBoundingClientRect();
     if (Math.min(r.width, r.height) < minT - 0.5) small.push(`${label(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
   }
   if (small.length) add(opts.mobile ? "error" : "warn", "targets", `цели нажатия меньше ${minT}px`, small.length, small);

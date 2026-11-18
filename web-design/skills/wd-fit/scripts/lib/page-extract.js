@@ -169,6 +169,8 @@
       const r = el.getBoundingClientRect();
       if (!groups[g].has(k)) groups[g].set(k, {
         id: h32(g + k), sig: k, n: 0, kit: mark(el), html: compact(el), w: Math.round(r.width), h: Math.round(r.height),
+        // имя детали от автора страницы (UI-кит wd-forge: data-part="Кнопка основная") — подпись канона при утверждении
+        name: el.getAttribute("data-part") || undefined,
         text: (el.innerText || el.value || el.placeholder || el.getAttribute("aria-label") || "").trim().replace(/\s+/g, " ").slice(0, 40),
         style: { background: s.backgroundColor, color: s.color, border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`, radius: s.borderTopLeftRadius,
           font: `${s.fontWeight} ${s.fontSize}/${s.lineHeight} ${s.fontFamily.split(",")[0]}`, padding: s.padding, shadow: s.boxShadow === "none" ? "" : s.boxShadow.slice(0, 120), transition: s.transitionDuration !== "0s" ? `${s.transitionProperty.slice(0, 40)} ${s.transitionDuration} ${s.transitionTimingFunction}` : "" },

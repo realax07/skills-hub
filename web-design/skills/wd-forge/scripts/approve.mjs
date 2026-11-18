@@ -45,6 +45,8 @@ const plan = {
   viewports: { desktop: { width: 1440, height: 900 }, mobile: { width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 } },
   pages: d.screens.map((s, i) => ({ id: i === 0 ? "home" : s.file.replace(/\.html?$/, ""), path: s.file === "index.html" ? "/" : "/" + s.file, title: s.what })),
   components: [],
+  // вторая тема направления — тем же атрибутом, что в tokens.css; wd-scan снимет её палитру, wd-fit будет проверять обе
+  ...((d.themes || []).length > 1 ? { themes: Object.fromEntries(d.themes.slice(1).map((t) => [t, { htmlAttr: { "data-theme": t } }])) } : {}),
 };
 // общие блоки — если они есть на главном экране (у рабочих интерфейсов шапки может не быть, зато есть сайдбар)
 const home = readFileSync(join(DIR, d.letter, d.screens[0].file), "utf8");
@@ -70,6 +72,9 @@ const run = (argv) => { const r = spawnSync(process.execPath, argv, { stdio: "in
 run([capture, planFile]);
 const kit = JSON.parse(readFileSync(join(OUT, "reference", "kit.json"), "utf8"));
 const groups = Object.entries(kit.parts || {}).filter(([, l]) => l.length);
+// имена из UI-кита (data-part) — подписи канона; остальное в группе — тоже канон (новый дизайн)
+const named = groups.flatMap(([, l]) => l.filter((p) => p.name).map((p) => `${p.id}=canon:${p.name}`));
+if (named.length) run([parts, OUT, "--set", ...named, "--no-rebuild"]);
 for (const [g] of groups) run([parts, OUT, "--group", g, "--rest", "canon", "--no-rebuild"]);
 run([capture, planFile, "--rebuild"]);
 const many = groups.filter(([, l]) => l.length > 6).map(([g, l]) => `${g} ${l.length}`);

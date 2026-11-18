@@ -45,6 +45,18 @@ async function shots() {
         await page.screenshot({ path: join(DIR, "_compare", `${d.letter}-${s.file.replace(/\.html?$/, "")}-${vp}.jpg`), type: "jpeg", quality: 78, fullPage: h <= (vp === "desktop" ? 3600 : 5200), clip: h > (vp === "desktop" ? 3600 : 5200) ? { x: 0, y: 0, width: cfg.viewport.width, height: vp === "desktop" ? 3600 : 5200 } : undefined });
         await ctx.close();
       }
+      // вторая тема: главный экран и кит на десктопе
+      for (const t of (d.themes || []).slice(1)) {
+        if (s !== d.screens[0] && !s.kit) continue;
+        const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+        const page = await ctx.newPage();
+        await page.goto(`${server.url}/${d.letter}/${s.file}`, { waitUntil: "load", timeout: 45000 });
+        await page.evaluate((x) => document.documentElement.setAttribute("data-theme", x), t);
+        await page.evaluate(() => document.fonts && document.fonts.ready);
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: join(DIR, "_compare", `${d.letter}-${s.file.replace(/\.html?$/, "")}-desktop-${t}.jpg`), type: "jpeg", quality: 78 });
+        await ctx.close();
+      }
     }
   } finally { await browser.close(); server.close(); }
 }
@@ -59,7 +71,8 @@ function page() {
       const base = s.file.replace(/\.html?$/, "");
       return `<figure><figcaption><a href="${d.letter}/${esc(s.file)}">${esc(s.file)}</a> — ${esc(s.what)}</figcaption>
         <div class="pair"><a href="${d.letter}/${esc(s.file)}"><img loading="lazy" src="_compare/${d.letter}-${base}-desktop.jpg" alt="${esc(s.what)}, десктоп"></a>
-        <a href="${d.letter}/${esc(s.file)}"><img loading="lazy" class="m" src="_compare/${d.letter}-${base}-mobile.jpg" alt="${esc(s.what)}, мобильный"></a></div></figure>`;
+        <a href="${d.letter}/${esc(s.file)}"><img loading="lazy" class="m" src="_compare/${d.letter}-${base}-mobile.jpg" alt="${esc(s.what)}, мобильный"></a></div>
+        ${(d.themes || []).slice(1).filter(() => s === d.screens[0] || s.kit).map((t) => `<p class="th">Тема ${t === "dark" ? "тёмная" : "светлая"} (data-theme="${t}"):</p><img loading="lazy" class="alt" src="_compare/${d.letter}-${base}-desktop-${t}.jpg" alt="${esc(s.what)}, тема ${t}">`).join("")}</figure>`;
     }).join("");
     return `<section class="col"><h2>${d.letter.toUpperCase()} · ${esc(d.archetypeName)}</h2>
       <p class="status ${v && v.errors ? "bad" : "ok"}">${status}</p>
@@ -79,7 +92,7 @@ header{padding:24px 32px;border-bottom:1px solid var(--b);background:#fff}h1{mar
 h2{margin:0 0 6px;font-size:18px}h3{margin:16px 0 4px;font-size:14px}.status{margin:0 0 10px;font-size:13px}.status.bad{color:#b42318}.status.ok{color:#067647}
 .sw{display:flex;gap:4px;margin:8px 0}.sw span{width:28px;height:28px;border-radius:6px;border:1px solid var(--b)}table{border-collapse:collapse;font-size:13px;width:100%}th{text-align:left;color:var(--m);font-weight:500;padding:2px 8px 2px 0;width:90px}td{padding:2px 0}
 figure{margin:18px 0 0}figcaption{font-size:13px;color:var(--m);margin-bottom:6px}.pair{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:start}.pair img{width:100%;border:1px solid var(--b);border-radius:6px;display:block}
-.div{margin:0;padding:0 32px;color:var(--m)}footer{padding:16px 32px 40px;color:var(--m)}code{background:#f1f1f3;padding:1px 5px;border-radius:4px}
+.div{margin:0;padding:0 32px;color:var(--m)}.th{margin:8px 0 4px;font-size:13px;color:var(--m)}.alt{width:100%;border:1px solid var(--b);border-radius:6px;display:block}footer{padding:16px 32px 40px;color:var(--m)}code{background:#f1f1f3;padding:1px 5px;border-radius:4px}
 @media (max-width:1100px){.grid{grid-template-columns:1fr}}
 </style></head><body><header><h1>${esc(D.product)}: три направления</h1><p>Режим: ${esc(D.mode)}${D.brand ? ` · бренд-цвет ${esc(D.brand)}` : ""}. Клик по скриншоту открывает мокап.</p></header>
 ${div}<main class="grid">${cols}</main>
