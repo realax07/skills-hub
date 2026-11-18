@@ -98,7 +98,8 @@ async function download(url) {
     if (type === "text/html" || /^\s*<(!doctype|html)/i.test(body.subarray(0, 64).toString("utf8"))) throw new Error("вместо файла пришла HTML-страница");
     let ext = extname(new URL(url).pathname).toLowerCase();
     if (!ext || ext.length > 6) ext = EXT_BY_TYPE[type] || ".bin";
-    if (ext === ".css") key = await saveCss(body.toString("utf8"), url, "", null);
+    // CSS узнаём и по типу: у Google Fonts адрес вида /css2?family=… без расширения
+    if (ext === ".css" || type === "text/css") key = await saveCss(body.toString("utf8"), url, "", null);
     else {
       key = nameFor(url, body, ext); // хэш от содержимого: тот же файл — то же имя при любом адресе
       if (!existsSync(blobFile(key))) writeFile(blobFile(key), body);

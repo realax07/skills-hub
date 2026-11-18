@@ -23,7 +23,16 @@
     // прозрачный: transparent, rgba(..., 0), color(... / 0)
     const transparent = (c) => !c || c === "transparent" || /^rgba\([^,]+,[^,]+,[^,]+,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c);
     const cv = document.createElement("canvas").getContext("2d");
-    const norm = (c) => { try { cv.fillStyle = "#010203"; cv.fillStyle = c; return cv.fillStyle; } catch { return c; } };
+    const norm = (c) => {
+      let v;
+      try { cv.fillStyle = "#010203"; cv.fillStyle = c; v = cv.fillStyle; } catch { return c; }
+      // color-mix() и широкий охват Chrome отдаёт как color(srgb r g b / a) — приводим к hex / rgba
+      const m = /^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/.exec(v);
+      if (!m) return v;
+      const ch = [m[1], m[2], m[3]].map((x) => Math.round(Math.min(1, Math.max(0, +x)) * 255));
+      const a = m[4] === undefined ? 1 : +(+m[4]).toFixed(2);
+      return a < 1 ? `rgba(${ch.join(", ")}, ${a})` : "#" + ch.map((x) => x.toString(16).padStart(2, "0")).join("");
+    };
     const h32 = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
     const bump = (m, k, ex) => { if (!m.has(k)) m.set(k, { n: 0, ex: [] }); const e = m.get(k); e.n++; if (ex && e.ex.length < 2) e.ex.push(ex); };
 

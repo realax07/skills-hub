@@ -1,0 +1,21 @@
+{
+  "_about": "Шрифтовые пары из Google Fonts (лицензия SIL OFL — можно встраивать). class — характер заголовков, body — класс текста. Inter, Roboto, Arial и системный шрифт как основной не используются: это первый признак шаблонного ИИ-дизайна.",
+  "pairs": [
+    { "id": "fraunces-work", "display": "Fraunces", "body": "Work Sans", "class": "soft-serif", "bodyClass": "grotesk", "mood": "тёплый, человечный, с характером", "weights": "Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800|Work+Sans:wght@400;500;600" },
+    { "id": "plex-pair", "display": "IBM Plex Serif", "body": "IBM Plex Sans", "class": "serif", "bodyClass": "grotesk", "mood": "рациональный, корпоративный, надёжный", "weights": "IBM+Plex+Serif:wght@500;700|IBM+Plex+Sans:wght@400;500;600" },
+    { "id": "space-plex", "display": "Space Grotesk", "body": "IBM Plex Sans", "class": "tech-grotesk", "bodyClass": "grotesk", "mood": "технологичный, инженерный", "weights": "Space+Grotesk:wght@500;700|IBM+Plex+Sans:wght@400;500;600" },
+    { "id": "dm-pair", "display": "DM Serif Display", "body": "DM Sans", "class": "contrast-serif", "bodyClass": "geometric", "mood": "элегантный, глянцевый", "weights": "DM+Serif+Display|DM+Sans:wght@400;500;700" },
+    { "id": "syne-manrope", "display": "Syne", "body": "Manrope", "class": "expressive", "bodyClass": "geometric", "mood": "дерзкий, арт, креативная индустрия", "weights": "Syne:wght@600;800|Manrope:wght@400;500;700" },
+    { "id": "archivo", "display": "Archivo Black", "body": "Archivo", "class": "heavy-grotesk", "bodyClass": "grotesk", "mood": "индустриальный, громкий, плакатный", "weights": "Archivo+Black|Archivo:wght@400;500;700" },
+    { "id": "instrument-geist", "display": "Instrument Serif", "body": "Geist", "class": "serif", "bodyClass": "neo-grotesk", "mood": "современный редакционный, сдержанный", "weights": "Instrument+Serif:ital@0;1|Geist:wght@400;500;600" },
+    { "id": "mono-geist", "display": "JetBrains Mono", "body": "Geist", "class": "mono", "bodyClass": "neo-grotesk", "mood": "для разработчиков, терминальный, точный", "weights": "JetBrains+Mono:wght@500;700|Geist:wght@400;500;600" },
+    { "id": "newsreader-public", "display": "Newsreader", "body": "Newsreader", "class": "reading-serif", "bodyClass": "serif", "mood": "для чтения, газетный, спокойный", "weights": "Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700|Public+Sans:wght@400;600" , "ui": "Public Sans" },
+    { "id": "bricolage-figtree", "display": "Bricolage Grotesque", "body": "Figtree", "class": "quirky-grotesk", "bodyClass": "humanist", "mood": "дружелюбный, живой, стартап", "weights": "Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800|Figtree:wght@400;500;700" },
+    { "id": "unbounded-onest", "display": "Unbounded", "body": "Onest", "class": "round-geometric", "bodyClass": "geometric", "mood": "игривый, округлый, молодёжный (есть кириллица)", "weights": "Unbounded:wght@500;800|Onest:wght@400;500;700" },
+    { "id": "cormorant-karla", "display": "Cormorant Garamond", "body": "Karla", "class": "luxury-serif", "bodyClass": "grotesk", "mood": "роскошь, мода, ремесло", "weights": "Cormorant+Garamond:wght@500;700|Karla:wght@400;500;700" },
+    { "id": "spectral-franklin", "display": "Spectral", "body": "Libre Franklin", "class": "serif", "bodyClass": "grotesk", "mood": "академичный, издательский", "weights": "Spectral:wght@500;700|Libre+Franklin:wght@400;500;700" },
+    { "id": "shoulders-barlow", "display": "Big Shoulders Display", "body": "Barlow", "class": "condensed", "bodyClass": "grotesk", "mood": "спорт, транспорт, город", "weights": "Big+Shoulders+Display:wght@700;900|Barlow:wght@400;500;600" },
+    { "id": "atkinson", "display": "Atkinson Hyperlegible", "body": "Atkinson Hyperlegible", "class": "legible", "bodyClass": "legible", "mood": "доступность прежде всего, утилитарный", "weights": "Atkinson+Hyperlegible:wght@400;700" },
+    { "id": "golos-pt", "display": "PT Serif", "body": "Golos Text", "class": "serif", "bodyClass": "neo-grotesk", "mood": "строгий, госсервисы и финансы (кириллица)", "weights": "PT+Serif:wght@400;700|Golos+Text:wght@400;500;600" }
+  ]
+}

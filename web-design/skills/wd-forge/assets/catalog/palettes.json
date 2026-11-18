@@ -1,0 +1,277 @@
+{
+  "_about": "Палитры-токены. scheme: light|dark, temp: cool|warm|neutral, energy: calm|vivid. Подобраны так, чтобы не попадать в узнаваемые кластеры ИИ-дизайна (кремовый + терракота, почти чёрный + кислотный зелёный/киноварь, фиолетово-синие градиенты). Контраст проверяет deal.mjs --validate.",
+  "palettes": [
+    {
+      "id": "glacier",
+      "name": "Ледник",
+      "scheme": "light",
+      "temp": "cool",
+      "energy": "calm",
+      "c": {
+        "bg": "#f4f7fb",
+        "surface": "#ffffff",
+        "text": "#0f1b2d",
+        "muted": "#4d5b74",
+        "border": "#d6dee9",
+        "accent": "#1f56e0",
+        "onAccent": "#ffffff",
+        "accent2": "#007f86"
+      }
+    },
+    {
+      "id": "forest",
+      "name": "Лес",
+      "scheme": "light",
+      "temp": "warm",
+      "energy": "calm",
+      "c": {
+        "bg": "#f3f5ef",
+        "surface": "#ffffff",
+        "text": "#1c2a1f",
+        "muted": "#546656",
+        "border": "#d5dccd",
+        "accent": "#2f6b3a",
+        "onAccent": "#ffffff",
+        "accent2": "#9a6a14"
+      }
+    },
+    {
+      "id": "saffron-navy",
+      "name": "Шафран и синий",
+      "scheme": "light",
+      "temp": "warm",
+      "energy": "vivid",
+      "c": {
+        "bg": "#fffaf0",
+        "surface": "#ffffff",
+        "text": "#1d2a4a",
+        "muted": "#545f7e",
+        "border": "#ece3cf",
+        "accent": "#1d2a4a",
+        "onAccent": "#fffaf0",
+        "accent2": "#f2b100"
+      }
+    },
+    {
+      "id": "midnight-teal",
+      "name": "Полночный бирюзовый",
+      "scheme": "dark",
+      "temp": "cool",
+      "energy": "vivid",
+      "c": {
+        "bg": "#0e1a24",
+        "surface": "#152837",
+        "text": "#e8f1f5",
+        "muted": "#9cb2bf",
+        "border": "#254053",
+        "accent": "#3fd0c9",
+        "onAccent": "#062023",
+        "accent2": "#f2b84b"
+      }
+    },
+    {
+      "id": "coral-reef",
+      "name": "Коралловый риф",
+      "scheme": "light",
+      "temp": "warm",
+      "energy": "vivid",
+      "c": {
+        "bg": "#fff6f3",
+        "surface": "#ffffff",
+        "text": "#2b1b1b",
+        "muted": "#6e5250",
+        "border": "#f0d9d3",
+        "accent": "#d63c48",
+        "onAccent": "#ffffff",
+        "accent2": "#1f6a72"
+      }
+    },
+    {
+      "id": "nordic-slate",
+      "name": "Северный сланец",
+      "scheme": "light",
+      "temp": "neutral",
+      "energy": "calm",
+      "c": {
+        "bg": "#f2f1ee",
+        "surface": "#fbfaf8",
+        "text": "#262624",
+        "muted": "#615d57",
+        "border": "#dedad3",
+        "accent": "#3d5a80",
+        "onAccent": "#ffffff",
+        "accent2": "#6f9bb8"
+      }
+    },
+    {
+      "id": "electric-blue",
+      "name": "Электрический синий",
+      "scheme": "light",
+      "temp": "cool",
+      "energy": "vivid",
+      "c": {
+        "bg": "#ffffff",
+        "surface": "#f2f4ff",
+        "text": "#0a0f2e",
+        "muted": "#474e75",
+        "border": "#dfe3f7",
+        "accent": "#2335ff",
+        "onAccent": "#ffffff",
+        "accent2": "#ffd23f"
+      }
+    },
+    {
+      "id": "deep-ocean",
+      "name": "Глубокий океан",
+      "scheme": "dark",
+      "temp": "cool",
+      "energy": "vivid",
+      "c": {
+        "bg": "#0b1730",
+        "surface": "#12224a",
+        "text": "#eef2ff",
+        "muted": "#a7b3d8",
+        "border": "#24366a",
+        "accent": "#ff9f1c",
+        "onAccent": "#1a1200",
+        "accent2": "#2ec4b6"
+      }
+    },
+    {
+      "id": "mint",
+      "name": "Мята",
+      "scheme": "light",
+      "temp": "cool",
+      "energy": "vivid",
+      "c": {
+        "bg": "#f2fbf7",
+        "surface": "#ffffff",
+        "text": "#0d2b22",
+        "muted": "#486a5e",
+        "border": "#cfeadf",
+        "accent": "#0b7f57",
+        "onAccent": "#ffffff",
+        "accent2": "#e85d3a"
+      }
+    },
+    {
+      "id": "monochrome",
+      "name": "Монохром",
+      "scheme": "light",
+      "temp": "neutral",
+      "energy": "calm",
+      "c": {
+        "bg": "#f7f7f8",
+        "surface": "#ffffff",
+        "text": "#18181b",
+        "muted": "#56575f",
+        "border": "#e4e4e7",
+        "accent": "#18181b",
+        "onAccent": "#ffffff",
+        "accent2": "#2563eb"
+      }
+    },
+    {
+      "id": "burgundy-gold",
+      "name": "Бордо и золото",
+      "scheme": "dark",
+      "temp": "warm",
+      "energy": "calm",
+      "c": {
+        "bg": "#1e0f14",
+        "surface": "#2a161d",
+        "text": "#f7ece4",
+        "muted": "#c6ad9f",
+        "border": "#3d2229",
+        "accent": "#d6a85c",
+        "onAccent": "#1e0f14",
+        "accent2": "#c4505c"
+      }
+    },
+    {
+      "id": "sky-sun",
+      "name": "Небо и солнце",
+      "scheme": "light",
+      "temp": "cool",
+      "energy": "vivid",
+      "c": {
+        "bg": "#eaf6ff",
+        "surface": "#ffffff",
+        "text": "#10324a",
+        "muted": "#456579",
+        "border": "#cde6f7",
+        "accent": "#c2410c",
+        "onAccent": "#ffffff",
+        "accent2": "#1576b8"
+      }
+    },
+    {
+      "id": "olive-dark",
+      "name": "Тёмная олива",
+      "scheme": "dark",
+      "temp": "warm",
+      "energy": "calm",
+      "c": {
+        "bg": "#1d211c",
+        "surface": "#262b25",
+        "text": "#eceee6",
+        "muted": "#a8ad9e",
+        "border": "#363c34",
+        "accent": "#b5c99a",
+        "onAccent": "#1d211c",
+        "accent2": "#e9c46a"
+      }
+    },
+    {
+      "id": "paper-red",
+      "name": "Газетный красный",
+      "scheme": "light",
+      "temp": "neutral",
+      "energy": "vivid",
+      "c": {
+        "bg": "#fbfaf8",
+        "surface": "#ffffff",
+        "text": "#1f1d1a",
+        "muted": "#625d55",
+        "border": "#e6e2da",
+        "accent": "#c8102e",
+        "onAccent": "#ffffff",
+        "accent2": "#1f1d1a"
+      }
+    },
+    {
+      "id": "ice-dark",
+      "name": "Лёд в темноте",
+      "scheme": "dark",
+      "temp": "cool",
+      "energy": "calm",
+      "c": {
+        "bg": "#0f141a",
+        "surface": "#171e27",
+        "text": "#e6edf3",
+        "muted": "#909dab",
+        "border": "#28333f",
+        "accent": "#58a6ff",
+        "onAccent": "#0b1320",
+        "accent2": "#f07ab0"
+      }
+    },
+    {
+      "id": "sand-ink",
+      "name": "Песок и тушь",
+      "scheme": "light",
+      "temp": "warm",
+      "energy": "calm",
+      "c": {
+        "bg": "#f4efe6",
+        "surface": "#fbf8f2",
+        "text": "#22201c",
+        "muted": "#5f584d",
+        "border": "#e2d9c9",
+        "accent": "#22201c",
+        "onAccent": "#f4efe6",
+        "accent2": "#2f6f6a"
+      }
+    }
+  ]
+}

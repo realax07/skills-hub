@@ -1,0 +1,228 @@
+{
+  "_about": "Остальные оси: форма, плотность, движение, ограничения режимов и запреты (кластеры и «тела» ИИ-дизайна). Правила — своими словами по мотивам frontend-design (Anthropic), Impeccable, taste-skill, Web Interface Guidelines (Vercel); источники — references/sources.md.",
+  "shapes": {
+    "sharp": {
+      "name": "Острая",
+      "radius": [
+        "0px",
+        "2px",
+        "4px"
+      ],
+      "shadow": [
+        "none",
+        "0 0 0 1px var(--color-border)"
+      ]
+    },
+    "soft": {
+      "name": "Мягкая",
+      "radius": [
+        "4px",
+        "8px",
+        "14px"
+      ],
+      "shadow": [
+        "0 1px 2px rgb(0 0 0 / .06), 0 2px 6px rgb(0 0 0 / .05)",
+        "0 2px 4px rgb(0 0 0 / .06), 0 12px 28px rgb(0 0 0 / .08)"
+      ]
+    },
+    "round": {
+      "name": "Округлая",
+      "radius": [
+        "10px",
+        "18px",
+        "999px"
+      ],
+      "shadow": [
+        "0 1px 3px rgb(0 0 0 / .08), 0 4px 12px rgb(0 0 0 / .06)",
+        "0 4px 8px rgb(0 0 0 / .08), 0 18px 40px rgb(0 0 0 / .10)"
+      ]
+    }
+  },
+  "density": {
+    "compact": {
+      "name": "Плотная",
+      "space": [
+        "4px",
+        "8px",
+        "12px",
+        "16px",
+        "24px",
+        "32px"
+      ],
+      "base": "14px",
+      "ratio": 1.2,
+      "maxText": "68ch"
+    },
+    "regular": {
+      "name": "Обычная",
+      "space": [
+        "4px",
+        "8px",
+        "16px",
+        "24px",
+        "40px",
+        "64px"
+      ],
+      "base": "16px",
+      "ratio": 1.25,
+      "maxText": "66ch"
+    },
+    "airy": {
+      "name": "Воздушная",
+      "space": [
+        "8px",
+        "16px",
+        "24px",
+        "40px",
+        "72px",
+        "120px"
+      ],
+      "base": "18px",
+      "ratio": 1.333,
+      "maxText": "62ch"
+    }
+  },
+  "motion": {
+    "still": {
+      "name": "Статичное",
+      "idea": "Только смена состояний (hover, focus, active) без анимации",
+      "dur": "0ms",
+      "ease": "linear"
+    },
+    "subtle": {
+      "name": "Сдержанное",
+      "idea": "Короткие переходы состояний 120–200 мс, только transform и opacity",
+      "dur": "160ms",
+      "ease": "cubic-bezier(.2,.7,.2,1)"
+    },
+    "orchestrated": {
+      "name": "Оркестрованное",
+      "idea": "Один продуманный момент (появление героя при загрузке) + сдержанные состояния; не fade-up на каждой секции",
+      "dur": "220ms",
+      "ease": "cubic-bezier(.16,1,.3,1)"
+    },
+    "expressive": {
+      "name": "Выразительное",
+      "idea": "Сцены по скроллу, пружины, крупные переходы — только для Persuade/Experience, с prefers-reduced-motion",
+      "dur": "320ms",
+      "ease": "cubic-bezier(.34,1.56,.64,1)"
+    }
+  },
+  "modes": {
+    "persuade": {
+      "name": "Убедить (лендинг, промо, магазин)",
+      "density": [
+        "compact",
+        "regular",
+        "airy"
+      ],
+      "motion": [
+        "subtle",
+        "orchestrated",
+        "expressive"
+      ],
+      "scheme": [
+        "light",
+        "dark"
+      ],
+      "ambition": "смело: позиция, характер, один запоминающийся приём",
+      "typeAvoid": []
+    },
+    "operate": {
+      "name": "Работать (приложение, кабинет, админка)",
+      "density": [
+        "compact",
+        "regular"
+      ],
+      "motion": [
+        "still",
+        "subtle"
+      ],
+      "scheme": [
+        "light",
+        "dark"
+      ],
+      "ambition": "сдержанно: привычные паттерны, плотность, скорость, характер — в деталях",
+      "typeAvoid": [
+        "expressive",
+        "round-geometric",
+        "luxury-serif",
+        "condensed",
+        "heavy-grotesk",
+        "contrast-serif",
+        "soft-serif"
+      ]
+    },
+    "read": {
+      "name": "Читать (документация, медиа, база знаний)",
+      "density": [
+        "regular",
+        "airy"
+      ],
+      "motion": [
+        "still",
+        "subtle"
+      ],
+      "scheme": [
+        "light",
+        "dark"
+      ],
+      "ambition": "текст главный: ритм, колонка, типографика",
+      "typeAvoid": [
+        "heavy-grotesk",
+        "condensed",
+        "round-geometric",
+        "expressive"
+      ]
+    },
+    "experience": {
+      "name": "Пережить (бренд-история, портфолио, событие)",
+      "density": [
+        "regular",
+        "airy"
+      ],
+      "motion": [
+        "orchestrated",
+        "expressive"
+      ],
+      "scheme": [
+        "light",
+        "dark"
+      ],
+      "ambition": "максимально смело: сцена, движение, неожиданность",
+      "typeAvoid": [
+        "legible"
+      ]
+    }
+  },
+  "bannedClusters": [
+    {
+      "id": "cream-terracotta",
+      "why": "кремовый фон + терракотовый акцент — узнаваемый ИИ-шаблон «уютного» сайта"
+    },
+    {
+      "id": "black-acid",
+      "why": "почти чёрный фон + кислотно-зелёный или киноварный акцент — узнаваемый ИИ-шаблон «технологичного» сайта"
+    },
+    {
+      "id": "purple-blue-gradient",
+      "why": "фиолетово-синие градиенты — главный признак шаблонного SaaS"
+    },
+    {
+      "id": "uniform-saas-cards",
+      "why": "одинаковые скруглённые карточки с мягкой тенью в каждой секции"
+    }
+  ],
+  "tells": [
+    "дефолтный шрифт (Inter, Roboto, Arial, системный) основным",
+    "фиолетово-синий градиент",
+    "карточка внутри карточки",
+    "квадратная плитка с иконкой над каждым заголовком",
+    "мелкие заглавные с разрядкой (eyebrow) над каждым заголовком",
+    "эмодзи вместо иконок",
+    "«→» в каждой ссылке",
+    "одна и та же анимация появления на всех секциях",
+    "всё выровнено по центру",
+    "выдуманные отзывы, клиенты, цифры"
+  ]
+}
