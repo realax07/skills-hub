@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-// Установщик зависимостей скилла {{name}} (идемпотентный).
+// Зависимости скилла {{name}}.
 //
-//   node scripts/setup.mjs           поставить (повторный запуск ничего не ломает)
-//   node scripts/setup.mjs --check   только проверить: код 0 — всё есть, 1 — чего-то не хватает
+//   node scripts/setup.mjs           проверить реальной загрузкой; ставить, только если не загружается
+//   node scripts/setup.mjs --check   только проверить: код 0 — всё работает, 1 — чего-то не хватает
+//   node scripts/setup.mjs --force   поставить в кэш, даже если уже работает
 //
-// Ставит npm-пакеты вне папки скилла (скилл бывает симлинком в git-репо или read-only копией):
-//   macOS/Linux: ~/.cache/agent-skills/{{name}}
-//   Windows:     %LOCALAPPDATA%\agent-skills\{{name}}
+// Проверка — не по путям: пакет ищется так, как его найдёт Node в окружении агента (проект, NODE_PATH,
+// глобальные пакеты, кэш скиллов) и реально загружается. Не нашёлся — ставится в кэш вне папки скилла
+// (скилл бывает симлинком в git-репо или read-only копией):
+//   macOS/Linux: ~/.cache/agent-skills/{{name}}    Windows: %LOCALAPPDATA%\agent-skills\{{name}}
 // Переопределить: {{env}}_HOME=<dir>.
 //
-// Скрипты скилла грузят пакеты так:
-//   createRequire(join(depsHome(), "package.json"))("<пакет>")
+// Скрипты скилла грузят пакеты так:  import { loadDep } from "./setup.mjs";  const pkg = loadDep("<пакет>");
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,17 +29,28 @@ export function depsHome() {
   return join(homedir(), ".cache", "agent-skills", "{{name}}");
 }
 
-function check(home) {
-  const req = createRequire(join(home, "package.json"));
+function bases() {
+  const out = [join(process.cwd(), "noop.js")];
+  for (const d of (process.env.NODE_PATH || "").split(isWin ? ";" : ":").filter(Boolean)) out.push(join(d, "noop.js"));
+  const g = spawnSync(isWin ? "npm.cmd" : "npm", ["root", "-g"], { encoding: "utf8", timeout: 8000, shell: isWin });
+  if (g.status === 0 && g.stdout.trim()) out.push(join(g.stdout.trim(), "noop.js"));
+  out.push(join(depsHome(), "package.json"));
+  return out;
+}
+
+// Загрузить пакет оттуда, где он есть. null — нигде не нашёлся.
+export function loadDep(name) {
+  for (const b of bases()) { try { return createRequire(b)(name); } catch {} }
+  return null;
+}
+
+function check() {
   let ok = true;
   for (const name of Object.keys(PACKAGES)) {
-    try {
-      req.resolve(name);
-      console.log(`  ✓ ${name}`);
-    } catch {
-      console.log(`  ✗ ${name} не найден в ${home}`);
-      ok = false;
-    }
+    const mod = loadDep(name);
+    // TODO: если пакету нужен бинарник или браузер — вызови здесь что-то настоящее (версию, запуск), а не только загрузку
+    console.log(mod ? `  ✓ ${name} загружается` : `  ✗ ${name} не найден (ни в проекте, ни глобально, ни в кэше скиллов)`);
+    ok = ok && !!mod;
   }
   return ok;
 }
@@ -50,9 +62,11 @@ function main() {
     console.log(`  ✗ нужен Node.js 18+, сейчас ${process.versions.node}. Установи с https://nodejs.org`);
     return 1;
   }
-  const home = depsHome();
-  if (process.argv.includes("--check")) return check(home) ? 0 : 1;
+  const ready = check();
+  if (process.argv.includes("--check")) return ready ? 0 : 1;
+  if (ready && !process.argv.includes("--force")) { console.log("Готово: всё уже работает, ставить нечего."); return 0; }
 
+  const home = depsHome();
   mkdirSync(home, { recursive: true });
   const pkg = join(home, "package.json");
   if (!existsSync(pkg)) writeFileSync(pkg, JSON.stringify({ name: "{{name}}-deps", private: true }, null, 2));
@@ -65,8 +79,8 @@ function main() {
     console.log("  ✗ npm install упал — см. вывод выше");
     return 1;
   }
-  return check(home) ? 0 : 1;
+  return check() ? 0 : 1;
 }
 
-// запускать main только при прямом вызове, чтобы другие скрипты могли импортировать depsHome()
+// запускать main только при прямом вызове, чтобы другие скрипты могли импортировать loadDep()
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) process.exit(main());

@@ -229,7 +229,8 @@ cmd_install() {
 # Зависимости скилла: scripts/setup.mjs | setup.py | setup.sh (соглашение хаба, см. docs/skill-guide.md)
 setup_of() {
   local d="$1"
-  for f in setup.mjs setup.py setup.sh; do [ -f "$d/scripts/$f" ] && { echo "$d/scripts/$f"; return; }; done
+  for f in setup.mjs setup.py setup.sh; do [ -f "$d/scripts/$f" ] && { echo "$d/scripts/$f"; return 0; }; done
+  return 0   # нет установщика — не ошибка (set -e не должен обрывать скрипт)
 }
 cmd_deps() {
   local t s d f rc=0 any=0 extra=""
@@ -248,12 +249,21 @@ cmd_deps() {
   [ "$any" = 0 ] && echo "У выбранных скиллов нет зависимостей."
   return $rc
 }
+# После install: проверить зависимости реальным вызовом (setup --check самого скилла), подсказать только про неготовые.
 deps_hint() {
-  local t s d names=""
+  local t s d f names="" checked=0
   while IFS='|' read -r t s d; do
-    [ -n "$s" ] && [ -n "$(setup_of "$d")" ] && names="$names,$s"
+    [ -z "$s" ] && continue
+    f="$(setup_of "$d")"; [ -z "$f" ] && continue
+    checked=1
+    case "$f" in
+      *.mjs) command -v node >/dev/null && node "$f" --check >/dev/null 2>&1 || names="$names,$s" ;;
+      *.py)  python3 "$f" --check >/dev/null 2>&1 || names="$names,$s" ;;
+      *.sh)  bash "$f" --check >/dev/null 2>&1 || names="$names,$s" ;;
+    esac
   done <<<"$(selected_skills)"
-  [ -n "$names" ] && echo "Скиллам нужны зависимости (${names#,}). Поставь: ./install.sh deps -s ${names#,}"
+  if [ -n "$names" ]; then echo "Зависимости не готовы: ${names#,}. Поставь: ./install.sh deps -s ${names#,}"
+  elif [ "$checked" = 1 ]; then echo "Зависимости скиллов в порядке (проверено запуском)."; fi
   return 0
 }
 

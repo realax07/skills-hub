@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Установщик зависимостей скилла {{name}} (идемпотентный).
+"""Зависимости скилла {{name}}.
 
-  python3 scripts/setup.py           поставить (повторный запуск ничего не ломает)
-  python3 scripts/setup.py --check   только проверить: код 0 — всё есть, 1 — чего-то не хватает
+  python3 scripts/setup.py           проверить реальным импортом; ставить, только если не импортируется
+  python3 scripts/setup.py --check   только проверить: код 0 — всё работает, 1 — чего-то не хватает
+  python3 scripts/setup.py --force   поставить в venv, даже если уже работает
 
-Ставит в отдельный venv вне папки скилла (скилл бывает симлинком в git-репо или read-only копией):
-  macOS/Linux: ~/.cache/agent-skills/{{name}}
-  Windows:     %LOCALAPPDATA%\\agent-skills\\{{name}}
+Проверка — не по путям: сначала модули импортируются тем Python, которым агент запускает скрипты
+(пакеты проекта, пользователя, системы), затем — из venv скилла. Не импортируются нигде — ставятся в venv
+вне папки скилла (скилл бывает симлинком в git-репо или read-only копией):
+  macOS/Linux: ~/.cache/agent-skills/{{name}}    Windows: %LOCALAPPDATA%\\agent-skills\\{{name}}
 Переопределить: {{env}}_HOME=<dir>.
 
-Скрипты скилла запускай интерпретатором из этого venv: путь печатает `--check`.
+Каким Python запускать скрипты, печатает `--check`: текущим, если модули есть у него, иначе — из venv.
 """
 import argparse
 import os
@@ -39,24 +41,26 @@ def venv_python(home: Path) -> Path:
     return home / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
+def imports_ok(py: Path) -> bool:
+    # TODO: если модулю нужен бинарник или сервис — проверь настоящим вызовом, а не только импортом
+    code = "; ".join(f"import {m}" for m in MODULES)
+    return subprocess.run([str(py), "-c", code], capture_output=True).returncode == 0
+
+
 def check(home: Path) -> bool:
-    py = venv_python(home)
-    if not py.exists():
-        print(f"  ✗ нет окружения в {home}")
-        return False
-    ok = True
-    for mod in MODULES:
-        r = subprocess.run([str(py), "-c", f"import {mod}"], capture_output=True)
-        print(f"  {'✓' if r.returncode == 0 else '✗'} {mod}")
-        ok = ok and r.returncode == 0
-    if ok:
-        print(f"  python: {py}")
-    return ok
+    for py, where in ((Path(sys.executable), "текущий Python"), (venv_python(home), "venv скилла")):
+        if py.exists() and imports_ok(py):
+            print(f"  ✓ {', '.join(MODULES)} импортируются — {where}")
+            print(f"  python: {py}")
+            return True
+    print(f"  ✗ {', '.join(MODULES)} не импортируются ни текущим Python, ни из venv ({home})")
+    return False
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Зависимости скилла {{name}}")
     ap.add_argument("--check", action="store_true", help="только проверить, ничего не ставить")
+    ap.add_argument("--force", action="store_true", help="поставить в venv, даже если уже работает")
     a = ap.parse_args()
 
     print("{{name}}: зависимости")
@@ -64,8 +68,12 @@ def main() -> int:
         print(f"  ✗ нужен Python {'.'.join(map(str, MIN_PYTHON))}+, сейчас {sys.version.split()[0]}")
         return 1
     home = deps_home()
+    ready = check(home)
     if a.check:
-        return 0 if check(home) else 1
+        return 0 if ready else 1
+    if ready and not a.force:
+        print("Готово: всё уже работает, ставить нечего.")
+        return 0
 
     if not venv_python(home).exists():
         print(f"→ venv в {home}")

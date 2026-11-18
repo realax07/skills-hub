@@ -160,9 +160,21 @@ function Cmd-Deps {
   if (-not $any) { Write-Host "У выбранных скиллов нет зависимостей." }
   if ($failed) { exit 1 }
 }
+# После install: проверить зависимости реальным вызовом (setup --check самого скилла), подсказать только про неготовые.
 function Deps-Hint {
-  $names = @(Selected-Skills | Where-Object { Setup-Of $_.Dir } | ForEach-Object { $_.Skill })
-  if ($names) { Write-Host "Скиллам нужны зависимости ($($names -join ',')). Поставь: .\install.ps1 deps -Skill $($names -join ',')" }
+  $names = @(); $checked = $false
+  foreach ($s in Selected-Skills) {
+    $f = Setup-Of $s.Dir; if (-not $f) { continue }
+    $checked = $true; $okDep = $false
+    switch -Wildcard ($f) {
+      "*.mjs" { if (Get-Command node -ErrorAction SilentlyContinue) { & node $f --check *> $null; $okDep = ($LASTEXITCODE -eq 0) } }
+      "*.py" { & python $f --check *> $null; $okDep = ($LASTEXITCODE -eq 0) }
+      "*.ps1" { & $f --check *> $null; $okDep = ($LASTEXITCODE -eq 0) }
+    }
+    if (-not $okDep) { $names += $s.Skill }
+  }
+  if ($names) { Write-Host "Зависимости не готовы: $($names -join ','). Поставь: .\install.ps1 deps -Skill $($names -join ',')" }
+  elseif ($checked) { Write-Host "Зависимости скиллов в порядке (проверено запуском)." }
 }
 
 function Cmd-Uninstall {

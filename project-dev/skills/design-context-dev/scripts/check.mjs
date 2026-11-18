@@ -205,9 +205,14 @@ async function checkPage() {
     const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.deviceScaleFactor || 1, isMobile: !!vp.isMobile, hasTouch: !!vp.isMobile,
       storageState: args["storage-state"] ? resolve(args["storage-state"]) : undefined, locale: plan.locale, colorScheme: vp.colorScheme || plan.colorScheme });
     const page = await context.newPage();
-    const jsErrors = [];
+    const jsErrors = [], consoleErrors = [];
     page.on("pageerror", (e) => jsErrors.push(String(e.message).split("\n")[0]));
-    page.on("console", (m) => { if (m.type() === "error") jsErrors.push(m.text().split("\n")[0]); });
+    page.on("console", (m) => {
+      if (m.type() !== "error") return;
+      const at = (m.location() || {}).url || "";
+      if (/favicon\.ico/.test(at)) return; // браузер просит favicon сам — не ошибка страницы
+      consoleErrors.push(/^Failed to load resource/.test(m.text()) ? `не загрузился ресурс ${at || "(адрес неизвестен)"}` : m.text().split("\n")[0]);
+    });
     await page.goto(url, { waitUntil: "load", timeout: 45000 });
     await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
     await page.evaluate(() => document.fonts && document.fonts.ready);
@@ -223,6 +228,7 @@ async function checkPage() {
     compareFoundations(E);
     compareParts(E);
     // ошибки JS на странице: часто скрипт проекта ищет элемент, которого на новой странице нет
+    for (const e of [...new Set(consoleErrors)].slice(0, 5)) W(`консоль: ${e.slice(0, 160)}`, "ресурс или скрипт с ошибкой — проверь путь; если это не из твоей правки, упомяни в отчёте");
     for (const e of [...new Set(jsErrors)].slice(0, 5)) V(`ошибка JS на странице: ${e.slice(0, 160)}`, "скрипт проекта упал — проверь, что новая разметка не сломала его (нет ожидаемого элемента, другой id); интерактив может не работать");
   } finally {
     await browser.close();
