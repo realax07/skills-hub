@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: add-pricing-block
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Агент берёт выжимку дизайн-контекста, собирает блок из канонических деталей (.card, .btn-primary, .btn-ghost) без новых цветов и шрифтов, проверяет результат check.mjs и сообщает итог проверки. Файлы design-context/ не правит.

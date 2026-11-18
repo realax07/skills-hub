@@ -223,6 +223,12 @@ def main():
             if len(paths) > 1:
                 print(f"[FAIL] имя '{n}' повторяется: " + ", ".join(str(p.relative_to(REPO)) for p in paths))
                 total_err += 1
+        # общий код скиллов: копии должны совпадать с источниками (tools/shared.conf)
+        sys.path.insert(0, str(REPO / "tools"))
+        import sync_shared
+        for b in sync_shared.check():
+            print(f"[FAIL] общий код: {b} — запусти python3 tools/sync_shared.py")
+            total_err += 1
     print(f"\n{len(skills)} скилл(ов), ошибок: {total_err}")
     return 1 if total_err else 0
 

@@ -1,0 +1,207 @@
+{
+  "serve": "../site",
+  "src": [
+    "../site/src",
+    "../site/assets"
+  ],
+  "context": "../AGENTS.md",
+  "stance": "normalize",
+  "locale": "ru-RU",
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 900
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "isMobile": true,
+      "deviceScaleFactor": 2
+    }
+  },
+  "defaults": {
+    "hide": []
+  },
+  "pages": [
+    {
+      "id": "home",
+      "path": "/",
+      "title": "Главная",
+      "notes": "Лендинг: hero с CTA + сетка карточек (#cards рендерится из app.js)"
+    },
+    {
+      "id": "about",
+      "path": "/about",
+      "title": "О компании",
+      "notes": "Тот же шаблон, что главная"
+    },
+    {
+      "id": "blog",
+      "path": "/blog",
+      "title": "Блог — список статей",
+      "notes": "Список .post-list + карточки; доп. стили blog.css"
+    },
+    {
+      "id": "blog-post",
+      "path": "/blog/first-post",
+      "title": "Статья блога",
+      "notes": "article.post: h1, .meta, фото, текст; blog.css"
+    },
+    {
+      "id": "product",
+      "path": "/products/analytics",
+      "title": "Страница продукта",
+      "notes": "hero без CTA + карточки; тот же шаблон у /products/integrations"
+    },
+    {
+      "id": "home--login-open",
+      "path": "/",
+      "title": "Главная, открыто окно входа",
+      "steps": [
+        {
+          "click": "[data-open=login]"
+        },
+        {
+          "waitFor": "[role=dialog]"
+        }
+      ]
+    },
+    {
+      "id": "home--more-open",
+      "path": "/",
+      "title": "Главная, открыто меню «Ещё»",
+      "steps": [
+        {
+          "click": ".dropdown > button"
+        },
+        {
+          "waitFor": ".dropdown-menu"
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "header",
+      "group": "layout",
+      "page": "home",
+      "selector": "header.site-header",
+      "notes": "Логотип + nav + дропдаун «Ещё» + кнопка «Войти»; одинаков на всех страницах"
+    },
+    {
+      "id": "footer",
+      "group": "layout",
+      "page": "home",
+      "selector": "footer.site-footer",
+      "notes": "Тёмный футер"
+    },
+    {
+      "id": "hero",
+      "group": "sections",
+      "page": "home",
+      "selector": "section.hero",
+      "notes": "Фон hero.svg, h1 44px, подзаголовок, CTA .btn-primary"
+    },
+    {
+      "id": "cards",
+      "group": "sections",
+      "page": "home",
+      "selector": "#cards",
+      "notes": "Сетка 3 колонки (1 на мобильном), карточки из app.js"
+    },
+    {
+      "id": "card",
+      "group": "content",
+      "page": "home",
+      "selector": "#cards > article.card",
+      "notes": "Бейдж + h3 + текст + .btn-ghost"
+    },
+    {
+      "id": "post-list",
+      "group": "content",
+      "page": "blog",
+      "selector": "ul.post-list",
+      "notes": "Список статей с разделителями"
+    },
+    {
+      "id": "post",
+      "group": "content",
+      "page": "blog-post",
+      "selector": "article.post",
+      "notes": "Тело статьи, ширина 720px"
+    }
+  ],
+  "modals": [
+    {
+      "id": "login",
+      "page": "home",
+      "title": "Окно входа",
+      "selector": "[role=dialog]",
+      "notes": "Кнопка «Войти» в шапке ([data-open=login]); модалка (.modal-backdrop > .modal[role=dialog]) создаётся в body из app.js, фон rgba(17,24,39,.5) — см. состояние home--login-open; закрывается кликом по фону (Esc не обрабатывается)",
+      "steps": [
+        {
+          "click": "[data-open=login]"
+        },
+        {
+          "waitFor": "[role=dialog]"
+        }
+      ]
+    },
+    {
+      "id": "more-menu",
+      "page": "home",
+      "title": "Выпадающее меню «Ещё»",
+      "selector": ".dropdown-menu",
+      "notes": "Кнопка «Ещё ▾» в шапке; открывается toggle класса .open на .dropdown, закрывается повторным кликом",
+      "steps": [
+        {
+          "click": ".dropdown > button"
+        },
+        {
+          "waitFor": ".dropdown-menu"
+        }
+      ]
+    }
+  ],
+  "parts": {
+    "1vyvupb": {
+      "status": "canon",
+      "name": "Кнопка основная"
+    },
+    "dfvh5f": {
+      "status": "canon",
+      "name": "Кнопка контурная (ghost)"
+    },
+    "19h5clt": {
+      "status": "variant",
+      "name": "Кнопка основная как ссылка (a.btn)"
+    },
+    "17mnphw": {
+      "status": "canon",
+      "name": "Поле ввода"
+    },
+    "2o2hpd": {
+      "status": "canon",
+      "name": "Ссылка навигации"
+    },
+    "fdeuxs": {
+      "status": "variant",
+      "name": "Пункт выпадающего меню"
+    },
+    "142cdks": {
+      "status": "variant",
+      "name": "Заголовок статьи в списке"
+    },
+    "1kw5ogi": {
+      "status": "canon",
+      "name": "Бейдж"
+    },
+    "h8huo5": {
+      "status": "canon",
+      "name": "Карточка"
+    },
+    "kvmvy4": {
+      "status": "noise"
+    }
+  }
+}

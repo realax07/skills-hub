@@ -1,5 +1,5 @@
 // Выполняется ВНУТРИ страницы. Извлекает дизайн-контекст: основы и детали.
-//   opts: { serviceStyleId, iconMax: 64 }
+//   opts: { serviceStyleId, iconMax: 64, root?: CSS-селектор — извлекать только внутри него (проверка нового блока) }
 // Возвращает { foundations, motion, parts, icons, logos }:
 //   foundations — цвета по ролям (с именами CSS-переменных), типографика, отступы, радиусы, тени, шрифты;
 //   motion      — переходы, анимации, @keyframes, признаки JS-анимаций (GSAP, Framer, Lottie, canvas, WebGL);
@@ -50,7 +50,9 @@
     }
 
     const skipTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "META", "LINK", "BR", "HEAD", "TITLE"]);
-    const all = [...document.body.querySelectorAll("*")].filter((el) => !skipTags.has(el.tagName));
+    const base = opts.root ? document.querySelector(opts.root) : document.body;
+    if (!base) return { error: `нет элемента ${opts.root}` };
+    const all = [...(opts.root ? [base] : []), ...base.querySelectorAll("*")].filter((el) => !skipTags.has(el.tagName));
     const visible = all.filter(vis).slice(0, 20000);
     const ownText = (el) => [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").replace(/\s+/g, " ").trim();
 
