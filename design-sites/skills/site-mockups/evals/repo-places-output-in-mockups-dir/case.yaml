@@ -1,9 +1,0 @@
-schema_version: "1.1"
-name: repo-places-output-in-mockups-dir
-context:
-  scaffold_script: place-files.sh
-expected_outcome: |
-  Агент кладёт результат в mockups/ в корне репозитория (соглашение для репозиториев сайтов),
-  не путаясь с существующей папкой design/ и не трогая dist/ и src/. В mockups/ — дерево разделов:
-  главная в корне, about/, blog/ со статьями, products/ с подразделами; README.md в каждом разделе,
-  модалка входа в _modals/, manifest.json и _catalog.html. Агент сообщает пользователю путь и карту разделов.

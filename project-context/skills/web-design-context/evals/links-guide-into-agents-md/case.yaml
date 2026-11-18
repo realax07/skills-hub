@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: links-guide-into-agents-md
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Агент собирает дизайн-контекст в design-context/ и пишет в plan.json "context" (AGENTS.md — пользователь
+  выбрал сам) и "stance": "preserve" (пользователь сказал «повторяем как есть»). GUIDE.md описывает позицию
+  «повторять как есть», вопросы, маршрутизацию и указатель со ссылками на существующие файлы. В AGENTS.md добавлен
+  блок между метками web-design-context:start/end со ссылкой на design-context/GUIDE.md; прежний текст AGENTS.md
+  сохранён, CLAUDE.md (только @AGENTS.md) не тронут. Отчёт называет GUIDE.md и файл, куда вписан указатель.

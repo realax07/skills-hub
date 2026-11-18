@@ -54,7 +54,7 @@ Examples:
   ./install.sh install
   ./install.sh install -a claude,codex -t design-sites
   ./install.sh install -a all -p ~/code/my-site --copy
-  ./install.sh install --deps -s site-mockups
+  ./install.sh install --deps -s web-design-context
   ./install.sh deps --check
   ./install.sh uninstall -a all
 EOF
@@ -176,7 +176,7 @@ cmd_list() {
   local t s d desc last=""
   all_skills | while IFS='|' read -r t s d; do
     [ "$t" != "$last" ] && { echo "$t/"; last="$t"; }
-    desc="$(sed -n 's/^description:[[:space:]]*//p' "$d/SKILL.md" | head -1 | sed "s/[.—].*//")"
+    desc="$(sed -n 's/^description:[[:space:]]*//p' "$d/SKILL.md" | head -1 | sed -e 's/\. .*//' -e 's/ — .*//')"
     printf '  %-28s %s\n' "$s" "$desc"
   done
 }

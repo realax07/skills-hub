@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: repo-places-output-in-design-context-dir
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Агент кладёт результат в design-context/ в корне репозитория (соглашение скилла), не путаясь с существующей
+  папкой design/ и не трогая dist/ и src/. Там GUIDE.md, foundations.md, parts/, compositions/, assets/ и reference/.
+  Исходники src/ указаны в плане ("src"), поэтому есть source.md со ссылкой из GUIDE.md.
+  Позицию проекта (повторять как есть / приводить к канону) и место указателя агент не решает сам: спрашивает
+  или явно отмечает, что они не заданы. Файлы инструкций агентов без согласия не создаёт.

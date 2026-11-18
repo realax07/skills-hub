@@ -12,7 +12,7 @@ design-sites/
 
 | Скилл | Что делает |
 |---|---|
-| [site-mockups](skills/site-mockups/) | Статические HTML-мокапы готового сайта для AI-контекста: страницы, компоненты, модалки, токены, каталог, гайд для агентов и указатель на него в AGENTS.md. Нужен Node.js 18+ (Playwright ставится через `./install.sh deps`) |
+| — | пока пусто. Дизайн-контекст существующего сайта — в [project-context/web-design-context](../project-context/skills/web-design-context/) |
 
 Установить только эту тему:
 

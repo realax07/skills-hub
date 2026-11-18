@@ -96,6 +96,7 @@ function Cmd-List {
   foreach ($s in All-Skills) {
     if ($s.Topic -ne $last) { Write-Host "$($s.Topic)/"; $last = $s.Topic }
     $desc = (Select-String -Path (Join-Path $s.Dir "SKILL.md") -Pattern "^description:\s*(.*)" | Select-Object -First 1).Matches.Groups[1].Value
+    $desc = ($desc -split '\. | — ')[0]   # как в install.sh: до первой точки или тире
     Write-Host ("  {0,-28} {1}" -f $s.Skill, $desc)
   }
 }
