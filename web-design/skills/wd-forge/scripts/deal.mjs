@@ -168,7 +168,7 @@ if (!["ru", "latin"].includes(lang)) die("--lang: ru или latin");
 const INDUSTRIES = SYS.industries || [];
 const industry = (() => {
   const id = args.industry || (prev && prev.industry);
-  if (id) { const x = INDUSTRIES.find((i) => i.id === id); if (!x) die(`--industry: одно из ${INDUSTRIES.map((i) => i.id).join(", ")}`); return x; }
+  if (id) { const x = INDUSTRIES.find((i) => i.id === id || (i.aliases || []).includes(String(id).toLowerCase())); if (!x) die(`--industry: одно из ${INDUSTRIES.map((i) => i.id).join(", ")}`); return x; }
   const text = (product + " " + brief).toLowerCase();
   const hits = INDUSTRIES.map((i) => ({ i, n: i.keywords.filter((k) => text.includes(k)).length })).filter((x) => x.n).sort((a, b) => b.n - a.n);
   return hits.length ? hits[0].i : null;
@@ -186,8 +186,9 @@ if (!pals.length) die(`нет палитр для схемы ${scheme}${industry
 // смелость шрифта — по режиму и отрасли; язык — только пары с кириллицей для русского
 const types = TYPE.filter((t) => !(M.typeAvoid || []).includes(t.class) && !((industry && industry.typeAvoid) || []).includes(t.class) && (lang !== "ru" || t.cyr));
 if (types.length < 3) die(`мало шрифтовых пар для режима${industry ? ", отрасли" : ""} и языка ${lang} — ослабь ограничения`);
+const archs = ARCH[mode].filter((a) => !((industry && industry.archetypeAvoid) || []).includes(a.id));
 const candidate = () => {
-  const arch = pick(ARCH[mode]);
+  const arch = pick(archs);
   const dens = arch.density.filter((d) => M.density.includes(d));
   return { arch, pal: pick(pals), type: pick(types), shape: pick(Object.keys(SYS.shapes)), density: pick(dens.length ? dens : M.density), motion: pick(M.motion) };
 };

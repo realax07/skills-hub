@@ -64,7 +64,9 @@ async function main() {
         const sec = (t) => { const m = md.match(new RegExp(`^## ${t}[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m")); return m ? m[1].trim() : ""; };
         if (!left && sec("Что тут дефолтное").replace(/\s+/g, " ").length < 80) V.plan.push("PLAN.md: раздел «Что тут дефолтное — и что изменено» слишком короткий — перечисли, что взялось по умолчанию и на что заменено");
         const frames = [...md.matchAll(/```\n([\s\S]*?)```/g)].map((m) => m[1].trim().split("\n").length);
-        if (!left && sec("kit\\.html").replace(/\s+/g, " ").length < 120) V.plan.push("PLAN.md: раздел «kit.html — UI-кит» слишком короткий — опиши, что в заготовке кита изменено под направление (кнопки, поля, метки, таблица)");
+        // раздел кита — подзаголовок «### kit.html» внутри «Каркас экранов» (deal.mjs) или «## kit.html», если его подняли
+        const kitSec = (() => { const m = md.match(/^(#{2,3}) kit\.html[^\n]*\n([\s\S]*?)(?=^#{2,3} |(?![\s\S]))/m); return m ? m[2].replace(/Заготовка уже лежит[^\n]*\n?/, "").trim() : ""; })();
+        if (!left && kitSec.replace(/\s+/g, " ").length < 120) V.plan.push("PLAN.md: раздел «kit.html — UI-кит» слишком короткий — опиши, что в заготовке кита изменено под направление (кнопки, поля, метки, таблица)");
         if (!left && frames.some((n) => n < 4)) V.plan.push("PLAN.md: ASCII-каркас экрана короче 4 строк — опиши зоны экрана сверху вниз");
       }
       V.errors += V.plan.length;
