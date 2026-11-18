@@ -64,11 +64,14 @@ async function main() {
         const sec = (t) => { const m = md.match(new RegExp(`^## ${t}[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m")); return m ? m[1].trim() : ""; };
         if (!left && sec("Что тут дефолтное").replace(/\s+/g, " ").length < 80) V.plan.push("PLAN.md: раздел «Что тут дефолтное — и что изменено» слишком короткий — перечисли, что взялось по умолчанию и на что заменено");
         const frames = [...md.matchAll(/```\n([\s\S]*?)```/g)].map((m) => m[1].trim().split("\n").length);
+        if (!left && sec("kit\\.html").replace(/\s+/g, " ").length < 120) V.plan.push("PLAN.md: раздел «kit.html — UI-кит» слишком короткий — опиши, что в заготовке кита изменено под направление (кнопки, поля, метки, таблица)");
         if (!left && frames.some((n) => n < 4)) V.plan.push("PLAN.md: ASCII-каркас экрана короче 4 строк — опиши зоны экрана сверху вниз");
       }
       V.errors += V.plan.length;
       const tokens = tokenColors(d.letter);
-      for (const s of d.screens) {
+      // кит — первым: его детали — эталон для экранов (off-kit)
+      const kitSigs = {};
+      for (const s of [...d.screens].sort((x, y) => (y.kit ? 1 : 0) - (x.kit ? 1 : 0))) {
         const file = join(DIR, d.letter, s.file);
         const S = (V.screens[s.file] = { issues: [] });
         if (!existsSync(file)) { S.issues.push({ level: "error", rule: "missing", what: `нет экрана ${d.letter}/${s.file} (${s.what})` }); V.errors++; continue; }
@@ -98,6 +101,14 @@ async function main() {
             if (s.file === d.screens[0].file) V.stats = r.stats;
             // цвета страницы против токенов направления
             const E = await page.evaluate(`(${EXTRACT})({})`);
+            // детали экранов — из кита: иначе в каноне окажется по два варианта каждой кнопки
+            const G = { buttons: "кнопка", inputs: "поле", badges: "метка" };
+            if (s.kit) for (const g of Object.keys(G)) kitSigs[g] = new Set((E.parts[g] || []).map((p) => p.sig));
+            else if (Object.keys(kitSigs).length) {
+              const off = [];
+              for (const [g, w] of Object.entries(G)) for (const p of E.parts[g] || []) if (!kitSigs[g].has(p.sig)) off.push(`${w} «${p.text || p.id}»`);
+              if (off.length) S.issues.push({ level: "error", rule: "off-kit", what: "детали не из UI-кита — сделай их классами kit.html (или добавь вариант в кит с data-part)", n: off.length, ex: off.slice(0, 5), viewport: vpName });
+            }
             const off = [];
             for (const role of ["text", "background", "border"]) for (const c of E.foundations.colors[role] || []) {
               const h = hex(c.color);
