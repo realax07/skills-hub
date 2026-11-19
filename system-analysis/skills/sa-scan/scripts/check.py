@@ -5,7 +5,7 @@
 
 Без --cap — всё; с --cap — одна возможность (её спека, трассировка, вопросы) и общий формат.
 --partial — незаконченные возможности (status todo) не ошибка, а предупреждение: для промежуточных проверок.
-Если в PATH есть CLI openspec, дополнительно запускает `openspec validate --specs --strict --no-interactive`.
+Если в PATH есть CLI openspec, дополнительно запускает `openspec validate --all --strict --no-interactive` (спеки и изменения).
 Код выхода: 0 — ошибок нет, 1 — есть ошибки, 2 — нечего проверять.
 """
 import argparse
@@ -51,6 +51,12 @@ def check_files(P, R):
             R.e(P.rel(P.config), "нет `schema:`")
         if not re.search(r"^context:\s*\|", t, re.M):
             R.e(P.rel(P.config), "нет `context: |`")
+        rules = re.search(r"^rules:\s*\n((?:[ \t]+.*\n?|\s*\n)*)", t, re.M)
+        if rules:
+            for ln in rules.group(1).splitlines():
+                m = re.match(r"^\s+-\s+(.*)$", ln)
+                if m and not m.group(1).startswith(("'", '"')) and re.search(r":(\s|$)", m.group(1)):
+                    R.e(P.rel(P.config), f"правило с «: » без кавычек — YAML прочтёт его как пару ключ: значение, и OpenSpec проигнорирует все правила артефакта: {m.group(1)[:60]}…")
     g = P.ctx / "glossary.md"
     if g.is_file():
         rows = [ln for ln in g.read_text(encoding="utf-8").splitlines() if ln.startswith("|") and not re.match(r"^\|\s*(Термин|---)", ln)]
@@ -251,16 +257,16 @@ def run_cli(P, R):
         R.info.append("CLI openspec не найден — формат проверен своим разбором (тот же набор правил)")
         return
     try:
-        r = subprocess.run([exe, "validate", "--specs", "--strict", "--no-interactive"], cwd=str(P.repo),
+        r = subprocess.run([exe, "validate", "--all", "--strict", "--no-interactive"], cwd=str(P.repo),
                            capture_output=True, text=True, timeout=180)
     except (OSError, subprocess.TimeoutExpired) as ex:
         R.w("openspec", f"CLI не отработал: {ex}")
         return
     out = (r.stdout + r.stderr).strip()
     if r.returncode != 0:
-        R.e("openspec validate --specs --strict", out[-2000:] or f"код {r.returncode}")
+        R.e("openspec validate --all --strict", out[-2000:] or f"код {r.returncode}")
     else:
-        R.info.append("openspec validate --specs --strict: ✓")
+        R.info.append("openspec validate --all --strict: ✓")
 
 
 def main():

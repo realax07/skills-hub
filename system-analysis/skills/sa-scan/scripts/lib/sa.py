@@ -335,8 +335,10 @@ def delta_problems(text, main_specs):
             continue
         if blocks:
             b = blocks[-1]
-            if re.match(r"^####\s+Scenario:", ln):
+            sm2 = re.match(r"^####\s+Scenario:\s*(.*)$", ln)
+            if sm2:
                 b["scen"] += 1
+                b.setdefault("scen_names", []).append(sm2.group(1).strip())
             sm = SCEN_STEP.match(ln)
             if sm:
                 b["steps"].append(sm.group(1))
@@ -354,6 +356,12 @@ def delta_problems(text, main_specs):
             names = {r["name"] for r in main_specs["requirements"]}
             if b["name"] not in names:
                 err.append(f"{tag}: в основной спеке нет требования с таким именем — имя должно совпадать дословно")
+            elif b["op"] == "MODIFIED":
+                cur = next(r for r in main_specs["requirements"] if r["name"] == b["name"])
+                lost = [sc["name"] for sc in cur["scenarios"] if sc["name"] not in b.get("scen_names", [])]
+                if lost:
+                    err.append(f"{tag}: MODIFIED заменяет требование целиком — перенеси и сценарии текущей спеки: "
+                               + ", ".join(f"«{x}»" for x in lost) + " (поправь их текст, если поведение меняется)")
         if b["op"] == "ADDED" and main_specs is not None and b["name"] in {r["name"] for r in main_specs["requirements"]}:
             err.append(f"{tag}: такое требование уже есть — тогда это MODIFIED")
     return err
