@@ -306,9 +306,24 @@ def parse_trace(text):
             if "|" in rest:
                 rest, tests = rest.split("|", 1)
                 tests = re.sub(r"^\s*тесты?\s*:\s*", "", tests.strip(), flags=re.I)
-            code = [x.strip().strip("`") for x in rest.split(",") if x.strip()]
-            tl = [x.strip().strip("`") for x in tests.split(",") if x.strip() and x.strip() not in ("—", "-", "нет")]
+            code = _paths(rest)
+            tl = _paths(tests)
             out[cap][name] = {"code": code, "tests": tl, "line": i}
+    return out
+
+
+def _paths(raw):
+    """«a.py:9, 18-20, b.py (заглушка)» → ['a.py:9', 'a.py:18-20', 'b.py']: голые номера строк относятся к предыдущему файлу,
+    пояснения в скобках отбрасываются."""
+    out = []
+    for x in raw.split(","):
+        x = re.sub(r"\s*\([^)]*\)\s*$", "", x.strip().strip("`")).strip().strip("`")
+        if not x or x in ("—", "-", "нет"):
+            continue
+        if re.match(r"^\d+(-\d+)?$", x) and out:
+            out.append(strip_loc(out[-1]) + ":" + x)
+            continue
+        out.append(x)
     return out
 
 

@@ -81,6 +81,16 @@ def match_entries(pattern, ids):
     return [i for i in ids if i == pattern]
 
 
+def no_match(pattern, ids, repo):
+    words = [w for w in re.findall(r"[\w{}/.-]{3,}", pattern.lower()) if w not in ("http", "get", "post")]
+    near = [i for i in ids if any(w in i.lower() for w in words)][:8]
+    msg = (f"под «{pattern}» нет входов. id — с видом в начале («http:GET /documents», «consumer:…»); "
+           f"шаблон — с * («http:* /documents*»), регулярное выражение — «re:…». Все id: inventory.py show {repo}")
+    if near:
+        msg += "\n  похожие: " + "; ".join(near)
+    return msg
+
+
 def detach(plan, eid):
     for c in plan["capabilities"]:
         if eid in c["entries"]:
@@ -311,7 +321,7 @@ def cmd_move(a):
     c = find_cap(plan, a.cap)
     ids = match_entries(a.pattern, list(sa.all_entries(inv, plan)))
     if not ids:
-        sa.die(f"под «{a.pattern}» нет входов — точные id: inventory.py show {a.repo}")
+        sa.die(no_match(a.pattern, list(sa.all_entries(inv, plan)), a.repo))
     for eid in ids:
         detach(plan, eid)
         c["entries"].append(eid)
@@ -328,7 +338,7 @@ def cmd_exclude(a):
     ids = match_entries(a.pattern, list(sa.all_entries(inv, plan)) + [x for c in plan["capabilities"] for x in c["entries"]])
     ids = list(OrderedDict.fromkeys(ids))
     if not ids:
-        sa.die(f"под «{a.pattern}» нет входов")
+        sa.die(no_match(a.pattern, list(sa.all_entries(inv, plan)), a.repo))
     for eid in ids:
         detach(plan, eid)
         plan.setdefault("excluded", []).append({"entry": eid, "reason": a.reason})
@@ -377,6 +387,17 @@ def cmd_set(a):
     if a.status:
         if a.status == "done" and not P.spec(a.cap).is_file():
             sa.die(f"нет {P.rel(P.spec(a.cap))} — сначала спека, потом done")
+        if a.status == "done" and not a.force:
+            import subprocess
+            r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "check.py"), str(P.repo), "--cap", a.cap,
+                                "--no-cli", "--json"], capture_output=True, text=True)
+            try:
+                errs = json.loads(r.stdout).get("errors", [])
+            except ValueError:
+                errs = [r.stderr.strip() or "check.py не отработал"]
+            if errs:
+                print("\n".join(f"✗ {e}" for e in errs), file=sys.stderr)
+                sa.die(f"{a.cap}: check.py --cap нашёл ошибки ({len(errs)}) — исправь, потом done (обойти: --force)")
         c["status"] = a.status
     if a.title is not None:
         c["title"] = a.title
@@ -504,6 +525,7 @@ def main():
     p = sp("set", cmd_set, "статус, название, заметки возможности")
     p.add_argument("cap")
     p.add_argument("--status", choices=["todo", "done"])
+    p.add_argument("--force", action="store_true", help="done без проверки check.py --cap")
     p.add_argument("--title")
     p.add_argument("--notes")
     sp("drop-cap", cmd_drop, "удалить пустую возможность").add_argument("cap")

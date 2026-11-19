@@ -3,6 +3,7 @@
 
   python3 questions.py add <repo> --title "…?" --category "внешний сервис" --seen "…" --affects "cap / Требование"
                                  --assume "…" --who "владелец интеграции" [--importance блокирует|уточняет]
+  python3 questions.py edit <repo> Q-003 [--title "…?"] [--affects "…"] [--seen …] [--assume …] [--who …] [--category …] [--importance …]
   python3 questions.py answer <repo> Q-003 "текст ответа"
   python3 questions.py set <repo> Q-003 --status внесён|снят|открыт [--note "…"]
   python3 questions.py list <repo> [--status открыт|отвечен|внесён|снят] [--json]
@@ -87,6 +88,13 @@ def cmd_add(a):
         sa.die(f"в --affects неизвестные возможности: {', '.join(bad)} — есть: {', '.join(sorted(caps)) or 'нет'}; "
                f"общий вопрос — --affects \"—\"")
     title = a.title.strip()
+    if not title.endswith("?"):
+        sa.die("заголовок — сам вопрос, с «?» в конце (например: «30 или 50 позиций?»)")
+    for cap, req in sa.affects(fake):
+        sp = P.spec(cap)
+        if req and sp.is_file() and req not in {r["name"] for r in sa.parse_spec(sp.read_text(encoding="utf-8"))["requirements"]}:
+            names = ", ".join(f"«{r['name']}»" for r in sa.parse_spec(sp.read_text(encoding="utf-8"))["requirements"])
+            sa.die(f"в {cap} нет требования «{req}» — имя дословно как в spec.md: {names}")
     for q in qs:
         if q["title"].strip().lower() == title.lower():
             sa.die(f"такой вопрос уже есть: {q['id']}")
@@ -142,6 +150,39 @@ def cmd_set(a):
         text = set_field(text, q, "Ответ", (q["fields"].get("Ответ", "") + "\n" + a.note).strip())
     write(P, text)
     print(f"✓ {a.id}: {a.status}")
+    return 0
+
+
+FIELD_ARGS = [("title", None), ("category", "Категория"), ("seen", "Что видно"), ("affects", "Затрагивает"),
+              ("assume", "Допущение"), ("who", "Кто ответит"), ("importance", "Важность")]
+
+
+def cmd_edit(a):
+    P = sa.Paths(a.repo)
+    text = read(P)
+    q = find(sa.parse_questions(text), a.id)
+    if a.category and a.category not in sa.CATEGORIES:
+        sa.die(f"категория «{a.category}» не из списка: " + "; ".join(sa.CATEGORIES))
+    if a.importance and a.importance not in sa.IMPORTANCE:
+        sa.die("важность: блокирует | уточняет")
+    changed = []
+    if a.title:
+        if not a.title.strip().endswith("?"):
+            sa.die("заголовок — сам вопрос, с «?» в конце")
+        lines = text.split("\n")
+        lines[q["line"] - 1] = f"### {q['id']}. {a.title.strip()}"
+        text = "\n".join(lines)
+        changed.append("заголовок")
+    for arg, field in FIELD_ARGS[1:]:
+        val = getattr(a, arg)
+        if val is not None:
+            q = find(sa.parse_questions(text), a.id)
+            text = set_field(text, q, field, val)
+            changed.append(field)
+    if not changed:
+        sa.die("нечего менять: --title, --category, --seen, --affects, --assume, --who, --importance")
+    write(P, text)
+    print(f"✓ {a.id}: " + ", ".join(changed))
     return 0
 
 
@@ -211,7 +252,11 @@ def main():
     p.add_argument("--affects", required=True, help="«cap / Требование; cap2» или «—»")
     p.add_argument("--assume", required=True, help="по какому допущению написана спека, пока нет ответа")
     p.add_argument("--who", required=True, help="кто может ответить (роль, не имя)")
-    p.add_argument("--importance", default="уточняет", help="блокирует | уточняет")
+    p.add_argument("--importance", default="уточняет", help="блокирует | уточняет (по умолчанию уточняет)")
+    p = sp("edit", cmd_edit, "поправить формулировку, категорию, затрагиваемое и т.п.")
+    p.add_argument("id")
+    for arg, _ in FIELD_ARGS:
+        p.add_argument(f"--{arg}")
     p = sp("answer", cmd_answer, "записать ответ")
     p.add_argument("id")
     p.add_argument("text")

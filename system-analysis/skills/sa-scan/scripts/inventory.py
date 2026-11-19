@@ -274,8 +274,8 @@ class Inv:
                 for m in re.finditer(r'"([A-Za-z0-9_.\-]+)(?:\[[^\]]*\])?\s*[<>=~!;]', text):
                     deps.add(m.group(1).lower())
                 for m in re.finditer(r'^\[(?:project\.)?scripts\]\s*\n((?:[^\[\n].*\n?)*)', text, re.M):
-                    for sm in re.finditer(r'^\s*([\w\-]+)\s*=', m.group(1), re.M):
-                        self.add_entry("cli", sm.group(1), relp, line_of(text, m.start()), "pyproject scripts")
+                    for sm in re.finditer(r'^\s*([\w\-]+)\s*=\s*"([\w.]+)', m.group(1), re.M):
+                        self.add_entry("cli", sm.group(1), relp, line_of(text, m.start()), f"pyproject scripts → {sm.group(2)}")
             elif p.name == "go.mod":
                 m = re.search(r"^module\s+(\S+)", text, re.M)
                 name = m.group(1) if m else None
@@ -755,7 +755,8 @@ class Inv:
     AUTHZ_RX = re.compile(r"@Roles\(|@PreAuthorize\(|@Secured\(|@RolesAllowed\(|hasRole\(|hasAuthority\(|hasPermission\(|"
                           r"@UseGuards\(|@permission_required|@login_required|permission_classes\s*=|IsAuthenticated|IsAdminUser|"
                           r"\bauthorize[!(]|\bcan\?\(|Gate::|->can\(|\[Authorize|\bRequireAuth|requireRole\(|checkPermission\(|"
-                          r"\bisAdmin\b|\brole\s*===?\s*['\"]|\.role\s*(?:==|!=|in)\s*")
+                          r"\bisAdmin\b|\brole\s*===?\s*['\"]|\.role\s*(?:==|!=|in)\s*|\w*[rR]ole\s*(?:===?|!==?)\s*['\"]|"
+                          r"\brequire_?(?:admin|role|auth|login|permission|user)\w*\b|\b(?:owner|author|user)(?:_id|Id)\s*(?:!==?|===?)\s*\w")
 
     def authz_lines(self, relp, text):
         if len(self.authz) >= CAP_AUTHZ or self.is_test(relp):
@@ -770,7 +771,7 @@ class Inv:
         if len(self.todos) >= CAP_TODOS:
             return
         for i, ln in enumerate(text.splitlines(), 1):
-            m = re.search(r"(?:#|//|/\*|\*|--|<!--)\s*(TODO|FIXME|HACK|XXX|BUG)\b[:\s(]*(.*)", ln)
+            m = re.search(r"(?:#|//|/\*|^\s*\*|--|<!--)[^\n]*?\b(TODO|FIXME|HACK|XXX)\b[:\s(]*(.*)", ln)
             if m:
                 self.todos.append({"file": relp, "line": i, "tag": m.group(1), "text": m.group(2).strip()[:160]})
                 if len(self.todos) >= CAP_TODOS:
@@ -960,6 +961,12 @@ class Inv:
             if ext in {".md", ".mdx", ".rst", ".adoc", ".txt", ".yaml", ".yml", ".json"}:
                 self.scan_doc(p, relp, read(p))
         self.apply_js_mounts()
+        # один и тот же CLI: скрипт из pyproject (app.cli:main) и `python app/cli.py` — оставить скрипт
+        targets = {e["how"].split("→", 1)[-1].strip() for e in self.entries.values() if e["how"].startswith("pyproject scripts")}
+        for eid in [i for i, e in self.entries.items() if e["how"] == "argparse"]:
+            mod = re.sub(r"\.py$", "", self.entries[eid]["file"]).replace("/", ".")
+            if any(t == mod or t.endswith("." + mod) or mod.endswith("." + t) or mod == t for t in targets):
+                del self.entries[eid]
         for e in self.entries.values():
             if e["kind"] == "http" and re.search(r"webhook|callback|/hooks?(/|$)|notify|ipn", e["name"], re.I):
                 e["tags"] = sorted(set(e["tags"]) | {"webhook"})
