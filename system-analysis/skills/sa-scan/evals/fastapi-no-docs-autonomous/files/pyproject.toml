@@ -1,0 +1,15 @@
+[project]
+name = "docs-converter"
+version = "0.3.0"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "sqlalchemy>=2.0",
+  "celery[redis]>=5.3",
+  "boto3>=1.34",
+  "httpx>=0.27",
+  "python-telegram-bot>=21.0",
+]
+
+[project.scripts]
+reconvert = "app.cli:main"

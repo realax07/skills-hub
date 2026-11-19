@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: orders-service-with-prd
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  В openspec/specs/ — спеки по возможностям, нарезанным по поведению (оформление, оплата, просмотр, отмена и возврат, отгрузка или близко),
+  с ## Purpose, требованиями с SHALL/MUST и сценариями WHEN/THEN; пути HTTP с префиксами /api/orders и /webhooks. Спека описывает код,
+  а не PRD: лимит 50 позиций, автоотмена 30 минут, цена из запроса. Расхождения с PRD (30 против 50, 1 час против 30 минут, цена из каталога,
+  отмена оплаченного покупателем) — вопросы в system-context/QUESTIONS.md с допущениями и пометками (допущение: Q-…) в спеках.
+  Есть integrations.md со Stripe, складом-партнёром и почтой (включая поведение при отказе), domain.md с переходами статусов заказа и правами,
+  glossary.md, trace.md, GUIDE.md, config.yaml и указатель в AGENTS.md. check.py проходит без ошибок, главные вопросы показаны в чате.

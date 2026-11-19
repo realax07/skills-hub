@@ -23,6 +23,8 @@ CASE_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 WHEN_RE = re.compile(r"(?im)^#{1,6}\s+((?:когда\s+(?:применять|использовать|брать|вызывать)|when\s+to\s+use|use\s+when)\b.*)$")
 BODY_LINES_LIMIT = 500
 # ссылки на ресурсы скилла: [текст](path) и `path` с известными папками
+# заглушка шаблона: «TODO: …», «TODO [ … ]», «TODO — …»; упоминание слова TODO в тексте (TODO/FIXME в коде) — не заглушка
+TODO_RE = re.compile(r"\bTODO(?::|\s*\[|\s+—)")
 LINK_RE = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
 TICK_RE = re.compile(r"`((?:references|scripts|assets|examples)/[^`\s<>]*)`")
 
@@ -168,9 +170,12 @@ def validate(skill: Path, strict: bool) -> Report:
             r.err(f"ссылка на несуществующий файл: {target}")
 
     for f in skill.rglob("*"):
+        parts = f.relative_to(skill).parts
+        # входные файлы тест-кейсов (evals/<case>/files/) — имитация чужого проекта, свои TODO там нормальны
+        fixture = len(parts) > 2 and parts[0] == "evals" and parts[2] == "files"
         if f.is_file() and f.suffix in {".md", ".py", ".sh", ".yaml", ".ps1", ".js", ".mjs", ".json"} \
-                and not (set(f.relative_to(skill).parts) & SKIP_DIRS):
-            if "TODO" in f.read_text(encoding="utf-8", errors="ignore"):
+                and not (set(parts) & SKIP_DIRS) and not fixture:
+            if TODO_RE.search(f.read_text(encoding="utf-8", errors="ignore")):
                 (r.err if strict else r.warn)(f"TODO-заглушка: {f.relative_to(skill)}")
 
     check_evals(skill, r)
