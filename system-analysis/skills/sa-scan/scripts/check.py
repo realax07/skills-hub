@@ -116,28 +116,93 @@ def check_specs(P, R, plan, only):
     return specs
 
 
-def check_trace(P, R, specs):
-    if not P.trace.is_file():
-        return
-    tr = sa.parse_trace(P.trace.read_text(encoding="utf-8"))
+def check_trace(P, R, specs, text=None, where=None):
+    if text is None:
+        if not P.trace.is_file():
+            return
+        text = P.trace.read_text(encoding="utf-8")
+    tr = sa.parse_trace(text)
+    tpath = where or P.trace
     for cap, parsed in specs.items():
         names = {r["name"] for r in parsed["requirements"]}
         got = tr.get(cap, {})
         if not got:
-            R.e(P.rel(P.trace), f"нет раздела `## {cap}` со строками «требование → код»")
+            R.e(P.rel(tpath), f"нет раздела `## {cap}` со строками «требование → код»")
             continue
         for r in parsed["requirements"]:
             if r["name"] not in got:
-                R.e(P.rel(P.trace), f"{cap}: нет строки для требования «{r['name']}»")
+                R.e(P.rel(tpath), f"{cap}: нет строки для требования «{r['name']}»")
         for name, rec in got.items():
             if name not in names:
-                R.w(P.rel(P.trace), f"стр. {rec['line']}: «{name}» — такого требования в {cap}/spec.md нет (имя должно совпадать)")
+                R.w(P.rel(tpath), f"стр. {rec['line']}: «{name}» — такого требования в {cap}/spec.md нет (имя должно совпадать)")
             if not rec["code"]:
-                R.e(P.rel(P.trace), f"стр. {rec['line']}: у «{name}» нет ни одного пути к коду")
+                R.e(P.rel(tpath), f"стр. {rec['line']}: у «{name}» нет ни одного пути к коду")
             for path in rec["code"] + rec["tests"]:
                 fp = sa.strip_loc(path)
                 if fp and not (P.repo / fp).exists():
-                    R.e(P.rel(P.trace), f"стр. {rec['line']}: нет файла {fp}")
+                    R.e(P.rel(tpath), f"стр. {rec['line']}: нет файла {fp}")
+
+
+def validate_question(R, where, q, caps, specs):
+    f = q["fields"]
+    for k in sa.Q_FIELDS:
+        if k not in f:
+            R.e(where, f"нет поля «{k}»")
+        elif k not in ("Ответ",) and not f[k].strip():
+            R.e(where, f"пустое поле «{k}»")
+    st = f.get("Статус", "").strip().lower()
+    if st and st not in sa.STATUSES:
+        R.e(where, f"статус «{st}» — допустимы: {', '.join(sa.STATUSES)}")
+    if f.get("Важность", "").strip() and f["Важность"].strip() not in sa.IMPORTANCE:
+        R.e(where, f"важность «{f['Важность']}» — блокирует | уточняет")
+    if f.get("Категория", "").strip() and f["Категория"].strip() not in sa.CATEGORIES:
+        R.w(where, f"категория «{f['Категория']}» не из списка (references/questions.md)")
+    if not q["title"].rstrip().endswith("?"):
+        R.w(where, "заголовок — сам вопрос, с «?» в конце")
+    for cap, req in sa.affects(q):
+        if cap not in caps:
+            R.e(where, f"затрагивает неизвестную возможность «{cap}»")
+        elif req and cap in specs and req not in {r["name"] for r in specs[cap]["requirements"]}:
+            R.w(where, f"затрагивает «{cap} / {req}» — такого требования нет")
+
+
+def check_work(P, R, plan, specs, cap):
+    """Режим раздачи: результат работника до сборки — трассировка и вопросы из .work/<cap>/, пометки TMP-…"""
+    d = P.workdir(cap)
+    if not d.is_dir():
+        R.e(P.rel(d), "нет папки работника — бриф: plan.py brief")
+        return
+    if cap not in specs:
+        R.e(P.rel(P.spec(cap)), "нет спеки")
+        return
+    tp = d / "trace.md"
+    check_trace(P, R, specs, f"## {cap}\n" + (tp.read_text(encoding="utf-8") if tp.is_file() else ""), tp)
+    qp = d / "questions.md"
+    wq = sa.parse_questions(qp.read_text(encoding="utf-8")) if qp.is_file() else []
+    caps = {c["id"]: c for c in plan["capabilities"]}
+    ids = []
+    for q in wq:
+        where = f"{P.rel(qp)} {q['id']}"
+        if not q["id"].startswith("TMP-"):
+            R.e(where, "у работника номера временные: TMP-1, TMP-2…")
+        if q["id"] in ids:
+            R.e(where, "номер повторяется")
+        ids.append(q["id"])
+        validate_question(R, where, q, caps, specs)
+    st = P.spec(cap).read_text(encoding="utf-8")
+    used = set(sa.TMP_RX.findall(st))
+    for m in sorted(used - set(ids)):
+        R.e(P.rel(P.spec(cap)), f"пометка {m}, а в {P.rel(qp)} такого вопроса нет")
+    for m in sorted(set(ids) - used):
+        R.w(P.rel(qp), f"{m} не помечен ни в одном требовании — если вопрос общий, это нормально")
+    if sa.Q_RX.search(st):
+        for m in sorted(set(sa.Q_RX.findall(st))):
+            known = sa.parse_questions(P.questions.read_text(encoding="utf-8")) if P.questions.is_file() else []
+            if m not in {q["id"] for q in known}:
+                R.e(P.rel(P.spec(cap)), f"ссылка на {m}, такого вопроса нет — свои вопросы работник нумерует TMP-…")
+    notes = d / "notes.md"
+    if not notes.is_file():
+        R.w(P.rel(notes), "нет заметок для главного агента")
 
 
 def check_questions(P, R, plan, specs, only):
@@ -155,26 +220,7 @@ def check_questions(P, R, plan, specs, only):
         if q["id"] in by_id:
             R.e(where, "номер повторяется")
         by_id[q["id"]] = q
-        f = q["fields"]
-        for k in sa.Q_FIELDS:
-            if k not in f:
-                R.e(where, f"нет поля «{k}»")
-            elif k not in ("Ответ",) and not f[k].strip():
-                R.e(where, f"пустое поле «{k}»")
-        st = f.get("Статус", "").strip().lower()
-        if st and st not in sa.STATUSES:
-            R.e(where, f"статус «{st}» — допустимы: {', '.join(sa.STATUSES)}")
-        if f.get("Важность", "").strip() and f["Важность"].strip() not in sa.IMPORTANCE:
-            R.e(where, f"важность «{f['Важность']}» — блокирует | уточняет")
-        if f.get("Категория", "").strip() and f["Категория"].strip() not in sa.CATEGORIES:
-            R.w(where, f"категория «{f['Категория']}» не из списка (references/questions.md)")
-        if not q["title"].rstrip().endswith("?"):
-            R.w(where, "заголовок — сам вопрос, с «?» в конце")
-        for cap, req in sa.affects(q):
-            if cap not in caps:
-                R.e(where, f"затрагивает неизвестную возможность «{cap}»")
-            elif req and cap in specs and req not in {r["name"] for r in specs[cap]["requirements"]}:
-                R.w(where, f"затрагивает «{cap} / {req}» — такого требования нет")
+        validate_question(R, where, q, caps, specs)
         if sa.effective_status(q) == "отвечен":
             R.w(where, "ответ есть, но не внесён в спеку — режим «внести ответы» (SKILL.md)")
     # пометки допущений в спеках
@@ -186,6 +232,11 @@ def check_questions(P, R, plan, specs, only):
                 R.e(P.rel(p), f"ссылка на {m}, а в QUESTIONS.md такого вопроса нет")
             elif sa.effective_status(q) in ("внесён", "снят"):
                 R.e(P.rel(p), f"пометка {m} осталась, а вопрос уже {sa.effective_status(q)} — сними пометку")
+    for cap, parsed in specs.items():
+        p = P.spec(cap)
+        left = sorted(set(sa.TMP_RX.findall(p.read_text(encoding="utf-8"))))
+        if left and not (P.workdir(cap)).is_dir():
+            R.e(P.rel(p), f"временные пометки {', '.join(left)} — результат работника не собран: plan.py collect")
     # пересобранный чек-лист совпадает
     if sa.replace_index(text, qs) != text:
         R.w(P.rel(P.questions), "чек-лист в начале файла устарел — questions.py sync")
@@ -277,8 +328,11 @@ def main():
     ap.add_argument("--cap", help="проверить одну возможность")
     ap.add_argument("--partial", action="store_true", help="незаконченные возможности — предупреждение, не ошибка")
     ap.add_argument("--no-cli", action="store_true", help="не запускать CLI openspec")
+    ap.add_argument("--work", action="store_true", help="с --cap: проверить результат работника в system-context/.work/<cap>/")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
+    if a.work and not a.cap:
+        sa.die("--work — только вместе с --cap <cap>")
     P = sa.Paths(a.repo)
     if not P.plan.is_file() or not P.inventory.is_file():
         print(f"нечего проверять: нет {P.rel(P.plan)} или {P.rel(P.inventory)} — сначала inventory.py scan и plan.py init", file=sys.stderr)
@@ -292,13 +346,22 @@ def main():
             sa.die(f"нет возможности {a.cap}")
     check_coverage(P, R, plan, inv, a.cap)
     specs = check_specs(P, R, plan, a.cap)
-    check_trace(P, R, specs)
-    check_questions(P, R, plan, specs, a.cap)
+    if a.work:
+        R.err = [m for m in R.err if not m.startswith("plan.json")]
+        R.warn = [m for m in R.warn if not m.startswith("plan.json")]
+        check_work(P, R, plan, specs, a.cap)
+    else:
+        check_trace(P, R, specs)
+        check_questions(P, R, plan, specs, a.cap)
     if not a.cap:
         check_files(P, R)
         check_integrations(P, R, inv)
         check_changes(P, R)
         check_link(P, R)
+        if P.work.is_dir():
+            rest = [d.name for d in P.work.iterdir() if d.is_dir() and not d.name.startswith("_")]
+            (R.e if rest else R.w)(P.rel(P.work), (f"не собраны результаты работников: {', '.join(rest)} — plan.py collect" if rest else
+                                                  "раздача собрана — перенеси .work/NOTES.md в общие файлы и удали папку .work/"))
         if not a.no_cli:
             run_cli(P, R)
     nreq = sum(len(s["requirements"]) for s in specs.values())

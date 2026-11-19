@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: fan-out-subagents
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Главный агент делает опись и план сам, готовит общую основу (глоссарий, статусы, сквозную возможность доступа),
+  создаёт брифы plan.py brief, раздаёт возможности субагентам по assets/worker-prompt.md, собирает plan.py collect,
+  объединяет дубли вопросов, сводит заметки работников в integrations.md, domain.md, glossary.md, удаляет system-context/.work/.
+  Пометок TMP- в спеках не остаётся, check.py без ошибок, в GUIDE.md есть «Параллельная работа», главные вопросы — в чате.

@@ -9,6 +9,7 @@
   python3 questions.py list <repo> [--status открыт|отвечен|внесён|снят] [--json]
   python3 questions.py top <repo> [--n 7]
   python3 questions.py sync <repo>
+  python3 questions.py merge <repo> Q-012 Q-004        (дубль Q-012 влить в Q-004)
 
 add — следующий номер сам, формат сам, оглавление-чек-лист в начале файла обновляется само.
 top — короткий список для чата: открытые, сначала блокирующие и затрагивающие больше всего требований.
@@ -235,6 +236,36 @@ def cmd_sync(a):
     return 0
 
 
+def cmd_merge(a):
+    P = sa.Paths(a.repo)
+    text = read(P)
+    qs = sa.parse_questions(text)
+    dup, keep = find(qs, a.dup), find(qs, a.keep)
+    if dup is keep:
+        sa.die("один и тот же вопрос")
+    # пометки в спеках: dup → keep, без повторов внутри одной пометки
+    changed = []
+    if P.specs.is_dir():
+        for sp in P.specs.glob("*/spec.md"):
+            st = sp.read_text(encoding="utf-8")
+            if not re.search(rf"\b{re.escape(a.dup)}\b", st):
+                continue
+            st = re.sub(rf"\b{re.escape(a.dup)}\b", a.keep, st)
+            st = re.sub(r"\(допущение:\s*([^)]*)\)", lambda m: "(допущение: " + ", ".join(dict.fromkeys(x.strip() for x in m.group(1).split(","))) + ")", st)
+            sp.write_text(st, encoding="utf-8")
+            changed.append(P.rel(sp))
+    aff = [x for x in sa.affects(keep)] + [x for x in sa.affects(dup) if x not in sa.affects(keep)]
+    if aff:
+        text = set_field(text, keep, "Затрагивает", "; ".join(f"{c} / {r}" if r else c for c, r in aff))
+    dup = find(sa.parse_questions(text), a.dup)
+    text = set_field(text, dup, "Статус", "снят")
+    dup = find(sa.parse_questions(text), a.dup)
+    text = set_field(text, dup, "Ответ", f"дубль {a.keep}")
+    write(P, text)
+    print(f"✓ {a.dup} влит в {a.keep}" + (f"; пометки заменены в {', '.join(changed)}" if changed else ""))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="Открытые вопросы: QUESTIONS.md")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -269,6 +300,9 @@ def main():
     p.add_argument("--json", action="store_true")
     sp("top", cmd_top, "главные открытые — для чата").add_argument("--n", type=int, default=7)
     sp("sync", cmd_sync, "пересобрать чек-лист")
+    p = sp("merge", cmd_merge, "дубль влить в другой вопрос: пометки в спеках, «Затрагивает», статус «снят»")
+    p.add_argument("dup")
+    p.add_argument("keep")
     a = ap.parse_args()
     return a.fn(a)
 

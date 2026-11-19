@@ -24,6 +24,7 @@ Q_FIELDS = ("Статус", "Важность", "Категория", "Что в
 INDEX_START = "<!-- sa-scan:index:start -->"
 INDEX_END = "<!-- sa-scan:index:end -->"
 Q_RX = re.compile(r"\bQ-\d{3,}\b")
+TMP_RX = re.compile(r"\bTMP-\d+\b")   # временные номера вопросов у работника (режим раздачи)
 ID_RX = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -46,6 +47,10 @@ class Paths:
         self.openspec = self.repo / SPEC_ROOT
         self.specs = self.openspec / "specs"
         self.config = self.openspec / "config.yaml"
+        self.work = self.ctx / ".work"
+
+    def workdir(self, cap):
+        return self.work / cap
 
     def spec(self, cap):
         return self.specs / cap / "spec.md"
@@ -211,8 +216,15 @@ def parse_questions(text):
     qs = []
     cur = None
     last = None
+    fence = False
     for i, ln in enumerate(text.splitlines(), 1):
-        m = re.match(r"^###\s+(Q-\d{3,})\.?\s*(.*)$", ln)
+        if ln.lstrip().startswith("```"):
+            fence = not fence
+            cur = None
+            continue
+        if fence:
+            continue
+        m = re.match(r"^###\s+(Q-\d{3,}|TMP-\d+)\.?\s*(.*)$", ln)
         if m:
             cur = {"id": m.group(1), "title": m.group(2).strip(), "line": i, "fields": OrderedDict()}
             qs.append(cur)
@@ -256,6 +268,52 @@ def affects(q):
         else:
             out.append((part, None))
     return out
+
+
+def question_block(qid, title, fields):
+    """Блок вопроса в формате QUESTIONS.md."""
+    lines = [f"### {qid}. {title.strip()}"]
+    for k in Q_FIELDS:
+        v = (fields.get(k) or "").strip()
+        if k == "Статус" and not v:
+            v = "открыт"
+        vl = v.split("\n")
+        lines.append(f"- **{k}:** {vl[0]}".rstrip())
+        lines += [f"  {x}" for x in vl[1:]]
+    return "\n".join(lines)
+
+
+def next_qnum(qs):
+    return max([int(q["id"][2:]) for q in qs if q["id"].startswith("Q-")] + [0]) + 1
+
+
+def similar(a, b):
+    """Похожесть заголовков вопросов (доля общих слов длиннее 3 букв)."""
+    wa = {w for w in re.findall(r"\w{4,}", a.lower())}
+    wb = {w for w in re.findall(r"\w{4,}", b.lower())}
+    if not wa or not wb:
+        return 0.0
+    return len(wa & wb) / len(wa | wb)
+
+
+def code_refs(text):
+    """Ссылки «путь:строка[-строка]» из текста → [(путь, начало, конец)]."""
+    out = []
+    for m in re.finditer(r"([\w./-]+\.\w{1,5}):(\d+)(?:-(\d+))?", text or ""):
+        lo = int(m.group(2))
+        out.append((m.group(1).split("/")[-1], lo, int(m.group(3) or lo)))
+    return out
+
+
+def near_duplicate(q1, q2):
+    """Похожи ли вопросы: заголовки близки или ссылаются на одно место кода (±3 строки) и хоть немного похожи словами."""
+    t = similar(q1["title"], q2["title"])
+    if t >= 0.4:
+        return True
+    r1 = code_refs(q1["fields"].get("Что видно", ""))
+    r2 = code_refs(q2["fields"].get("Что видно", ""))
+    same_place = any(a[0] == b[0] and a[1] <= b[2] + 3 and b[1] <= a[2] + 3 for a in r1 for b in r2)
+    return same_place and t >= 0.2
 
 
 def index_block(qs):

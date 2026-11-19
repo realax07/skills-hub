@@ -809,7 +809,9 @@ class Inv:
             titles = []
         shown = titles[:CAP_TESTS_PER_FILE]
         self.test_titles += len(shown)
-        self.tests.append({"file": relp, "kind": kind, "count": len(titles), "titles": shown})
+        stubs = len(re.findall(r"expect\(\s*true\s*\)\.toBe\(\s*true\s*\)|^\s*assert\s+True\s*$|assertTrue\(\s*true\s*\)|"
+                               r"assert\.ok\(\s*true\s*\)|t\.Skip\(|\.skip\(|@pytest\.mark\.skip|@Disabled|xit\(", text, re.M))
+        self.tests.append({"file": relp, "kind": kind, "count": len(titles), "titles": shown, "stubs": stubs})
 
     def scan_doc(self, p, relp, text):
         name = p.name.lower()
@@ -1100,7 +1102,8 @@ def to_markdown(r):
     out += [f"- `{f}`: строки {', '.join(ls[:10])}" for f, ls in list(af.items())[:80]]
     out += ["", f"## Тесты ({len(r['tests'])} файлов)", ""]
     for t in r["tests"][:200]:
-        out.append(f"- `{t['file']}` ({t['kind']}, {t['count']})" + (": " + "; ".join(t["titles"][:6]) if t["titles"] else ""))
+        stub = f", **заглушек или пропусков: {t['stubs']}**" if t.get("stubs") else ""
+        out.append(f"- `{t['file']}` ({t['kind']}, {t['count']}{stub})" + (": " + "; ".join(t["titles"][:6]) if t["titles"] else ""))
     out += ["", "## Документация", ""]
     out += [f"- `{d['file']}` — {md_escape(d['title'])} ({d['lines']} строк)" for d in r["docs"][:150]] or ["Не найдено."]
     out += ["", f"## TODO / FIXME ({len(r['todos'])})", "", "Подсказки о известных проблемах и недоделках — проверь, не попадают ли в спеку как «так задумано».", ""]

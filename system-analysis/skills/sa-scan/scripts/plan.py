@@ -14,6 +14,8 @@
   python3 plan.py set <repo> <cap> [--status todo|done] [--title …] [--notes …]
   python3 plan.py drop-cap <repo> <cap>
   python3 plan.py guide <repo>
+  python3 plan.py brief <repo> <cap> [<cap>…] | --all          (режим раздачи)
+  python3 plan.py collect <repo> [<cap>…]                       (режим раздачи)
 
 Шаблон входа — точный id из описи или шаблон с * (`http:* /api/orders*`); `re:<regex>` — регулярное выражение.
 Пути слоя фиксированы: <repo>/system-context/ (план, опись, карта) и <repo>/openspec/ (спеки).
@@ -243,7 +245,8 @@ def cmd_next(a):
     if tests:
         print("\nТесты — готовые сценарии (что проверено, то и есть поведение):")
         for t in tests[:15]:
-            print(f"  {t['file']}: " + "; ".join(t["titles"][:8]))
+            stub = f" [заглушек или пропусков: {t['stubs']} — не доказательство поведения]" if t.get("stubs") else ""
+            print(f"  {t['file']}{stub}: " + "; ".join(t["titles"][:8]))
     todos = [t for t in inv.get("todos", []) if t["file"] in files]
     if todos:
         print("\nTODO/FIXME в этих файлах — кандидаты в вопросы «баг или так задумано»:")
@@ -426,6 +429,92 @@ def first_sentence(s):
     return (m.group(1) if m else s)[:200]
 
 
+def _ranges(path):
+    """«a.ts:10-20» → ('a.ts', (10, 20)); без строк — весь файл."""
+    m = re.match(r"^(.*?):(\d+)(?:-(\d+))?$", path.strip())
+    if not m:
+        return path.strip(), None
+    lo = int(m.group(2))
+    return m.group(1), (lo, int(m.group(3) or lo))
+
+
+def parallel_map(P, plan):
+    """По trace.md: где возможности делят код. Жёстко — пересекаются строки (или файл без строк), мягко — тот же файл, разные места.
+    Возвращает (pairs, waves, hot): pairs — (x, y, hard_files, soft_files)."""
+    if not P.trace.is_file():
+        return [], [], []
+    tr = sa.parse_trace(P.trace.read_text(encoding="utf-8"))
+    ids = [c["id"] for c in plan["capabilities"] if c["id"] in tr]
+    spans = {}
+    for cap in ids:
+        d = defaultdict(list)
+        for rec in tr[cap].values():
+            for pth in rec["code"]:
+                f, r = _ranges(pth)
+                d[f].append(r)
+        spans[cap] = d
+
+    def overlap(r1, r2):
+        if r1 is None or r2 is None:
+            return True
+        return r1[0] <= r2[1] + 3 and r2[0] <= r1[1] + 3   # рядом стоящие строки — тоже столкновение
+
+    pairs = []
+    for i, x in enumerate(ids):
+        for y in ids[i + 1:]:
+            hard, soft = [], []
+            for f in sorted(set(spans[x]) & set(spans[y])):
+                if any(overlap(r1, r2) for r1 in spans[x][f] for r2 in spans[y][f]):
+                    hard.append(f)
+                else:
+                    soft.append(f)
+            if hard or soft:
+                pairs.append((x, y, hard, soft))
+    conflict = defaultdict(set)
+    for x, y, hard, _ in pairs:
+        if hard:
+            conflict[x].add(y)
+            conflict[y].add(x)
+    waves = []
+    for cap in sorted(ids, key=lambda c: -len(conflict[c])):
+        for w in waves:
+            if not (conflict[cap] & set(w)):
+                w.append(cap)
+                break
+        else:
+            waves.append([cap])
+    use = defaultdict(list)
+    for cap in ids:
+        for f in spans[cap]:
+            use[f].append(cap)
+    hot = sorted(((f, cs) for f, cs in use.items() if len(cs) >= 3), key=lambda x: -len(x[1]))
+    return pairs, waves, hot
+
+
+def parallel_section(P, plan):
+    pairs, waves, hot = parallel_map(P, plan)
+    if not waves:
+        return ""
+    out = ["", "## Параллельная работа", "",
+           "Посчитано по `trace.md`. **Конфликт** — возможности трогают одни и те же строки: параллельно разным агентам не отдавай.",
+           "**Тот же файл** — разные места одного файла: можно параллельно, но сливай по очереди и проверь сборку.",
+           "Смысловые пересечения (общая сущность, статус, внешняя система) отсюда не видны — смотри `domain.md` и `integrations.md`.", "",
+           "**Волны** — внутри волны нет конфликтов, возможности можно менять параллельно:", ""]
+    for i, w in enumerate(waves, 1):
+        out.append(f"{i}. " + ", ".join(f"`{c}`" for c in w))
+    if pairs:
+        out += ["", "| Возможность | С чем | Конфликт (те же строки) | Тот же файл, разные места |", "|---|---|---|---|"]
+        for x, y, hard, soft in pairs:
+            fmt = lambda fs: ", ".join(f"`{f}`" for f in fs[:5]) + (" …" if len(fs) > 5 else "") if fs else "—"
+            out.append(f"| `{x}` | `{y}` | {fmt(hard)} | {fmt(soft)} |")
+    else:
+        out += ["", "Общего кода у возможностей нет — любые изменения можно вести параллельно."]
+    if hot:
+        out += ["", "**Общие файлы** (в трёх и больше возможностях) — их рефакторинг затрагивает всех; делай его отдельной задачей:", ""]
+        out += [f"- `{f}` — " + ", ".join(f"`{c}`" for c in cs) for f, cs in hot[:15]]
+    return "\n".join(out) + "\n"
+
+
 def cmd_guide(a):
     P = sa.Paths(a.repo)
     plan = sa.load_plan(P)
@@ -478,10 +567,246 @@ def cmd_guide(a):
 - **Спека описывает «как есть», с багами.** Требование, помеченное как возможная ошибка, — не повод чинить молча: исправление — отдельное изменение.
 - **После изменения кода** обнови строки в `trace.md` и, если менялся внешний обмен, `integrations.md`.
 - Пересобрать опись после крупных изменений: `inventory.py scan .` (скилл sa-scan), сверка: `check.py .`.
-"""
+- Раздаёшь изменения нескольким агентам — сначала раздел «Параллельная работа» ниже.
+""" + parallel_section(P, plan)
     P.guide.write_text(text, encoding="utf-8")
     print(f"✓ {P.rel(P.guide)}: {len(rows)} возможностей, открытых вопросов {open_q}")
     return 0
+
+
+# ---------- режим раздачи: бриф работнику и сборка результатов
+
+WORK_Q_HEAD = """# Вопросы работника — {cap}
+
+Формат — как в system-context/QUESTIONS.md, но номера временные: TMP-1, TMP-2… (по порядку, без пропусков).
+Пометка в спеке — (допущение: TMP-1). Настоящие номера присвоит `plan.py collect`.
+Поля: Статус (всегда «открыт»), Важность (блокирует | уточняет), Категория (из списка), Что видно (с путь:строка),
+Затрагивает ({cap} / <Имя требования>), Допущение, Кто ответит (роль), Ответ (строка обязательна, значение пустое).
+Образец (скопируй ниже, без строк ```, и замени; заголовок заканчивается «?»):
+
+```
+### TMP-1. Сколько позиций допускается в заказе: 30 или 50?
+- **Статус:** открыт
+- **Важность:** блокирует
+- **Категория:** расхождение кода и документа
+- **Что видно:** PRD п.1 — до 30; код — MAX_ITEMS = 50 (src/routes/orders.ts:10)
+- **Затрагивает:** {cap} / Проверка состава заказа
+- **Допущение:** спека описывает код: до 50
+- **Кто ответит:** владелец продукта
+- **Ответ:**
+```
+
+Категории: внешний сервис; потребители API; конфигурация и окружение; данные в проде; расхождение кода и документа;
+баг или так задумано; мёртвый код; ручные процессы; права и роли; нефункциональное; правовое и регуляторное; другое.
+Твои вопросы — ниже этой строки.
+"""
+WORK_TRACE_HEAD = """# Трассировка работника — {cap}
+
+Строка на каждое требование: - <Имя требования, как в spec.md> → путь:строка, путь | тесты: путь (пояснение)
+"""
+WORK_NOTES_HEAD = """# Заметки работника — {cap}
+
+Для главного агента: он перенесёт их в общие файлы. Пиши фактами со ссылками путь:строка. Нечего сказать — «нет».
+
+## Интеграции
+<!-- внешние системы, которые трогает эта возможность: направление, когда, данные, что при отказе, env-имена, где в коде -->
+
+## Предметная область
+<!-- сущности и поля, переходы статусов «ИЗ → В: когда», проверки прав, константы -->
+
+## Глоссарий
+<!-- новые термины: термин | значение | в коде -->
+
+## Границы
+<!-- поведение, которое увидел, но оно относится к другой возможности: какой и что именно (вопрос по нему не заводи — это сделает её работник) -->
+
+## Прочее
+<!-- всё остальное, что важно главному агенту: тесты-заглушки, неиспользуемые флаги, запуск в нескольких экземплярах и т.п. -->
+"""
+
+
+def _capture(fn, *args):
+    import io
+    from contextlib import redirect_stdout
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        fn(*args)
+    return buf.getvalue()
+
+
+def cmd_brief(a):
+    P = sa.Paths(a.repo)
+    plan = sa.load_plan(P)
+    caps = [c for c in plan["capabilities"] if c["status"] != "done"] if a.all else [find_cap(plan, x) for x in a.caps]
+    if not caps:
+        sa.die("нечего раздавать: укажи возможности или --all (берёт все со статусом todo)")
+    qs = sa.parse_questions(P.questions.read_text(encoding="utf-8")) if P.questions.is_file() else []
+    skill = sa.SKILL_DIR
+    made = []
+    for c in caps:
+        if not c["title"].strip():
+            sa.die(f"у {c['id']} нет названия — plan.py set {a.repo} {c['id']} --title \"…\" до раздачи")
+        d = P.workdir(c["id"])
+        if (d / "BRIEF.md").exists() and not a.force:
+            print(f"· {c['id']}: бриф уже есть ({P.rel(d / 'BRIEF.md')}), пересоздать — --force")
+            made.append(c["id"])
+            continue
+        d.mkdir(parents=True, exist_ok=True)
+        ns = argparse.Namespace(repo=a.repo, cap=c["id"])
+        task = _capture(cmd_next, ns)
+        task = task.split("\nПиши:")[0].rstrip()
+        others = "\n".join(f"- `{x['id']}` — {x['title']}" for x in plan["capabilities"] if x["id"] != c["id"])
+        known = "\n".join(f"- {q['id']}: {q['title']}" for q in qs if sa.effective_status(q) == "открыт") or "- нет"
+        repo = P.repo
+        brief = f"""# Бриф: возможность `{c['id']}` — {c['title']}
+
+Ты — работник системного анализа (скилл sa-scan, режим раздачи). Опиши, **как эта возможность работает сейчас**, по коду.
+Пиши **только** файлы ниже. Общие файлы (`system-context/QUESTIONS.md`, `trace.md`, `integrations.md`, `domain.md`, `glossary.md`, `plan.json`)
+не трогай: их соберёт главный агент. Скрипты, меняющие общие файлы (`questions.py add`, `plan.py set`), не запускай.
+
+Репозиторий: `{repo}`
+
+## Что прочитать о формате и правилах
+
+- `{skill}/references/openspec-format.md` — формат spec.md, разделы «Структура» и «Основная спека» (обязательно; дельты не нужны).
+- `{skill}/references/rules.md` — разделы «Требования и сценарии», «Источники и конфликты».
+- `{skill}/references/questions.md` — какие вопросы задавать и как.
+- `{skill}/assets/spec.template.md` — заготовка спеки.
+- Термины: `{P.rel(P.ctx / 'glossary.md')}` (пиши этими словами), статусы: `{P.rel(P.ctx / 'domain.md')}`.
+
+## Что исследовать
+
+{task}
+
+Иди по вызовам от входов до БД и внешних систем. Код не запускай, внешние системы не вызывай.
+Поведение соседней возможности не описывай и вопросов по нему не заводи — запиши в заметки, раздел «Границы»
+(TODO из общего файла тоже может быть чужим). Поведение, общее для двух возможностей, описывай с той стороны, где вход,
+а у себя — только как оно влияет на твою возможность. Тест без реальной проверки (`expect(true)`, `assert True`) — не доказательство:
+отметь в «Прочее». Поведение библиотеки, которое не проверить без запуска, — «вероятно» и вопрос, в «Что видно» — «по знанию X, не проверено». Соседи:
+
+{others}
+
+Уже открытые вопросы (не дублируй — сошлись в заметках, если твоя возможность тоже от них зависит):
+
+{known}
+
+## Что написать
+
+1. `openspec/specs/{c['id']}/spec.md` (папку создай) — спека по формату OpenSpec, «как есть», с багами; расхождение с человеческой спекой
+   и всё про внешний мир — вопросом, в требовании пометка `(допущение: TMP-1)`. Зависишь от уже открытого вопроса — пометка с его номером `(допущение: Q-004)`.
+2. `{P.rel(d / 'questions.md')}` — твои вопросы с номерами TMP-1, TMP-2… (формат — в заголовке файла).
+3. `{P.rel(d / 'trace.md')}` — строка «требование → код | тесты» на каждое требование.
+4. `{P.rel(d / 'notes.md')}` — заметки для интеграций, предметной области, глоссария и о границах.
+
+## Проверка — до сдачи
+
+`python3 {skill}/scripts/check.py {repo} --cap {c['id']} --work` — без ✗ (предупреждения можно оставить, если понятно, почему).
+Затем короткий отчёт главному агенту: сколько требований и вопросов, расхождения с человеческой спекой (нет — так и напиши),
+главные находки, что вынес в «Границы».
+"""
+        (d / "BRIEF.md").write_text(brief, encoding="utf-8")
+        for name, head in (("questions.md", WORK_Q_HEAD), ("trace.md", WORK_TRACE_HEAD), ("notes.md", WORK_NOTES_HEAD)):
+            if not (d / name).exists():
+                (d / name).write_text(head.format(cap=c["id"]), encoding="utf-8")
+        made.append(c["id"])
+        print(f"✓ {P.rel(d / 'BRIEF.md')}")
+    print(f"\nРаздай: по одному работнику на возможность (мелкие — по 2–3 на работника), задание — assets/worker-prompt.md с путём к брифу.")
+    print(f"Сдали — plan.py collect {a.repo}")
+    return 0
+
+
+def _set_section(text, cap, body):
+    """Вставить или заменить раздел `## cap` в trace.md."""
+    lines = text.rstrip("\n").split("\n")
+    start = next((i for i, ln in enumerate(lines) if re.match(rf"^##\s+`?{re.escape(cap)}`?\s*$", ln)), None)
+    block = [f"## {cap}"] + body
+    if start is None:
+        return "\n".join(lines + [""] + block) + "\n"
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return "\n".join(lines[:start] + block + [""] + lines[end:]).rstrip("\n") + "\n"
+
+
+def cmd_collect(a):
+    import subprocess
+    P = sa.Paths(a.repo)
+    plan = sa.load_plan(P)
+    if not P.work.is_dir():
+        sa.die(f"нет {P.rel(P.work)} — раздачи не было (plan.py brief)")
+    caps = a.caps or sorted(d.name for d in P.work.iterdir() if d.is_dir() and not d.name.startswith("_"))
+    if not caps:
+        print("нечего собирать: все результаты уже собраны")
+        return 0
+    qtext = P.questions.read_text(encoding="utf-8")
+    done, failed, new_q = [], [], []
+    check = Path(__file__).resolve().parent / "check.py"
+    for cap in caps:
+        find_cap(plan, cap)
+        d = P.workdir(cap)
+        if not d.is_dir():
+            failed.append((cap, f"нет {P.rel(d)}"))
+            continue
+        r = subprocess.run([sys.executable, str(check), str(P.repo), "--cap", cap, "--work", "--no-cli", "--json"],
+                           capture_output=True, text=True)
+        try:
+            errs = json.loads(r.stdout).get("errors", [])
+        except ValueError:
+            errs = [r.stderr.strip() or "check.py не отработал"]
+        if errs:
+            failed.append((cap, f"{len(errs)} ошибок: " + "; ".join(errs[:3])))
+            continue
+        # вопросы: TMP → настоящие номера
+        wq = sa.parse_questions((d / "questions.md").read_text(encoding="utf-8")) if (d / "questions.md").is_file() else []
+        mapping = {}
+        for q in wq:
+            num = sa.next_qnum(sa.parse_questions(qtext))
+            qid = f"Q-{num:03d}"
+            mapping[q["id"]] = qid
+            fields = dict(q["fields"])
+            fields["Статус"] = "открыт"
+            qtext = qtext.rstrip() + "\n\n" + sa.question_block(qid, q["title"], fields) + "\n"
+            new_q.append((qid, q["title"], cap))
+        spec = P.spec(cap)
+        st = spec.read_text(encoding="utf-8")
+        st = sa.TMP_RX.sub(lambda m: mapping.get(m.group(0), m.group(0)), st)
+        spec.write_text(st, encoding="utf-8")
+        # трассировка
+        body = [ln for ln in (d / "trace.md").read_text(encoding="utf-8").splitlines() if re.match(r"^\s*[-*]\s+.+(→|->)", ln)]
+        P.trace.write_text(_set_section(P.trace.read_text(encoding="utf-8"), cap, body), encoding="utf-8")
+        # заметки — в общий файл для главного агента
+        notes = (d / "notes.md").read_text(encoding="utf-8") if (d / "notes.md").is_file() else ""
+        notes = re.sub(r"<!--[\s\S]*?-->\n?", "", notes.split("\n", 1)[-1]).strip()
+        notes = sa.TMP_RX.sub(lambda m: mapping.get(m.group(0), m.group(0)), notes)
+        with (P.work / "NOTES.md").open("a", encoding="utf-8") as fh:
+            fh.write(f"\n# {cap}\n\n{notes}\n")
+        dest = P.work / "_done" / cap
+        if dest.exists():
+            shutil.rmtree(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(d), str(dest))
+        find_cap(plan, cap)["status"] = "done"
+        done.append((cap, len(mapping)))
+    P.questions.write_text(sa.replace_index(qtext, sa.parse_questions(qtext)), encoding="utf-8")
+    sa.save_json(P.plan, plan)
+    for cap, n in done:
+        print(f"✓ {cap}: спека, трассировка, вопросов {n}")
+    for cap, why in failed:
+        print(f"✗ {cap}: не собрано — {why}. Верни работнику или исправь и повтори collect {cap}")
+    # похожие вопросы — кандидаты в дубли
+    allq = [q for q in sa.parse_questions(qtext) if sa.effective_status(q) == "открыт"]
+    newids = {x[0] for x in new_q}
+    pairs = []
+    for i, q1 in enumerate(allq):
+        for q2 in allq[i + 1:]:
+            if (q1["id"] in newids or q2["id"] in newids) and sa.near_duplicate(q1, q2):
+                pairs.append((q1["id"], q2["id"], q1["title"], q2["title"]))
+    if pairs:
+        print("\nПохожие вопросы — проверь, не дубли ли (объединить: questions.py merge <repo> <дубль> <оставить>):")
+        for x, y, tx, ty in pairs:
+            print(f"  {x} ≈ {y}: «{tx}» / «{ty}»")
+    if done:
+        print(f"\nЗаметки работников — {P.rel(P.work / 'NOTES.md')}: перенеси в integrations.md, domain.md, glossary.md,")
+        print(f"«Границы» — сверь с соседними спеками. Когда всё собрано и перенесено, удали {P.rel(P.work)}/.")
+    return 1 if failed else 0
 
 
 def main():
@@ -530,6 +855,12 @@ def main():
     p.add_argument("--notes")
     sp("drop-cap", cmd_drop, "удалить пустую возможность").add_argument("cap")
     sp("guide", cmd_guide, "собрать system-context/GUIDE.md")
+    p = sp("brief", cmd_brief, "режим раздачи: бриф работнику в system-context/.work/<cap>/")
+    p.add_argument("caps", nargs="*")
+    p.add_argument("--all", action="store_true", help="все возможности со статусом todo")
+    p.add_argument("--force", action="store_true", help="пересоздать бриф")
+    p = sp("collect", cmd_collect, "режим раздачи: собрать результаты работников в общие файлы")
+    p.add_argument("caps", nargs="*")
     a = ap.parse_args()
     return a.fn(a)
 

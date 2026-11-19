@@ -59,7 +59,10 @@ description: Восстанавливает по готовому проекту
    - Каждый вход — в возможность или `plan.py exclude <repo> "<шаблон>" --reason "…"` (служебное, отладка, мёртвый код — последнее ещё и вопросом).
    - Вход, которого опись не нашла (самописный роутер, редкий фреймворк), — `plan.py add-entry <repo> "<вид>:<имя>" --file <путь> --line <N> --cap <cap>`.
 
-5. **По возможностям — цикл**, по одной; на большом репо 1–3 за проход, продолжишь по `plan.py status`:
+5. **По возможностям — цикл**, по одной; на большом репо 1–3 за проход, продолжишь по `plan.py status`.
+   Умеешь запускать субагентов и возможностей ~8+ (или код не помещается в контекст) — **режим раздачи** вместо цикла:
+   общая основа сам, брифы `plan.py brief <repo> --all`, работники по возможностям, сборка `plan.py collect <repo>` —
+   [references/fan-out.md](references/fan-out.md). Иначе — цикл:
    1. `python3 <skill>/scripts/plan.py next <repo>` — входы, файлы, внешние вызовы, тесты, TODO и источники именно этой возможности.
    2. Прочитай обработчики и **иди по вызовам** до БД и внешних систем: проверки, ветки ошибок, статусы, лимиты, ретраи.
       Тесты — готовые сценарии. Сверь со списком из шага 3.
@@ -81,7 +84,8 @@ description: Восстанавливает по готовому проекту
    - `glossary.md` — термины как их зовут люди и как в коде;
    - `openspec/config.yaml` — 2–4 строки `context` о продукте (подробности — не сюда, а в `system-context/`).
 
-7. **Гайд и указатель.** `python3 <skill>/scripts/plan.py guide <repo>` → `system-context/GUIDE.md` (задача → файл, таблица возможностей, правила).
+7. **Гайд и указатель.** `python3 <skill>/scripts/plan.py guide <repo>` → `system-context/GUIDE.md` (задача → файл, таблица возможностей, правила
+   и «Параллельная работа» — какие возможности делят код и какими волнами можно раздавать изменения агентам).
    `python3 <skill>/scripts/link.py <repo> --file AGENTS.md` — блок между метками `<!-- sa-scan:start/end -->`, остальной текст не трогает.
 
 8. **Проверка.** `python3 <skill>/scripts/check.py <repo>` — готово, когда **ошибок 0**. Проверяет покрытие входов, формат спек
@@ -137,7 +141,7 @@ openspec/
   specs/<cap>/spec.md            по возможности: Purpose, Requirements с SHALL/MUST, Scenarios с WHEN/THEN
   changes/<id>/                  (режим B) предложения исправлений: proposal.md, tasks.md, specs/<cap>/spec.md (дельта)
 system-context/
-  GUIDE.md                       вход для агента: задача → файл, возможности, правила работы
+  GUIDE.md                       вход для агента: задача → файл, возможности, правила, параллельная работа (волны, конфликты)
   QUESTIONS.md                   чек-лист и открытые вопросы с допущениями и полем «Ответ»
   trace.md                       требование → код и тесты
   integrations.md                внешние системы: направление, когда, данные, отказы, настройки
@@ -186,13 +190,15 @@ AGENTS.md                        блок-указатель <!-- sa-scan:start/
 | `references/rules.md` | возможности, требования, источники и конфликты, крупные репо, существующий openspec, приватность | шаги 4–5, сомнения |
 | `references/openspec-format.md` | точный формат spec.md, дельты, config.yaml, CLI, версия | шаг 5, режим B |
 | `references/questions.md` | категории вопросов, как формулировать, важность, допущения, три исхода ответа | шаг 5.4, режим B |
+| `references/fan-out.md` | режим раздачи: когда, общая основа, брифы, сборка, дубли, сведение заметок | шаг 5 на большом репо |
+| `assets/worker-prompt.md` | задание работнику-субагенту | режим раздачи |
 | `examples/` | разобранные прогоны | перед первым запуском |
 | `assets/spec.template.md`, `assets/change/` | заготовки спеки и предложения изменения | шаг 5.3, режим B |
 | `assets/` (`*.template.md`, `config.template.yaml`) | заготовки `system-context/` и `config.yaml` — их копирует `plan.py init` | читать не нужно |
 | `scripts/inventory.py` | `scan` — опись репозитория, `show` — выборка | шаг 2, режим C |
-| `scripts/plan.py` | `init`, `status`, `next`, `rename`, `merge`, `move`, `exclude`, `add-entry`, `prune`, `set`, `guide` | шаги 4, 5, 7 |
-| `scripts/questions.py` | `add`, `answer`, `set`, `list`, `top`, `sync` | шаги 5, 9, режим B |
-| `scripts/check.py` | проверка всего слоя (`--cap`, `--partial`, `--no-cli`, `--json`) | шаги 5, 8 |
+| `scripts/plan.py` | `init`, `status`, `next`, `rename`, `merge`, `move`, `exclude`, `add-entry`, `prune`, `set`, `guide`; раздача — `brief`, `collect` | шаги 4, 5, 7 |
+| `scripts/questions.py` | `add`, `edit`, `answer`, `set`, `list`, `top`, `sync`, `merge` (дубли) | шаги 5, 9, режим B |
+| `scripts/check.py` | проверка всего слоя (`--cap`, `--work` — результат работника, `--partial`, `--no-cli`, `--json`) | шаги 5, 8 |
 | `scripts/link.py` | указатель в AGENTS.md и др. (`--suggest`, `--remove`) | шаг 7 |
 | `scripts/lib/sa.py` | разбор спек, вопросов, трассировки | читать не нужно |
 | `evals/` | тест-кейсы скилла | при доработке скилла |
