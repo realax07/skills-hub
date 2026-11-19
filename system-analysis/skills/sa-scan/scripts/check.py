@@ -88,7 +88,7 @@ def check_coverage(P, R, plan, inv, only):
         if not c["title"].strip():
             R.e("plan.json", f"у {c['id']} нет названия (plan.py set … --title)")
         if not c["entries"]:
-            R.w("plan.json", f"у {c['id']} нет входов — возможность без входа бывает (правило, общее для многих), но проверь")
+            R.info.append(f"{c['id']}: без своих входов — нормально для сквозной возможности (доступ, общие ошибки API)")
         if c["status"] != "done":
             (R.w if R.partial else R.e)("plan.json", f"{c['id']} не готова (status {c['status']})")
         if c["status"] == "done" and not P.spec(c["id"]).is_file():
@@ -240,7 +240,8 @@ def check_integrations(P, R, inv):
         seen.add(u["sdk"])
         name = u["sdk"].split("/")[-1].lower()
         if u["sdk"].lower() not in text and name not in text:
-            R.e(P.rel(p), f"SDK {u['sdk']} ({u['category']}) используется в {u['file']}, но в integrations.md не упомянут")
+            R.e(P.rel(p), f"SDK {u['sdk']} ({u['category']}) используется в {u['file']}, но в integrations.md не упомянут — "
+                          f"впиши имя пакета `{u['sdk']}` буквально в раздел его системы (например, в строку «В коде»)")
 
 
 def check_link(P, R):
@@ -266,7 +267,8 @@ def run_cli(P, R):
     if r.returncode != 0:
         R.e("openspec validate --all --strict", out[-2000:] or f"код {r.returncode}")
     else:
-        R.info.append("openspec validate --all --strict: ✓")
+        n = len([d for d in (P.openspec / "changes").iterdir() if d.is_dir() and d.name != "archive"]) if (P.openspec / "changes").is_dir() else 0
+        R.info.append(f"openspec validate --all --strict: ✓ (спеки и изменений: {n})")
 
 
 def main():

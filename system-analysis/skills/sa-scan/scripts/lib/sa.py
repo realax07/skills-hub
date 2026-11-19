@@ -314,10 +314,24 @@ def parse_trace(text):
 
 def _paths(raw):
     """«a.py:9, 18-20, b.py (заглушка)» → ['a.py:9', 'a.py:18-20', 'b.py']: голые номера строк относятся к предыдущему файлу,
-    пояснения в скобках отбрасываются."""
+    пояснения в скобках (с запятыми и вложенными скобками) отбрасываются."""
     out = []
-    for x in raw.split(","):
-        x = re.sub(r"\s*\([^)]*\)\s*$", "", x.strip().strip("`")).strip().strip("`")
+    parts, depth, cur = [], 0, ""
+    for ch in raw:
+        depth += ch == "("
+        depth -= ch == ")" and depth > 0
+        if ch == "," and depth == 0:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur)
+    for x in parts:
+        x = x.strip().strip("`")
+        i = x.find("(")
+        if i > 0:
+            x = x[:i]
+        x = x.strip().strip("`")
         if not x or x in ("—", "-", "нет"):
             continue
         if re.match(r"^\d+(-\d+)?$", x) and out:
