@@ -264,7 +264,8 @@ def affects(q):
             continue
         if "/" in part:
             cap, req = part.split("/", 1)
-            out.append((cap.strip().strip("`"), req.strip().strip("`")))
+            req = req.strip().strip("`")
+            out.append((cap.strip().strip("`"), None if req in ("", "—", "-", "нет") else req))
         else:
             out.append((part, None))
     return out
@@ -390,7 +391,7 @@ def _paths(raw):
         if i > 0:
             x = x[:i]
         x = x.strip().strip("`")
-        if not x or x in ("—", "-", "нет"):
+        if not x or x in ("—", "-", "нет") or x.startswith(("— ", "- ", "нет ")):
             continue
         if re.match(r"^\d+(-\d+)?$", x) and out:
             out.append(strip_loc(out[-1]) + ":" + x)

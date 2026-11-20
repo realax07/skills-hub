@@ -38,12 +38,26 @@ GENERIC_DIRS = {"src", "app", "apps", "lib", "libs", "internal", "pkg", "cmd", "
                 "routers", "controllers", "controller", "handlers", "handler", "views", "endpoints", "resources",
                 "jobs", "job", "workers", "worker", "tasks", "consumers", "listeners", "subscribers", "commands",
                 "management", "services", "service", "modules", "main", "java", "kotlin", "com", "org", "core",
-                "http", "web", "rest", "v1", "v2", "v3", "public", "private", "backend", "packages", "services"}
+                "http", "web", "rest", "v1", "v2", "v3", "public", "private", "backend", "packages", "services",
+                "eventhandling", "integrationevents", "domaineventhandlers", "application", "apis", "components",
+                "infrastructure", "quickstart", "endpoints", "pages"}
 SKIP_SEG = re.compile(r"^(api|v\d+|rest|public|internal|private|\{.*\}|)$", re.I)
 
 
-def draft_group(e):
-    """Черновая группа для входа: первый значимый сегмент пути или папка/файл обработчика."""
+def draft_group(e, multi=False):
+    """Черновая группа для входа: первый значимый сегмент пути или папка/файл обработчика.
+    В монорепо (multi) — по сервису: всё, что не /api/<сегмент>, группируется по пакету."""
+    pkg = e.get("package") or "."
+    short = sa.kebab(Path(pkg).name) if pkg != "." else ""
+    if multi and short:
+        if e["kind"] == "http":
+            m = re.match(r"^\w+ /api/(?:v\d+/)?([^/{]+)", e["name"])
+            return sa.kebab(m.group(1)) if m else short
+        if e["kind"] == "consumer":
+            return f"{short}-events"
+        if e["kind"] in ("ui", "schedule", "cli"):
+            return f"{short}-{e['kind']}"
+        return short
     if e["kind"] == "http":
         path = e["name"].split(" ", 1)[-1]
         for seg in path.split("/"):
@@ -122,11 +136,12 @@ def cmd_init(a):
     else:
         groups = OrderedDict()
         excluded = []
+        multi = len({e.get("package") for e in inv["entries"] if e.get("package") not in (None, ".")}) >= 3
         for e in inv["entries"]:
             if "служебное" in e.get("tags", []) or "ci" in e.get("tags", []):
                 excluded.append({"entry": e["id"], "reason": "служебное (health, метрики, CI) — проверь"})
                 continue
-            groups.setdefault(draft_group(e), []).append(e["id"])
+            groups.setdefault(draft_group(e, multi), []).append(e["id"])
         plan = OrderedDict([
             ("version", 1), ("created", date.today().isoformat()), ("language", a.language),
             ("sources", [{"ref": s, "kind": "url" if re.match(r"^https?://", s) else "file", "note": ""} for s in a.source]),
@@ -194,12 +209,21 @@ def cmd_status(a):
     return 0
 
 
+GENERIC_WORDS = {"order", "orders", "item", "items", "test", "tests", "user", "api", "http", "post", "get", "put",
+                 "delete", "event", "events", "service", "handler", "status", "data", "create", "update"}
+
+
 def related_tests(inv, files, words):
+    """Тесты возможности: файл теста назван как файл кода, или в названии теста/файла есть слово возможности (не общее).
+    Тесты без проверок (0 названий) не показываются."""
     out = []
-    words = {w.lower() for w in words if len(w) > 2}
+    words = {w.lower() for w in words if len(w) > 3 and w.lower() not in GENERIC_WORDS}
     stems = {Path(f).stem.lower().split(".")[0] for f in files}
+    stems = {s for s in stems if len(s) > 3 and s not in ("program", "extensions", "index", "main", "server", "globalusings")}
     for t in inv.get("tests", []):
-        name = t["file"].lower()
+        if not t.get("count"):
+            continue
+        name = Path(t["file"]).name.lower()
         blob = (name + " " + " ".join(t["titles"])).lower()
         if any(s in name for s in stems) or any(w in blob for w in words):
             out.append(t)
@@ -346,7 +370,9 @@ def cmd_exclude(a):
         detach(plan, eid)
         plan.setdefault("excluded", []).append({"entry": eid, "reason": a.reason})
     sa.save_json(P.plan, plan)
-    print(f"✓ исключено ({a.reason}): " + ", ".join(ids))
+    print(f"✓ исключено ({a.reason}), входов: {len(ids)}: " + ", ".join(ids))
+    if len(ids) > 5:
+        print(f"! шаблон захватил {len(ids)} входов — проверь список; вернуть нужный: plan.py move {a.repo} \"<id>\" <cap>")
     return 0
 
 
@@ -582,10 +608,10 @@ WORK_Q_HEAD = """# Вопросы работника — {cap}
 Пометка в спеке — (допущение: TMP-1). Настоящие номера присвоит `plan.py collect`.
 Поля: Статус (всегда «открыт»), Важность (блокирует | уточняет), Категория (из списка), Что видно (с путь:строка),
 Затрагивает ({cap} / <Имя требования>), Допущение, Кто ответит (роль), Ответ (строка обязательна, значение пустое).
-Образец (скопируй ниже, без строк ```, и замени; заголовок заканчивается «?»):
+Образец (скопируй ниже, без строк ```, N замени на номер; заголовок заканчивается «?»):
 
 ```
-### TMP-1. Сколько позиций допускается в заказе: 30 или 50?
+### TMP-N. Сколько позиций допускается в заказе: 30 или 50?
 - **Статус:** открыт
 - **Важность:** блокирует
 - **Категория:** расхождение кода и документа
@@ -602,7 +628,8 @@ WORK_Q_HEAD = """# Вопросы работника — {cap}
 """
 WORK_TRACE_HEAD = """# Трассировка работника — {cap}
 
-Строка на каждое требование: - <Имя требования, как в spec.md> → путь:строка, путь | тесты: путь (пояснение)
+Строка на каждое требование: - <Имя требования, как в spec.md> → путь:строка, путь:10-20, 31-35 | тесты: путь (пояснение)
+Заголовок `## <возможность>` не нужен. Нет тестов — `| тесты: —`. Номера строк — по коду (`grep -n`): проверка сверяет их с длиной файла.
 """
 WORK_NOTES_HEAD = """# Заметки работника — {cap}
 
@@ -655,8 +682,12 @@ def cmd_brief(a):
         ns = argparse.Namespace(repo=a.repo, cap=c["id"])
         task = _capture(cmd_next, ns)
         task = task.split("\nПиши:")[0].rstrip()
+        task = re.sub(r"\nЧеловеческие спеки — [^\n]*\n(?:  [^\n]*\n?)*", "\n", task)
         others = "\n".join(f"- `{x['id']}` — {x['title']}" for x in plan["capabilities"] if x["id"] != c["id"])
         known = "\n".join(f"- {q['id']}: {q['title']}" for q in qs if sa.effective_status(q) == "открыт") or "- нет"
+        srcs = plan.get("sources") or []
+        human = ("Человеческие спеки: " + ", ".join(f"`{x['ref']}`" for x in srcs) + " — найди разделы про эту возможность и сверь с кодом.") if srcs \
+            else "Человеческих спек нет — сверяй только с кодом и тестами; в отчёте напиши «человеческой спеки нет»."
         repo = P.repo
         brief = f"""# Бриф: возможность `{c['id']}` — {c['title']}
 
@@ -676,6 +707,8 @@ def cmd_brief(a):
 
 ## Что исследовать
 
+{human}
+
 {task}
 
 Иди по вызовам от входов до БД и внешних систем. Код не запускай, внешние системы не вызывай.
@@ -692,7 +725,8 @@ def cmd_brief(a):
 
 ## Что написать
 
-1. `openspec/specs/{c['id']}/spec.md` (папку создай) — спека по формату OpenSpec, «как есть», с багами; расхождение с человеческой спекой
+1. `openspec/specs/{c['id']}/spec.md` (папку создай) — спека по формату OpenSpec, «как есть», с багами; 2–12 требований
+   (больше — скажи в отчёте, главный агент поделит возможность), текст требования до 500 символов вместе с пометками; расхождение с человеческой спекой
    и всё про внешний мир — вопросом, в требовании пометка `(допущение: TMP-1)`. Зависишь от уже открытого вопроса — пометка с его номером `(допущение: Q-004)`.
 2. `{P.rel(d / 'questions.md')}` — твои вопросы с номерами TMP-1, TMP-2… (формат — в заголовке файла).
 3. `{P.rel(d / 'trace.md')}` — строка «требование → код | тесты» на каждое требование.
@@ -737,7 +771,7 @@ def cmd_collect(a):
         print("нечего собирать: все результаты уже собраны")
         return 0
     qtext = P.questions.read_text(encoding="utf-8")
-    done, failed, new_q = [], [], []
+    done, failed, new_q, big = [], [], [], []
     check = Path(__file__).resolve().parent / "check.py"
     for cap in caps:
         find_cap(plan, cap)
@@ -778,6 +812,18 @@ def cmd_collect(a):
         notes = sa.TMP_RX.sub(lambda m: mapping.get(m.group(0), m.group(0)), notes)
         with (P.work / "NOTES.md").open("a", encoding="utf-8") as fh:
             fh.write(f"\n# {cap}\n\n{notes}\n")
+        # те же заметки по разделам — чтобы сводить каждый общий файл отдельно (можно раздать субагентам)
+        for sec, body in re.findall(r"^##\s+(.+?)\s*\n([\s\S]*?)(?=^##\s|\Z)", notes, re.M):
+            body = body.strip()
+            if not body or body.lower() in ("нет", "нет.", "—"):
+                continue
+            key = {"интеграции": "integrations", "предметная область": "domain", "глоссарий": "glossary",
+                   "границы": "boundaries"}.get(sec.strip().lower(), "other")
+            with (P.work / f"NOTES-{key}.md").open("a", encoding="utf-8") as fh:
+                fh.write(f"\n# {cap}\n\n{body}\n")
+        nreq = len(sa.parse_spec(st)["requirements"])
+        if nreq > 12:
+            big.append((cap, nreq))
         dest = P.work / "_done" / cap
         if dest.exists():
             shutil.rmtree(dest)
@@ -803,9 +849,13 @@ def cmd_collect(a):
         print("\nПохожие вопросы — проверь, не дубли ли (объединить: questions.py merge <repo> <дубль> <оставить>):")
         for x, y, tx, ty in pairs:
             print(f"  {x} ≈ {y}: «{tx}» / «{ty}»")
+    for cap, n in big:
+        print(f"! {cap}: {n} требований — больше 12, подумай, не поделить ли возможность (rules.md, «Возможности»)")
     if done:
-        print(f"\nЗаметки работников — {P.rel(P.work / 'NOTES.md')}: перенеси в integrations.md, domain.md, glossary.md,")
-        print(f"«Границы» — сверь с соседними спеками. Когда всё собрано и перенесено, удали {P.rel(P.work)}/.")
+        print(f"\nЗаметки работников по разделам — {P.rel(P.work)}/NOTES-integrations.md, NOTES-domain.md, NOTES-glossary.md,")
+        print("NOTES-boundaries.md, NOTES-other.md (всё вместе — NOTES.md). Сведи каждый в свой общий файл — сам или по субагенту на файл:")
+        print("integrations.md, domain.md, glossary.md; «Границы» сверь с соседними спеками.")
+        print(f"Затем сократи вопросы (references/fan-out.md, шаг 8) и удали {P.rel(P.work)}/.")
     return 1 if failed else 0
 
 

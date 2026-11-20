@@ -36,14 +36,14 @@ SKIP_DIRS = {
 LOCKFILES = {"package-lock.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock", "go.sum", "Cargo.lock",
              "composer.lock", "Gemfile.lock", "Pipfile.lock", "bun.lockb", "uv.lock", "packages.lock.json"}
 CODE_EXT = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".py", ".go", ".java", ".kt", ".kts",
-            ".scala", ".groovy", ".rb", ".php", ".cs", ".rs", ".ex", ".exs", ".erl", ".clj"}
+            ".scala", ".groovy", ".rb", ".php", ".cs", ".rs", ".ex", ".exs", ".erl", ".clj", ".razor", ".cshtml"}
 JS = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
 PY = {".py"}
 GO = {".go"}
 JVM = {".java", ".kt", ".kts", ".scala", ".groovy"}
 RB = {".rb"}
 PHP = {".php"}
-CS = {".cs"}
+CS = {".cs", ".razor"}
 RS = {".rs"}
 CONF_EXT = {".yaml", ".yml", ".json", ".toml", ".ini", ".properties", ".conf", ".env", ".xml", ".tf", ".hcl"}
 MAX_FILE = 1_000_000
@@ -106,6 +106,16 @@ SDK = OrderedDict([
     ("mixpanel", "аналитика"), ("@amplitude", "аналитика"), ("@segment", "аналитика"), ("posthog", "аналитика"),
     ("@googlemaps", "карты и гео"), ("googlemaps", "карты и гео"), ("@mapbox", "карты и гео"),
     ("dadata", "справочники и проверки"), ("@dadata", "справочники и проверки"),
+    ("RabbitMQ.Client", "брокер сообщений"), ("MassTransit", "брокер сообщений"), ("Confluent.Kafka", "брокер сообщений"),
+    ("Azure.Messaging.ServiceBus", "брокер сообщений"), ("Aspire.RabbitMQ", "брокер сообщений"),
+    ("Npgsql", "базы данных"), ("Aspire.Npgsql", "базы данных"), ("Microsoft.EntityFrameworkCore", "базы данных"),
+    ("Pgvector", "базы данных"), ("Dapper", "базы данных"), ("MongoDB.Driver", "базы данных"),
+    ("StackExchange.Redis", "кэш и Redis"), ("Aspire.StackExchange.Redis", "кэш и Redis"),
+    ("Duende.IdentityServer", "аутентификация"), ("Microsoft.AspNetCore.Authentication", "аутентификация"),
+    ("Microsoft.Identity", "аутентификация"), ("Stripe.net", "платежи"), ("SendGrid", "почта"), ("MailKit", "почта"),
+    ("Microsoft.Extensions.AI", "ИИ-модели"), ("Azure.AI.OpenAI", "ИИ-модели"), ("Aspire.Azure.AI", "ИИ-модели"),
+    ("OllamaSharp", "ИИ-модели"), ("CommunityToolkit.Aspire.OllamaSharp", "ИИ-модели"),
+    ("Azure.Storage", "облако Azure"), ("AWSSDK", "облако AWS"), ("Grpc.Net.Client", "gRPC-клиент"),
 ])
 
 MANIFESTS = ("package.json", "requirements.txt", "pyproject.toml", "setup.py", "Pipfile", "go.mod", "pom.xml",
@@ -120,6 +130,8 @@ FRAMEWORKS = OrderedDict([
     ("symfony/framework-bundle", "Symfony"), ("github.com/gin-gonic/gin", "Gin"), ("github.com/labstack/echo", "Echo"),
     ("github.com/gofiber/fiber", "Fiber"), ("github.com/go-chi/chi", "chi"), ("actix-web", "actix-web"),
     ("axum", "axum"), ("phoenix", "Phoenix"),
+    ("Microsoft.NET.Sdk.Web", "ASP.NET Core"), ("Grpc.AspNetCore", "gRPC (ASP.NET Core)"), ("Aspire.Hosting", ".NET Aspire"),
+    ("Microsoft.AspNetCore.Components", "Blazor"), ("MediatR", "MediatR"), ("Asp.Versioning.Http", "версионирование API"),
 ])
 
 
@@ -148,7 +160,7 @@ def walk(root):
 
 def read(p):
     try:
-        return p.read_text(encoding="utf-8", errors="replace")
+        return p.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
         return ""
 
@@ -239,7 +251,7 @@ class Inv:
     # ----- манифесты и стек
     def scan_manifests(self, files):
         for p in files:
-            if p.name not in MANIFESTS:
+            if p.name not in MANIFESTS and p.suffix not in (".csproj", ".fsproj", ".vbproj") and p.name != "Directory.Packages.props":
                 continue
             relp = rel(self.root, p)
             d = rel(self.root, p.parent)
@@ -301,6 +313,14 @@ class Inv:
                 m = re.search(r'^name\s*=\s*"([^"]+)"', text, re.M)
                 name = m.group(1) if m else None
                 deps.update(re.findall(r"^([\w\-]+)\s*=", text.split("[dependencies]", 1)[-1], re.M))
+            elif p.suffix in (".csproj", ".fsproj", ".vbproj") or p.name == "Directory.Packages.props":
+                if p.name != "Directory.Packages.props":
+                    name = p.stem
+                    m = re.search(r'<Project\s+Sdk="([^"]+)"', text)
+                    if m:
+                        deps.add(m.group(1))
+                deps.update(re.findall(r'<Package(?:Reference|Version)\s+Include="([^"]+)"', text))
+                deps.update(re.findall(r'<Sdk\s+Name="([^"]+)"', text))
             elif p.name == "mix.exs":
                 deps.update(re.findall(r"\{:(\w+),", text))
             if not any(pk["dir"] == d for pk in self.packages):
@@ -319,13 +339,14 @@ class Inv:
             fw = []
             for k, v in FRAMEWORKS.items():
                 if any(dep == k or dep.startswith(k + "/") or (k.startswith("spring-boot") and "spring-boot" in dep)
-                       for dep in deps):
+                       or ("." in k and k[0].isupper() and dep.startswith(k)) for dep in deps):
                     if v not in fw:
                         fw.append(v)
             sdk = defaultdict(list)
             for dep in sorted(deps):
                 for k, cat in SDK.items():
                     if dep == k or dep.startswith(k + "/") or dep.startswith(k + "-") or (k.endswith(("-", ".")) and dep.startswith(k)) \
+                            or (k[:1].isupper() and (dep.startswith(k + ".") or dep == k)) \
                             or (k.startswith(("github.com", "gorm.io", "software.")) and dep.startswith(k)):
                         sdk[cat].append(dep)
                         break
@@ -500,9 +521,26 @@ class Inv:
         for mm in re.finditer(r"\[Http(Get|Post|Put|Patch|Delete)(?:\(\s*\"([^\"]*)\"\s*\))?\]", text):
             self.add_entry("http", f"{mm.group(1).upper()} {join_path(prefix, mm.group(2) or '')}", relp,
                            line_of(text, mm.start()), "ASP.NET")
-        for mm in re.finditer(r"\.Map(Get|Post|Put|Patch|Delete)\(\s*\"([^\"]+)\"", text):
-            self.add_entry("http", f"{mm.group(1).upper()} {norm_path(mm.group(2))}", relp, line_of(text, mm.start()),
-                           "ASP.NET minimal API")
+        groups = {}
+        for mm in re.finditer(r"(?:var|const)?\s*(\w+)\s*=\s*(\w+)\.MapGroup\(\s*\"([^\"]*)\"", text):
+            parent = groups.get(mm.group(2), "")
+            groups[mm.group(1)] = join_path(parent, mm.group(3)) if parent else mm.group(3)
+        for mm in re.finditer(r"(\w+)\.Map(Get|Post|Put|Patch|Delete)\(\s*\"([^\"]*)\"", text):
+            pre = groups.get(mm.group(1), "")
+            self.add_entry("http", f"{mm.group(2).upper()} {join_path(pre, mm.group(3)) if pre else norm_path(mm.group(3))}", relp,
+                           line_of(text, mm.start()), "ASP.NET minimal API" + (" (MapGroup)" if pre else ""))
+        m = re.search(r"\bclass\s+(\w+)Controller\b", text)
+        if m and not prefix and relp.endswith(".cs"):
+            ctrl = m.group(1)
+            for mm in re.finditer(r"\[Http(Get|Post|Put|Patch|Delete)\]", text):
+                act = ident_after(text, mm.start(), 4)
+                if act:
+                    eid = f"{mm.group(1).upper()} /{ctrl}/{act}"
+                    self.entries.pop(f"http:{mm.group(1).upper()} /", None)
+                    self.add_entry("http", eid, relp, line_of(text, mm.start()), "MVC-контроллер (маршрут по соглашению)")
+        if relp.endswith(".razor"):
+            for mm in re.finditer(r"^@page\s+\"([^\"]+)\"", text, re.M):
+                self.add_entry("ui", norm_path(mm.group(1)), relp, line_of(text, mm.start()), "Blazor @page")
 
     def rs_routes(self, relp, text):
         for mm in re.finditer(r"\.route\(\s*\"([^\"]+)\"\s*,\s*(get|post|put|patch|delete)", text):
@@ -545,6 +583,12 @@ class Inv:
             for mm in re.finditer(rx, text):
                 self.add_entry("consumer", f"{how} {mm.group(1)}", relp, line_of(text, mm.start()), how,
                                [tag] if tag else None)
+        if ext in CS:
+            for mm in re.finditer(r"class\s+(\w+)\s*(?:\([^)]*\))?\s*:\s*[^{]{0,300}?\bI(?:Integration)?EventHandler<(\w+)>", text):
+                self.add_entry("consumer", f"event {mm.group(2)}", relp, line_of(text, mm.start()), f"обработчик интеграционного события → {mm.group(1)}")
+            for mm in re.finditer(r"class\s+(\w+)\s*(?:\([^)]*\))?\s*:\s*[^{]{0,300}?\bINotificationHandler<(\w+)>", text):
+                self.add_entry("consumer", f"доменное событие {mm.group(2)}", relp, line_of(text, mm.start()),
+                               f"MediatR → {mm.group(1)}", ["internal"])
         named = [
             (r"@(?:\w+\.)?(?:task|shared_task)\b(?:\([^)]*\))?", "celery-задача"),
             (r"@dramatiq\.actor\b", "dramatiq-задача"),
@@ -561,7 +605,7 @@ class Inv:
                         (r"class\s+(\w+)\s*<\s*(?:ApplicationJob|ActiveJob::Base)", "active-job"),
                         (r"class\s+(\w+)[^{\n]*implements[^{\n]*ShouldQueue", "laravel-queue"),
                         (r"class\s+(\w+)\s*:\s*(?:[\w.]+\s*,\s*)*IConsumer<", "masstransit"),
-                        (r"class\s+(\w+)\s*:\s*BackgroundService", "background-service")]:
+                        (r"class\s+(\w+)(?:<[^>]*>)?\s*(?:\([^)]*\))?\s*:\s*BackgroundService", "background-service")]:
             for mm in re.finditer(rx, text):
                 self.add_entry("consumer", f"{how} {mm.group(1)}", relp, line_of(text, mm.start()), how)
 
@@ -641,6 +685,8 @@ class Inv:
         r"\bFaraday\.|\bNet::HTTP\b|\bHTTParty\b|\bRestClient\.|\bHttp::(?:get|post|put|patch|delete|withToken|withHeaders|acceptJson)\b|"
         r"\bGuzzleHttp\b|\bcurl_init\(|\breqwest::|\bnew\s+WebSocket\(|\bnodemailer\.createTransport|\bsmtplib\.SMTP|"
         r"\bgrpc\.(?:Dial|NewClient)\(|\bnew\s+\w+Client\(")
+    SVC_RX = re.compile(r"(?:https?\+https?|https?)://([a-z][a-z0-9-]*-(?:api|service|svc|server|worker|gateway|app|processor))\b")
+    COMMENT_LINE = ("//", "#", "*", "/*", "<!--", "--", "\'\'\'", '\"\"\"')
     URL_RX = re.compile(r"""(?:https?|wss?|amqps?|redis|postgres(?:ql)?|mongodb(?:\+srv)?|mysql|kafka)://([A-Za-z0-9][A-Za-z0-9.\-]*\.[A-Za-z]{2,}|[A-Za-z0-9\-]+:\d+)""")
     ENV_ON_LINE = re.compile(r"(?:process\.env\.|process\.env\[['\"]|os\.environ(?:\.get)?\(?\[?['\"]|os\.getenv\(['\"]|"
                              r"System\.getenv\(\"|os\.Getenv\(\"|ENV\[['\"]|ENV\.fetch\(['\"]|env\(['\"]|"
@@ -654,12 +700,18 @@ class Inv:
                 em = self.ENV_ON_LINE.search(ln)
                 self.calls.append({"file": relp, "line": i, "code": ln.strip()[:160],
                                    "host": hm.group(1) if hm else None, "env": em.group(1) if em else None})
+            if ln.lstrip().startswith(self.COMMENT_LINE):
+                continue   # ссылки в комментариях — документация, не интеграции
             for hm in self.URL_RX.finditer(ln):
+                if re.search(r"(?:href|src|action)\s*=\s*[\"']?[^\"'\s]*$", ln[:hm.start()]):
+                    continue   # ссылка в разметке — переход пользователя, не вызов
                 self.add_host(hm.group(1), relp, i, is_test)
+            for hm in self.SVC_RX.finditer(ln):
+                self.add_host(hm.group(1) + " (сервис по имени)", relp, i, is_test)
 
     def add_host(self, host, relp, line, is_test=False):
         h = host.lower().rstrip(".")
-        name = h.split(":")[0]
+        name = h.split(":")[0].split(" ")[0]
         if NOISE_HOSTS.search(name) or re.match(r"^\d+\.\d+\.\d+\.\d+$", name) or name.endswith((".example", ".local", ".test", ".invalid")):
             return
         if ":" in h and (len(name) < 3 or name in ("host", "hostname", "server", "domain", "your-host")):
@@ -677,6 +729,9 @@ class Inv:
         re.compile(r"(?:env|config)\(\s*['\"]([A-Z][A-Z0-9_]+)['\"]"), re.compile(r"System\.getenv\(\s*\"([A-Z][A-Z0-9_]+)\""),
         re.compile(r"os\.(?:Getenv|LookupEnv)\(\s*\"([A-Z][A-Z0-9_]+)\""), re.compile(r"ENV(?:\.fetch\(|\[)\s*['\"]([A-Z][A-Z0-9_]+)['\"]"),
         re.compile(r"Environment\.GetEnvironmentVariable\(\s*\"([A-Z][A-Z0-9_]+)\""),
+        re.compile(r"(?:Configuration|configuration|config|section|Section)\s*\[\s*\"([\w:]+)\"\s*\]"),
+        re.compile(r"\.(?:GetRequiredValue|GetValue<[\w?]+>)\(\s*\"([\w:]+)\""),
+        re.compile(r"GetConnectionString\(\s*\"([\w-]+)\"\)"),
         re.compile(r"env::var\(\s*\"([A-Z][A-Z0-9_]+)\""), re.compile(r"@Value\(\s*\"\$\{([\w.\-]+)"),
         re.compile(r"(?:Field|BaseSettings)[\s\S]{0,0}env\s*=\s*['\"]([A-Z][A-Z0-9_]+)['\"]"),
     ]
@@ -684,7 +739,10 @@ class Inv:
     def env_vars(self, relp, text, ext):
         for rx in self.ENV_RX:
             for mm in rx.finditer(text):
-                self.add_env(mm.group(1), relp, line_of(text, mm.start()))
+                name = mm.group(1)
+                if "GetConnectionString" in rx.pattern:
+                    name = f"ConnectionStrings:{name}"
+                self.add_env(name, relp, line_of(text, mm.start()))
 
     def env_conf(self, relp, text):
         name = Path(relp).name.lower()
@@ -911,6 +969,8 @@ class Inv:
             rx = r"\"((?:github\.com|gorm\.io|cloud\.google\.com|go\.mongodb\.org)/[\w.\-/]+)\""
         elif ext in JVM:
             rx = r"^import\s+([\w.]+)"
+        elif ext in CS:
+            rx = r"^\s*(?:global\s+)?using\s+(?:static\s+)?([\w.]+)\s*;"
         else:
             return
         for mm in re.finditer(rx, text, re.M):
@@ -922,7 +982,8 @@ class Inv:
                     if cat in ("мониторинг",):
                         break
                     ln = line_of(text, mm.start())
-                    self.sdk_uses.append({"file": relp, "line": ln, "sdk": mod, "category": cat})
+                    if not any(u["file"] == relp and u["sdk"] == k for u in self.sdk_uses):
+                        self.sdk_uses.append({"file": relp, "line": ln, "sdk": k, "module": mod, "category": cat})
                     break
 
     # ----- проход

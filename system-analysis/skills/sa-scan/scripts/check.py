@@ -141,6 +141,12 @@ def check_trace(P, R, specs, text=None, where=None):
                 fp = sa.strip_loc(path)
                 if fp and not (P.repo / fp).exists():
                     R.e(P.rel(tpath), f"стр. {rec['line']}: нет файла {fp}")
+                    continue
+                m = re.search(r":(\d+)(?:-(\d+))?$", path.strip())
+                if m and fp and (P.repo / fp).is_file():
+                    n = (P.repo / fp).read_text(encoding="utf-8", errors="replace").count("\n") + 1
+                    if int(m.group(2) or m.group(1)) > n:
+                        R.e(P.rel(tpath), f"стр. {rec['line']}: {path} — в файле {n} строк; номер строки сверь по коду (grep -n)")
 
 
 def validate_question(R, where, q, caps, specs):
@@ -200,6 +206,7 @@ def check_work(P, R, plan, specs, cap):
             known = sa.parse_questions(P.questions.read_text(encoding="utf-8")) if P.questions.is_file() else []
             if m not in {q["id"] for q in known}:
                 R.e(P.rel(P.spec(cap)), f"ссылка на {m}, такого вопроса нет — свои вопросы работник нумерует TMP-…")
+    R.info.append(f"вопросов работника: {len(wq)}")
     notes = d / "notes.md"
     if not notes.is_file():
         R.w(P.rel(notes), "нет заметок для главного агента")
@@ -279,7 +286,7 @@ def check_integrations(P, R, inv):
         rec = inv["outbound"]["hosts"][host]
         if all("(тест)" in f for f in rec["files"]):
             continue
-        base = host.split(":")[0]
+        base = host.split(" ")[0].split(":")[0]
         parts = base.split(".")
         short = ".".join(parts[-2:]) if len(parts) >= 2 else base
         if base not in text and short not in text:
