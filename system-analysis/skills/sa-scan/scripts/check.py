@@ -37,7 +37,8 @@ class Report:
 def check_files(P, R):
     for p, what in [(P.config, "настройки OpenSpec"), (P.ctx / "glossary.md", "глоссарий"), (P.ctx / "domain.md", "предметная область"),
                     (P.ctx / "integrations.md", "внешние системы"), (P.trace, "трассировка"), (P.questions, "вопросы"),
-                    (P.guide, "гайд (plan.py guide)"), (P.ctx / "inventory.md", "опись")]:
+                    (P.guide, "гайд (plan.py guide)"), (P.ctx / "inventory.md", "опись"),
+                    (P.ctx / "contracts.md", "контракты (contracts.py scan)"), (P.ctx / "data.md", "данные (contracts.py scan)")]:
         if not p.is_file():
             R.e(P.rel(p), f"нет файла ({what})")
             continue
@@ -62,6 +63,49 @@ def check_files(P, R):
         rows = [ln for ln in g.read_text(encoding="utf-8").splitlines() if ln.startswith("|") and not re.match(r"^\|\s*(Термин|---)", ln)]
         if len(rows) < 3:
             R.w(P.rel(g), f"терминов {len(rows)} — обычно их хотя бы 5–10: сущности, статусы, роли, процессы")
+
+
+def check_contracts(P, R, plan, inv):
+    """contracts.md собран по текущей описи: каждый вход есть, исчезнувшие разделы убраны."""
+    c = P.ctx / "contracts.md"
+    if not c.is_file():
+        return
+    text = c.read_text(encoding="utf-8")
+    keys = set(re.findall(r"<!-- sa:auto id=\"(.*?)\" -->", text))
+    excluded = {x["entry"] for x in plan.get("excluded", [])}
+    missing = [e["id"] for e in inv.get("entries", []) if e["kind"] not in ("consumer",) and e["id"] not in excluded and e["id"] not in keys]
+    if missing:
+        R.w(P.rel(c), f"нет разделов для {len(missing)} входов (опись новее?) — contracts.py scan: " + ", ".join(missing[:5]))
+    stale = text.count("⚠ больше не найдено при пересканировании")
+    if stale:
+        R.w(P.rel(c), f"разделов, которых больше нет в коде: {stale} — удали их (вместе с заметками) или проверь, куда переехал вход")
+
+
+def entry_named(e, text):
+    """Назван ли вход в тексте спеки так, как его видит вызывающий: метод и путь, RPC, операция GraphQL, страница."""
+    norm = lambda x: re.sub(r"\{[^}]*\}|(?<=/):\w+|<[^>]+>|(?<=/)\d+(?=/|\b)", "{}", x).lower().rstrip("/")
+    low = norm(text)
+    if e["kind"] in ("http", "ui"):
+        path = e["name"].split(" ", 1)[-1]
+        return norm(path) in low or norm(path.replace("/api", "", 1)) in low
+    if e["kind"] in ("grpc", "graphql"):
+        return e["name"].split(".")[-1].lower() in text.lower()
+    return True
+
+
+def check_entry_names(P, R, plan, inv, only):
+    ents = sa.all_entries(inv, plan)
+    for c in plan["capabilities"]:
+        if only and c["id"] != only:
+            continue
+        p = P.spec(c["id"])
+        if not p.is_file():
+            continue
+        text = p.read_text(encoding="utf-8")
+        miss = [eid for eid in c["entries"] if eid in ents and not entry_named(ents[eid], text)]
+        if miss:
+            R.w(P.rel(p), f"входы не названы ни в одном требовании ({len(miss)}): " + ", ".join(miss[:8]) +
+                (" …" if len(miss) > 8 else "") + " — агент, который меняет вход, не найдёт его требование: назови метод и путь (RPC) в требовании или сценарии")
 
 
 def check_coverage(P, R, plan, inv, only):
@@ -353,6 +397,7 @@ def main():
             sa.die(f"нет возможности {a.cap}")
     check_coverage(P, R, plan, inv, a.cap)
     specs = check_specs(P, R, plan, a.cap)
+    check_entry_names(P, R, plan, inv, a.cap)
     if a.work:
         R.err = [m for m in R.err if not m.startswith("plan.json")]
         R.warn = [m for m in R.warn if not m.startswith("plan.json")]
@@ -363,6 +408,7 @@ def main():
     if not a.cap:
         check_files(P, R)
         check_integrations(P, R, inv)
+        check_contracts(P, R, plan, inv)
         check_changes(P, R)
         check_link(P, R)
         if P.work.is_dir():

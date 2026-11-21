@@ -287,6 +287,19 @@ def cmd_next(a):
             print("\nВопросы по возможности:")
             for q in qs:
                 print(f"  {q['id']} [{sa.effective_status(q)}] {q['title']}")
+    cpath = P.ctx / "contracts.md"
+    if cpath.is_file():
+        import subprocess
+        r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "contracts.py"), "show", str(P.repo), "--cap", c["id"]],
+                           capture_output=True, text=True)
+        body = re.sub(r"<!-- sa:auto(?: id=\"[^\"]*\")? -->\n|<!-- sa:auto-end -->\n?", "", r.stdout).strip()
+        lines = body.split("\n")
+        print("\nКонтракты и данные (из contracts.md и data.md — сверь с кодом; требование называет вход: метод и путь, RPC, событие):")
+        print("\n".join("  " + x for x in lines[:120]) if body and "ничего не найдено" not in body else "  разделов не найдено")
+        if len(lines) > 120:
+            print(f"  … ещё {len(lines) - 120} строк: contracts.py show {a.repo} --cap {c['id']}")
+    else:
+        print(f"\n! нет {P.rel(cpath)} — сначала contracts.py scan {a.repo}: поля, ответы, события и вызывающие для этой возможности")
     spec = P.spec(c["id"])
     print(f"\nПиши: {P.rel(spec)} (шаблон — assets/spec.template.md), строки в {P.rel(P.trace)} под `## {c['id']}`,")
     print(f"вопросы — questions.py add. Затем: check.py {a.repo} --cap {c['id']} → plan.py set {a.repo} {c['id']} --status done")
@@ -371,6 +384,14 @@ def cmd_exclude(a):
         plan.setdefault("excluded", []).append({"entry": eid, "reason": a.reason})
     sa.save_json(P.plan, plan)
     print(f"✓ исключено ({a.reason}), входов: {len(ids)}: " + ", ".join(ids))
+    ents = sa.all_entries(inv, plan)
+    client = [i for i in ids if re.search(r"(^|/)[\w.-]*(client|mobile|maui|android|ios|hybrid|frontend|spa|desktop)[\w.-]*(/|$)",
+                                           (ents.get(i) or {}).get("file", "") + " " + i, re.I)
+              or re.search(r"клиент|мобильн|maui|hybrid|приложени", a.reason, re.I)]
+    if client:
+        print(f"! {len(client)} из них — клиентский код. Клиент — не вход, но потребитель контрактов: что он вызывает и на что опирается "
+              f"(статусы, коды ответа, поля), должно попасть в contracts.md, раздел «Кто вызывает входы» — contracts.py scan его найдёт, "
+              f"заполни «Опирается на». Исключать вход клиента можно, забывать клиента — нет.")
     if len(ids) > 5:
         print(f"! шаблон захватил {len(ids)} входов — проверь список; вернуть нужный: plan.py move {a.repo} \"<id>\" <cap>")
     return 0
@@ -576,6 +597,8 @@ def cmd_guide(a):
 | что значит термин, как назвать новое | [`glossary.md`](glossary.md) |
 | сущности, статусы и переходы, роли и права, бизнес-константы | [`domain.md`](domain.md) |
 | внешний сервис: когда вызываем, что при отказе, какие настройки | [`integrations.md`](integrations.md) |
+| поля запроса и ответа, коды ответа, события и подписчики, **кто ещё вызывает вход** (клиенты, шлюзы, ИИ) | [`contracts.md`](contracts.md) |
+| новое поле или таблица: где сущность создаётся и копируется, миграции, засев, конкурентность, транзакции, валидация | [`data.md`](data.md) |
 | все входы системы (маршруты, очереди, расписания, CLI), env, тесты | [`inventory.md`](inventory.md) |
 | что неизвестно и на каком допущении держится спека | [`QUESTIONS.md`](QUESTIONS.md) — открыто: {open_q} |
 
@@ -591,8 +614,10 @@ def cmd_guide(a):
   Основные спеки руками не правь: они обновляются при архивации изменения.
 - **Пометка `(допущение: Q-…)`** в требовании — поведение описано по догадке. Прежде чем на него опираться, проверь вопрос в `QUESTIONS.md`.
 - **Спека описывает «как есть», с багами.** Требование, помеченное как возможная ошибка, — не повод чинить молча: исправление — отдельное изменение.
+- **Прежде чем менять вход, событие или сущность** — её раздел в `contracts.md` и `data.md`: кто ещё на неё опирается
+  и куда копируются поля. Ломающее изменение контракта — отдельный пункт в proposal изменения.
 - **После изменения кода** обнови строки в `trace.md` и, если менялся внешний обмен, `integrations.md`.
-- Пересобрать опись после крупных изменений: `inventory.py scan .` (скилл sa-scan), сверка: `check.py .`.
+- Пересобрать опись после крупных изменений: `inventory.py scan .`, `contracts.py scan .` (скилл sa-scan; заметки вне блоков сохранятся), сверка: `check.py .`.
 - Раздаёшь изменения нескольким агентам — сначала раздел «Параллельная работа» ниже.
 """ + parallel_section(P, plan)
     P.guide.write_text(text, encoding="utf-8")
@@ -643,6 +668,14 @@ WORK_NOTES_HEAD = """# Заметки работника — {cap}
 
 ## Глоссарий
 <!-- новые термины: термин | значение | в коде -->
+
+## Контракты
+<!-- уточнения к contracts.md по входам и событиям этой возможности: ответы и ошибки из глубины вызовов (исключение → 500),
+поля, которые вызывающие читают или сравнивают (клиент ждёт статус Submitted, ловит только 400), расхождения копий событий -->
+
+## Ограничения
+<!-- транзакции и их границы, что публикуется вне транзакции, повторы и порядок событий, идемпотентность,
+гонки и конкурентные изменения, валидация (подключена ли), задержки и таймауты — со ссылками путь:строка -->
 
 ## Границы
 <!-- поведение, которое увидел, но оно относится к другой возможности: какой и что именно (вопрос по нему не заводи — это сделает её работник) -->
@@ -730,7 +763,9 @@ def cmd_brief(a):
    и всё про внешний мир — вопросом, в требовании пометка `(допущение: TMP-1)`. Зависишь от уже открытого вопроса — пометка с его номером `(допущение: Q-004)`.
 2. `{P.rel(d / 'questions.md')}` — твои вопросы с номерами TMP-1, TMP-2… (формат — в заголовке файла).
 3. `{P.rel(d / 'trace.md')}` — строка «требование → код | тесты» на каждое требование.
-4. `{P.rel(d / 'notes.md')}` — заметки для интеграций, предметной области, глоссария и о границах.
+4. `{P.rel(d / 'notes.md')}` — заметки для интеграций, предметной области, глоссария, контрактов, ограничений и о границах.
+   Контракты и данные твоих входов собраны в разделе «Контракты и данные» выше: сверь ответы и поля с кодом, недостающее
+   (ошибки из глубины вызовов, что вызывающие ждут от ответа) — в «Контракты», транзакции, повторы, гонки, валидацию — в «Ограничения».
 
 ## Проверка — до сдачи
 
@@ -818,7 +853,7 @@ def cmd_collect(a):
             if not body or body.lower() in ("нет", "нет.", "—"):
                 continue
             key = {"интеграции": "integrations", "предметная область": "domain", "глоссарий": "glossary",
-                   "границы": "boundaries"}.get(sec.strip().lower(), "other")
+                   "границы": "boundaries", "контракты": "contracts", "ограничения": "constraints"}.get(sec.strip().lower(), "other")
             with (P.work / f"NOTES-{key}.md").open("a", encoding="utf-8") as fh:
                 fh.write(f"\n# {cap}\n\n{body}\n")
         nreq = len(sa.parse_spec(st)["requirements"])
@@ -853,8 +888,10 @@ def cmd_collect(a):
         print(f"! {cap}: {n} требований — больше 12, подумай, не поделить ли возможность (rules.md, «Возможности»)")
     if done:
         print(f"\nЗаметки работников по разделам — {P.rel(P.work)}/NOTES-integrations.md, NOTES-domain.md, NOTES-glossary.md,")
-        print("NOTES-boundaries.md, NOTES-other.md (всё вместе — NOTES.md). Сведи каждый в свой общий файл — сам или по субагенту на файл:")
-        print("integrations.md, domain.md, glossary.md; «Границы» сверь с соседними спеками.")
+        print("NOTES-contracts.md, NOTES-constraints.md, NOTES-boundaries.md, NOTES-other.md (всё вместе — NOTES.md).")
+        print("Сведи каждый в свой общий файл — сам или по субагенту на файл: integrations.md, domain.md, glossary.md;")
+        print("контракты — в contracts.md строкой «Заметки: …» под блоком входа или события (не внутри блока sa:auto),")
+        print("ограничения — в data.md («Что это значит») и integrations.md («При отказе»); «Границы» сверь с соседними спеками.")
         print(f"Затем сократи вопросы (references/fan-out.md, шаг 8) и удали {P.rel(P.work)}/.")
     return 1 if failed else 0
 
