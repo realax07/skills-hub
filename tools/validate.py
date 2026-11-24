@@ -179,7 +179,27 @@ def validate(skill: Path, strict: bool) -> Report:
                 (r.err if strict else r.warn)(f"TODO-заглушка: {f.relative_to(skill)}")
 
     check_evals(skill, r)
+    check_guide(skill, r)
     return r
+
+
+def check_guide(skill: Path, r: Report):
+    """guide.html — наглядный гайд для людей; собирается tools/build_guides.py из guide.json."""
+    if "_template" in skill.parts:
+        return
+    try:
+        sys.path.insert(0, str(REPO / "tools"))
+        import build_guides
+    except ImportError:
+        return
+    st = build_guides.status(skill)
+    if st == "нет данных":
+        r.warn("нет guide.json и guide.html — гайд для людей (docs/skill-guide.md, «Гайд для людей»)")
+    elif st == "нет гайда":
+        r.warn("есть guide.json, но нет guide.html — python3 tools/build_guides.py")
+    elif st == "устарел":
+        r.warn("guide.html устарел: SKILL.md, guide.json или шаблон менялись после сборки — сверь guide.json со скиллом и "
+               "python3 tools/build_guides.py")
 
 
 def find_skills(args):

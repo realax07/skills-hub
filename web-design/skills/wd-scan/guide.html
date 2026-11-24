@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="skill-hash" content="ba2a58c86aaec31a">
+<title>wd-scan — гайд</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --surface-2: #f0eee8; --text: #1d1c1a; --muted: #6b6760; --line: #e2dfd7;
+  --accent: #2f5bd3; --accent-soft: #e6ecfb;
+  --human: #b4561f; --human-soft: #fbeee4;
+  --model: #6a3fc1; --model-soft: #efe8fb;
+  --script: #1f7a54; --script-soft: #e3f4ec;
+  --warn: #9a6a00; --warn-soft: #fbf1d9;
+  --code-bg: #f3f1ec; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --surface: #1d1c1b; --surface-2: #262523; --text: #ecebe7; --muted: #a29f97; --line: #34322f;
+    --accent: #8aa8ff; --accent-soft: #1f2840;
+    --human: #f0a070; --human-soft: #35241a; --model: #b79af5; --model-soft: #2a2140;
+    --script: #6fd3a5; --script-soft: #17302a; --warn: #e7c062; --warn-soft: #332a14;
+    --code-bg: #232220; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --surface: #1d1c1b; --surface-2: #262523; --text: #ecebe7; --muted: #a29f97; --line: #34322f;
+  --accent: #8aa8ff; --accent-soft: #1f2840;
+  --human: #f0a070; --human-soft: #35241a; --model: #b79af5; --model-soft: #2a2140;
+  --script: #6fd3a5; --script-soft: #17302a; --warn: #e7c062; --warn-soft: #332a14;
+  --code-bg: #232220; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+header.top .wrap { display: flex; align-items: center; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.crumbs { color: var(--muted); font-size: 14px; }
+.crumbs a { color: var(--muted); }
+nav.toc { margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--text); }
+.theme-btn { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.hero { padding: 48px 0 28px; }
+.hero .kicker { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 8px 0 14px; letter-spacing: -.01em; }
+.hero p.lead { font-size: 19px; color: var(--muted); max-width: 760px; margin: 0; }
+section { padding: 34px 0; border-top: 1px solid var(--line); }
+section h2 { font-size: 24px; margin: 0 0 6px; }
+section .sub { color: var(--muted); margin: 0 0 22px; max-width: 760px; }
+.grid { display: grid; gap: 14px; }
+.cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.two { grid-template-columns: 1fr 1fr; }
+.list { margin: 0; padding-left: 20px; }
+.list li { margin: 4px 0; }
+.yes h3 { color: var(--script); } .no h3 { color: var(--human); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; }
+.tablebox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+
+/* поток: три дорожки */
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+.chip.human { background: var(--human-soft); color: var(--human); }
+.chip.model { background: var(--model-soft); color: var(--model); }
+.chip.script { background: var(--script-soft); color: var(--script); }
+.chip.file { background: var(--surface-2); color: var(--text); font-family: var(--mono); font-weight: 500; font-size: 12px; text-decoration: none; border-color: var(--line); }
+.chip.file:hover { border-color: var(--accent); }
+.flow { position: relative; }
+.lanes-head, .frow { display: grid; grid-template-columns: 44px repeat(3, 1fr); gap: 12px; }
+.lanes-head { padding: 8px 0; }
+.lanes-head div { font-size: 13px; font-weight: 700; text-align: center; padding: 6px; border-radius: 8px; }
+.lanes-head .h { background: var(--human-soft); color: var(--human); }
+.lanes-head .m { background: var(--model-soft); color: var(--model); }
+.lanes-head .s { background: var(--script-soft); color: var(--script); }
+.frow { position: relative; padding: 6px 0; }
+.frow .num { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 14px; margin-top: 10px; position: relative; z-index: 1; }
+.frow::before { content: ""; position: absolute; left: 21px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.frow:first-of-type::before { top: 24px; } .frow:last-child::before { bottom: calc(100% - 24px); }
+.lane { min-width: 0; }
+.lane.dim { display: flex; align-items: center; justify-content: center; }
+.lane.dim::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.lane.also::after { background: currentColor; opacity: .5; }
+.step { border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+.step.human { border-left: 4px solid var(--human); } .step.model { border-left: 4px solid var(--model); } .step.script { border-left: 4px solid var(--script); }
+.step h4 { margin: 0 0 4px; font-size: 15px; }
+.step p { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+.step .cmd { display: block; background: var(--code-bg); border-radius: 6px; padding: 6px 8px; font-size: 12px; margin: 6px 0; overflow-x: auto; white-space: pre; }
+.step .outs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.step .badge-mob { display: none; }
+
+/* дерево результата */
+.tree td.path { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.tree td.path .ind { display: inline-block; }
+.tree tr.dir td.path { color: var(--muted); }
+.tree tr:target, .tree tr.hl { background: var(--accent-soft); }
+.tree .who { font-size: 13px; color: var(--muted); }
+.git { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.git.yes { background: var(--script-soft); color: var(--script); }
+.git.no { background: var(--human-soft); color: var(--human); }
+.git.opt { background: var(--warn-soft); color: var(--warn); }
+
+/* жизненный цикл */
+.pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.stage { flex: 1 1 200px; display: flex; align-items: stretch; }
+.stage .box { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+.stage.cur .box { border: 2px solid var(--accent); background: var(--accent-soft); }
+.stage .box h4 { margin: 0 0 4px; font-size: 15px; }
+.stage .box p { margin: 0; font-size: 14px; color: var(--muted); }
+.stage .box .skill { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.stage .arrow { width: 28px; display: grid; place-items: center; color: var(--muted); font-size: 20px; }
+.stage:last-child .arrow { display: none; }
+.modes { margin-top: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.modes .card h3 { display: flex; gap: 8px; align-items: center; }
+
+/* примеры */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tabs button { border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.example { display: none; }
+.example.on { display: block; }
+.example .note { color: var(--muted); margin: 0 0 10px; font-size: 15px; }
+pre.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; margin: 0; white-space: pre; max-height: 520px; }
+@media print { .example { display: block; } .tabs { display: none; } }
+
+/* замеры */
+.metric { margin-bottom: 18px; }
+.metric h4 { margin: 0 0 8px; font-size: 15px; }
+.bar { display: grid; grid-template-columns: 180px 1fr 70px; gap: 10px; align-items: center; margin: 5px 0; font-size: 14px; }
+.bar .track { background: var(--surface-2); border-radius: 6px; height: 18px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 6px; }
+.bar .fill.alt { background: var(--muted); }
+.bar .val { font-variant-numeric: tabular-nums; text-align: right; }
+.metric .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+
+.rules li { margin: 8px 0; }
+.rules b { display: block; }
+footer { color: var(--muted); font-size: 13px; padding: 30px 0 50px; border-top: 1px solid var(--line); }
+
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px; }
+  nav.toc { display: none; }
+  .two { grid-template-columns: 1fr; }
+  .lanes-head { display: none; }
+  .frow { grid-template-columns: 36px 1fr; }
+  .frow::before { left: 17px; }
+  .frow .num { width: 28px; height: 28px; font-size: 13px; }
+  .lane.dim { display: none; }
+  .step .badge-mob { display: inline-flex; margin-bottom: 6px; }
+  .stage { flex-basis: 100%; flex-direction: column; }
+  .stage .arrow { width: auto; height: 26px; transform: rotate(90deg); }
+  .bar { grid-template-columns: 110px 1fr 54px; }
+  .tree table, .tree tbody, .tree tr, .tree td { display: block; width: 100%; }
+  .tree tr:first-child { display: none; }
+  .tree tr { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .tree td { border: 0; padding: 2px 8px; }
+  .tree td.path { white-space: normal; font-weight: 600; }
+  .tree td:empty { display: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="crumbs"><a href="../../README.md">web-design</a> / <b>wd-scan</b></span><nav class="toc"><a href=#gives>Что даёт</a><a href=#when>Когда звать</a><a href=#flow>Как работает</a><a href=#tree>Куда складывает</a><a href=#life>Что дальше</a><a href=#examples>Примеры</a><a href=#rules>Правила</a></nav><button class="theme-btn" id="theme" type="button">тема</button></div></header><div class="hero"><div class="wrap"><div class="kicker">Веб-дизайн · wd-scan</div><h1>wd-scan: дизайн готового сайта — в контекст для агентов</h1><p class="lead">Скилл снимает с работающего сайта то, что реально рисует браузер, — цвета, шрифты, отступы, кнопки, карточки, модалки, схемы страниц — и, если есть код, где это задано. Получается дизайн-контекст: агент, который делает новую фичу, грузит один нужный файл и делает новое как существующее.</p></div></div><section id="gives"><div class="wrap"><h2>Что даёт</h2><p class="sub">Без контекста агент собирает «примерно похоже»: свои отступы, новый оттенок синего, ещё один вариант кнопки. Контекст даёт ему канон.</p><div class="grid cards"><div class="card"><h3>Основы с именами переменных</h3><p><code>foundations.md</code>: цвета с ролью, значением, CSS-переменной и частотой, типографика, шкала отступов, радиусы, тени, движение, разброс. Тёмная тема — если снята.</p></div><div class="card"><h3>Детали: канон, вариант, шум</h3><p><code>parts/*.md</code>: кнопки, поля, ссылки, бейджи, карточки — каждый вариант со статусом, стилем, разметкой и страницами. Агент берёт канон, а не «похожее».</p></div><div class="card"><h3>Схемы разделов</h3><p><code>compositions/&lt;раздел&gt;.md</code>: сжатая разметка страницы и её состояний. Правильные кубики без композиции дают усреднённый дизайн.</p></div><div class="card"><h3>Где это в коде</h3><p><code>source.md</code> (если дали исходники): токены и темы, Tailwind, варианты <code>cva</code>/<code>styled</code>, компоненты, иконки, шрифты, привязка «деталь → файл».</p></div><div class="card"><h3>Ассеты</h3><p><code>assets/</code>: шрифты, иконки SVG, логотипы и <code>tokens.css</code> — всё, что нужно сверстать без похода на сайт.</p></div><div class="card"><h3>Эталон для сверки</h3><p><code>reference/</code>: снимки страниц, вырезки деталей и всё извлечённое — для wd-fit и проверки, не для чтения агентом.</p></div></div></div></section><section id="when"><div class="wrap"><h2>Когда звать</h2><p class="sub">Первый шаг дизайна при переводе существующего проекта на агентную разработку. Любой сайт — от легаси с таблицами до проектов с анимациями.</p><div class="grid two"><div class="card yes"><h3>Подходит</h3><ul class="list"><li>Есть работающий сайт или веб-приложение, и агенты будут делать в нём новые страницы и фичи.</li><li>Нужно собрать дизайн-систему, UI-кит или стайлгайд по тому, что уже есть.</li><li>Дизайн разъехался (легаси, много авторов), и хочется понять, что канон, а что шум.</li><li>Дизайн придуман в wd-forge — его утверждение запускает wd-scan по мокапам.</li></ul></div><div class="card no"><h3>Не подходит</h3><ul class="list"><li>Новый дизайн с нуля — это wd-forge.</li><li>Доработка по готовому контексту — это wd-fit.</li><li>Десктопные и мобильные приложения: скилл работает только с браузером.</li></ul></div></div><h3 style="margin:26px 0 10px">Что нужно на входе</h3><div class="tablebox"><table><tr><th>Что</th><th>Нужно</th><th>Зачем и как</th></tr><tr><td><b>Сайт</b></td><td>обязательно</td><td>URL (прод, стейдж, <code>localhost</code>) или папка сборки (<code>dist/</code>).</td></tr><tr><td><b>Исходники</b></td><td>по желанию</td><td>Папка фронтенда. Без неё всё работает, но без «где это в коде».</td></tr><tr><td><b>Позиция проекта</b></td><td>желательно</td><td><code>preserve</code> — повторять как есть (легаси, регламент), <code>normalize</code> — приводить к канону.</td></tr><tr><td><b>Вход за логином</b></td><td>если нужно</td><td>Только <code>storageState</code> от пользователя: пароли скилл не вводит.</td></tr></table></div></div></section><section id="flow"><div class="wrap"><h2>Как работает</h2><p class="sub">Браузер и извлечение — скрипты на Node и Playwright; что считать каноном — решает модель, а при сомнениях человек. Зрение у модели не обязательно: разбор деталей есть текстом.</p><div class="legend"><span class="chip human">Человек</span><span class="chip model">Модель</span><span class="chip script">Скрипт</span><span style="color:var(--muted)">— кто делает шаг; файлы под шагом — что он создаёт (нажми, чтобы найти в дереве)</span></div><div class="flow"><div class="lanes-head"><span></span><div class="h">Человек</div><div class="m">Модель</div><div class="s">Скрипт</div></div><div class="frow"><div class="num">1</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Зависимости</h4><p>Проверяет Playwright и браузер реальным запуском и ставит только недостающее, вне папки скилла.</p><code class="cmd">node scripts/setup.mjs</code></div></div></div><div class="frow"><div class="num">2</div><div class="lane"><div class="step human"><span class="chip human badge-mob">Человек</span><h4>Входные данные</h4><p>Одним сообщением: сайт, исходники, позиция проекта, куда вписать указатель. Автономно — позиция «не задана», инструкции не трогаются.</p></div></div><div class="lane dim"></div><div class="lane dim"></div></div><div class="frow"><div class="num">3</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Разведка</h4><p>Обход сайта: страницы по разделам, кандидаты в компоненты, триггеры модалок; из кода — маршруты, модалки, сводка дизайна.</p><code class="cmd">discover.mjs --url &lt;URL&gt; --src &lt;src&gt;</code><div class="outs"><span class="chip file">design-context/discovery.json</span></div></div></div></div><div class="frow"><div class="num">4</div><div class="lane dim"></div><div class="lane"><div class="step model"><span class="chip model badge-mob">Модель</span><h4>План съёмки</h4><p>По представителю на каждый шаблон страницы, модалки со <code>steps</code> реальными кликами, компоненты, темы, позиция. Кнопки и поля перечислять не нужно — их найдёт извлечение.</p><div class="outs"><a class="chip file" href="#f-design-context-plan-json">design-context/plan.json</a></div></div></div><div class="lane dim"></div></div><div class="frow"><div class="num">5</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Съёмка и сборка слоя</h4><p>Снимает страницы и состояния, извлекает основы и детали, сканирует исходники, собирает слой и эталон, вписывает указатель.</p><code class="cmd">capture.mjs design-context/plan.json</code><div class="outs"><a class="chip file" href="#f-design-context-foundations-md">design-context/foundations.md</a><span class="chip file">design-context/parts/</span><span class="chip file">design-context/compositions/</span><a class="chip file" href="#f-design-context-source-md">design-context/source.md</a><a class="chip file" href="#f-design-context-reference">design-context/reference/</a></div></div></div></div><div class="frow"><div class="num">6</div><div class="lane dim also" style="color:var(--human)"></div><div class="lane"><div class="step model"><span class="chip model badge-mob">Модель</span><h4>Разбор деталей</h4><p>По группам: что канон (частый, на многих страницах, понятная роль), что вариант, что шум. Канонов больше ~6 в группе — показать список человеку.</p><code class="cmd">parts.mjs design-context --group buttons --set &lt;id&gt;=canon:&quot;…&quot;</code><div style="margin-top:6px"><span class="chip human">Человек</span> </div></div></div><div class="lane dim"></div></div><div class="frow"><div class="num">7</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Проверка эталона</h4><p>Эталон сверяется с оригиналом; ниже порога — смотреть журнал съёмки.</p><code class="cmd">verify.mjs design-context</code></div></div></div><div class="frow"><div class="num">8</div><div class="lane dim"></div><div class="lane"><div class="step model"><span class="chip model badge-mob">Модель</span><h4>Отчёт</h4><p>Где лежит, позиция, ключевые цвета и шрифты, канон по группам, разброс, что найдено в коде, что не снято и почему.</p><div class="outs"><a class="chip file" href="#f-design-context-guide-md">design-context/GUIDE.md</a><a class="chip file" href="#f-agents-md">AGENTS.md</a></div></div></div><div class="lane dim"></div></div></div></div></section><section id="tree"><div class="wrap"><h2>Куда что складывает</h2><p class="sub">Слой для агента лёгкий — его коммитят. <code>reference/</code> — десятки мегабайт скриншотов, его в git не кладут.</p><div class="tablebox tree"><table><tr><th>Путь</th><th>Что внутри</th><th>Кто пишет → кто читает</th><th>Git</th></tr><tr id="f-agents-md" class=""><td class="path"><span class="ind" style="width:0px"></span>📄 AGENTS.md</td><td>Блок-указатель между <code>&lt;!-- wd-scan:start/end --&gt;</code> на <code>design-context/GUIDE.md</code>.</td><td class="who">capture.mjs<br>→ любой агент в проекте</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:0px"></span>📁 design-context/</td><td></td><td></td><td></td></tr><tr id="f-design-context-guide-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 GUIDE.md</td><td>Вход: вопросы, задача → файл, позиция проекта, темы.</td><td class="who">capture.mjs<br>→ агент доработки, wd-fit</td><td><span class="git yes">в git</span></td></tr><tr id="f-design-context-foundations-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 foundations.md</td><td>Цвета, типографика, отступы, радиусы, тени, движение, разброс. 1–3 тыс. токенов.</td><td class="who">capture.mjs<br>→ агент, brief.mjs</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 parts/</td><td></td><td></td><td></td></tr><tr id="f-design-context-parts-buttons-md" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 buttons.md</td><td>Варианты кнопок со статусом канон / вариант / шум, стилем, разметкой, страницами, исходником. Так же — inputs, links, badges, cards.</td><td class="who">capture.mjs + разбор<br>→ агент, check.mjs</td><td><span class="git yes">в git</span></td></tr><tr id="f-design-context-parts-components-md" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 components.md</td><td>Компоненты из плана: шапка, футер, формы, секции — сжатая разметка. Рядом <code>overlays.md</code> — модалки и меню, как открыть.</td><td class="who">capture.mjs<br>→ агент</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 compositions/</td><td></td><td></td><td></td></tr><tr id="f-design-context-compositions-md" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 &lt;раздел&gt;.md</td><td>Сжатая схема страницы раздела и её состояний.</td><td class="who">capture.mjs<br>→ агент (одну — под задачу)</td><td><span class="git yes">в git</span></td></tr><tr id="f-design-context-source-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 source.md</td><td>Если есть исходники: стек, токены и темы в коде, варианты, компоненты, анимации, иконки, шрифты.</td><td class="who">capture.mjs<br>→ агент, который меняет код компонентов</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 assets/</td><td></td><td></td><td></td></tr><tr id="f-design-context-assets-tokens-css" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 tokens.css</td><td>CSS-переменные сайта. Рядом <code>fonts/</code>, <code>icons/*.svg</code>, <code>logos/</code>.</td><td class="who">capture.mjs<br>→ вёрстка, мокапы wd-fit</td><td><span class="git yes">в git</span></td></tr><tr id="f-design-context-plan-json" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 plan.json</td><td>План съёмки — переигрывается для обновления. Рядом <code>discovery.json</code>.</td><td class="who">модель<br>→ повторная съёмка</td><td><span class="git yes">в git</span></td></tr><tr id="f-design-context-reference" class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 reference/</td><td>Эталон: снимки страниц (HTML и скриншоты), <code>parts.html</code> с вырезками, <code>kit.json</code>, <code>tokens.json</code>, журналы.</td><td class="who">capture.mjs<br>→ verify, wd-fit (мокапы в странице)</td><td><span class="git no">не коммитить</span></td></tr></table></div></div></section><section id="life"><div class="wrap"><h2>Что дальше</h2><p class="sub">Контекст — снимок. Им пользуются при каждой доработке и переснимают, когда интерфейс заметно поменялся.</p><div class="pipe"><div class="stage"><div class="box"><h4>Новый дизайн</h4><p>Если сайта ещё нет: три направления, выбор, утверждение.</p><a class="skill" href="../wd-forge/guide.html">wd-forge →</a></div><div class="arrow">→</div></div><div class="stage cur"><div class="box"><h4>Снять контекст</h4><p>Основы, детали, схемы, код, эталон.</p><span class="skill">wd-scan · этот скилл</span></div><div class="arrow">→</div></div><div class="stage"><div class="box"><h4>Дорабатывать в стиле</h4><p>Выжимка под задачу, мокапы, реализация, проверка скриптом.</p><a class="skill" href="../wd-fit/guide.html">wd-fit →</a></div><div class="arrow">→</div></div><div class="stage cur"><div class="box"><h4>Переснять изменённое</h4><p>После слияния — добавить страницу в план и <code>capture.mjs --only &lt;id&gt;</code>.</p><span class="skill">wd-scan · этот скилл</span></div><div class="arrow">→</div></div></div><div class="grid modes"><div class="card"><h3>Полная съёмка</h3><p><b>Когда:</b> первый раз</p><p style="margin-top:6px">Все шаги. На сайте есть тёмная тема — добавить <code>themes</code> в план и переснять, иначе агенты не узнают её цвета.</p></div><div class="card"><h3>Частичная пересъёмка</h3><p><b>Когда:</b> поменялась страница</p><p style="margin-top:6px"><code>capture.mjs plan.json --only &lt;id&gt;</code>; без браузера, из кэша — <code>--rebuild</code>.</p></div><div class="card"><h3>Только разбор</h3><p><b>Когда:</b> поменялось решение о каноне</p><p style="margin-top:6px"><code>parts.mjs --set … / --rest noise</code> — слой пересобирается сам.</p></div></div><h3 style="margin:26px 0 10px">Как результат используется потом</h3><div class="grid cards"><div class="card"><h3>wd-fit</h3><p><code>brief.mjs</code> берёт из контекста выжимку под задачу, <code>check.mjs</code> сравнивает новую страницу с каноном теми же скриптами извлечения.</p></div><div class="card"><h3>Агент без wd-fit</h3><p>AGENTS.md → GUIDE.md → один нужный файл: основы, детали группы или схема раздела.</p></div><div class="card"><h3>Дизайнер и команда</h3><p><code>reference/parts.html</code> — все варианты деталей рядом: видно, сколько у вас «синих кнопок» на самом деле.</p></div></div></div></section><section id="examples"><div class="wrap"><h2>Примеры из прогонов</h2><p class="sub">Из разобранных прогонов скилла (<code>examples/</code>), сокращено.</p><div data-tabs><div class="tabs" role="tablist"><button type="button" aria-selected="true">План съёмки</button><button type="button" aria-selected="false">Разбор кнопок</button></div><div class="example on"><p class="note">Маркетинговый сайт на dev-сервере, код в <code>apps/web/src</code>, позиция «к канону».</p><pre class="code">{
+  &quot;baseUrl&quot;: &quot;http://localhost:5173&quot;,
+  &quot;src&quot;: &quot;../apps/web/src&quot;,
+  &quot;context&quot;: &quot;../AGENTS.md&quot;,
+  &quot;stance&quot;: &quot;normalize&quot;,
+  &quot;defaults&quot;: { &quot;hide&quot;: [&quot;#cookie-consent&quot;] },
+  &quot;pages&quot;: [
+    { &quot;id&quot;: &quot;home&quot;, &quot;path&quot;: &quot;/&quot; }, { &quot;id&quot;: &quot;pricing&quot;, &quot;path&quot;: &quot;/pricing&quot; },
+    { &quot;id&quot;: &quot;blog-post&quot;, &quot;path&quot;: &quot;/blog/launch-week&quot;, &quot;notes&quot;: &quot;представитель статей&quot; },
+    { &quot;id&quot;: &quot;home--demo-open&quot;, &quot;path&quot;: &quot;/&quot;,
+      &quot;steps&quot;: [{ &quot;click&quot;: &quot;header &gt;&gt; text=Запросить демо&quot; }, { &quot;waitFor&quot;: &quot;[role=dialog]&quot; }] }
+  ],
+  &quot;modals&quot;: [
+    { &quot;id&quot;: &quot;mobile-nav&quot;, &quot;group&quot;: &quot;menus&quot;, &quot;page&quot;: &quot;home&quot;, &quot;selector&quot;: &quot;[role=dialog]&quot;, &quot;viewports&quot;: [&quot;mobile&quot;],
+      &quot;steps&quot;: [{ &quot;click&quot;: &quot;[aria-label=Меню]&quot; }, { &quot;waitFor&quot;: &quot;[role=dialog] nav&quot; }] }
+  ]
+}</pre></div><div class="example"><p class="note">Из 14 найденных вариантов кнопок канон — три; имена взяты из <code>cva</code> в коде.</p><pre class="code">capture → разброс: кнопки 14/4, поля 3/2, типографика 19/7; деталей привязано к файлам 11 из 23
+
+parts.mjs design-context --group buttons
+  канон:   1k3x9a «Кнопка основная» (синяя, 31× на 7 стр.)
+           0zq2mf «Кнопка вторичная» (обводка)
+           2c8u1w «Иконочная»
+  вариант: 1q7b0d «Основная на тёмном» (hero, футер)
+  шум:     8 — пункты меню, табы тарифов, одноразовая «Подробнее» из старой статьи
+  исходник канонов — components/ui/button.tsx (cva: default, outline, icon)
+
+parts.mjs design-context --set 1k3x9a=canon:&quot;Кнопка основная&quot; … --group buttons --rest noise
+verify.mjs → 41/42 (иконка соцсети с внешнего CDN не скачалась — в отчёт)</pre></div></div></div></section><section id="rules"><div class="wrap"><h2>Главные правила</h2><p class="sub">Почему скилл ведёт себя так, а не иначе.</p><ul class="list rules"><li><b>Не размножать шум.</b>Найденное — описание того, что есть, а не норма. Норму задают разбор и позиция проекта.</li><li><b>Композиции так же важны, как детали.</b>Снимать каждый шаблон страницы и ключевые состояния: правильные кубики без схем дают пустой дизайн.</li><li><b>Состояния — реальными действиями.</b><code>click</code>, <code>waitFor</code>, а не подмена DOM: иначе детали и схемы врут.</li><li><b>Код — «где», браузер — «что».</b>Значение в основах и переменная в коде расходятся — верить браузеру (так видит пользователь) и отметить расхождение.</li><li><b>Никаких персональных данных.</b>Формы и кабинеты — без реальных данных; вход только через <code>storageState</code>.</li></ul><h3 style="margin:26px 0 10px">Если что-то пошло не так</h3><div class="tablebox"><table><tr><th>Симптом</th><th>Что делать</th></tr><tr><td>Шаг съёмки падает по таймауту</td><td>Селектор не тот или перекрыт баннером: <code>defaults.hide</code>, шаг <code>scroll</code>.</td></tr><tr><td>Модалка не проходит verify</td><td>В <code>selector</code> попала подложка — указать само окно (<code>[role=dialog]</code>).</td></tr><tr><td>В группе сотни вариантов</td><td>Норма для легаси: пометить канон, остальное <code>--rest noise</code>.</td></tr><tr><td>«На сайте есть вторая (тёмная) тема»</td><td>Добавить <code>themes</code> в план и переснять.</td></tr></table></div></div></section><footer><div class="wrap">Подробно для агента — <a href="SKILL.md">SKILL.md</a>. Гайд собран <code>tools/build_guides.py</code> из <code>guide.json</code>; правь его, а не этот файл.</div></footer>
+<script>
+(function () {
+  // вкладки примеров
+  document.querySelectorAll("[data-tabs]").forEach(function (box) {
+    var btns = box.querySelectorAll(".tabs button"), panes = box.querySelectorAll(".example");
+    btns.forEach(function (b, i) {
+      b.addEventListener("click", function () {
+        btns.forEach(function (x, j) { x.setAttribute("aria-selected", i === j ? "true" : "false"); });
+        panes.forEach(function (p, j) { p.classList.toggle("on", i === j); });
+      });
+    });
+  });
+  // переключатель темы
+  var btn = document.getElementById("theme");
+  if (btn) {
+    var key = "guide-theme", root = document.documentElement;
+    try { var saved = localStorage.getItem(key); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+    btn.addEventListener("click", function () {
+      var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark"
+                                                 : matchMedia("(prefers-color-scheme: dark)").matches;
+      var next = dark ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem(key, next); } catch (e) {}
+    });
+  }
+  // подсветка файла из шага потока
+  document.querySelectorAll("a.chip.file").forEach(function (a) {
+    a.addEventListener("click", function () {
+      var row = document.getElementById(a.getAttribute("href").slice(1));
+      if (!row) return;
+      document.querySelectorAll(".tree tr.hl").forEach(function (r) { r.classList.remove("hl"); });
+      row.classList.add("hl");
+    });
+  });
+})();
+</script>
+</body>
+</html>

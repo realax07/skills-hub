@@ -1,0 +1,45 @@
+{
+  "kicker": "Тема · skill-name",
+  "title": "TODO: skill-name — что он делает, одной фразой",
+  "tagline": "TODO: два-три предложения для человека — что скилл даёт и чем результат полезен дальше.",
+  "gives_intro": "TODO: какую боль снимает скилл.",
+  "gives": [
+    {"title": "TODO: результат 1", "text": "TODO: что это и зачем (`путь/файла`)."}
+  ],
+  "when": {
+    "intro": "TODO: в какой момент работы его звать.",
+    "yes": ["TODO: типичный запрос пользователя"],
+    "no": ["TODO: где он не нужен и что взять вместо"]
+  },
+  "inputs": [
+    {"name": "TODO: вход", "need": "обязательно", "note": "TODO: зачем и где взять"}
+  ],
+  "flow_intro": "TODO: кто что делает — скрипты, модель, человек.",
+  "flow": [
+    {"n": 1, "who": "script", "title": "TODO: шаг", "text": "TODO: что происходит", "cmd": "scripts/…", "out": ["result/file.md"]},
+    {"n": 2, "who": "model", "title": "TODO: шаг", "text": "TODO: что решает модель"},
+    {"n": 3, "who": "human", "title": "TODO: шаг", "text": "TODO: что решает человек"}
+  ],
+  "tree_intro": "TODO: что коммитить, что нет.",
+  "tree": [
+    {"path": "result/file.md", "desc": "TODO: что внутри", "by": "scripts/…", "for": "кто читает", "git": "yes"}
+  ],
+  "lifecycle_intro": "TODO: что происходит с результатом потом.",
+  "lifecycle": [
+    {"title": "TODO: этап", "text": "TODO", "skill": "skill-name"},
+    {"title": "TODO: следующий этап", "text": "TODO"}
+  ],
+  "usage": [
+    {"who": "TODO: кто", "text": "TODO: как пользуется результатом"}
+  ],
+  "examples_intro": "TODO: откуда примеры (examples/, реальный прогон).",
+  "examples": [
+    {"title": "TODO: пример", "note": "TODO", "code": "TODO: фрагмент результата"}
+  ],
+  "rules": [
+    {"title": "TODO: правило.", "text": "TODO: почему."}
+  ],
+  "pitfalls": [
+    {"symptom": "TODO: симптом", "fix": "TODO: что делать"}
+  ]
+}

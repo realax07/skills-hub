@@ -11,7 +11,7 @@ skill-authoring/
 
 | Скилл | Что делает |
 |---|---|
-| [skill-author](skills/skill-author/) | Создаёт и улучшает скиллы по полной анатомии (SKILL.md, references, examples, scripts, assets, evals) и проверяет их. Свои скрипты: каркас, тест-кейсы, валидатор — работает и вне этого репо |
+| [skill-author](skills/skill-author/) · [гайд](skills/skill-author/guide.html) | Создаёт и улучшает скиллы по полной анатомии (SKILL.md, references, examples, scripts, assets, evals) и проверяет их. Свои скрипты: каркас, тест-кейсы, валидатор — работает и вне этого репо |
 
 Установить только эту тему:
 

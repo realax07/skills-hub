@@ -17,6 +17,7 @@ skills-hub/
     new_skill.py     # создать скилл из шаблона
     validate.py      # проверить скиллы
     sync_shared.py   # общий код скиллов: копии по shared.conf
+    build_guides.py  # собрать guide.html скиллов из guide.json (шаблон — tools/guide/)
   _template/skill-name/  # шаблон скилла
   web-design/        # тема: набор wd-* — дизайн веб-проектов (собрать, дорабатывать, создать)
     skills/<skill-name>/
@@ -102,6 +103,9 @@ irm https://raw.githubusercontent.com/realax07/skills-hub/main/install.ps1 | iex
 `-p` проект, `--copy`, `--force`, `-n` dry-run. В PowerShell те же: `-Agent`, `-Topic`, `-Skill`, `-Project`, `-Copy`, `-Force`, `-DryRun`.
 
 ## Добавить скилл
+
+У каждого скилла есть `guide.html` — наглядный разбор для людей: что даёт, как работает (кто делает шаг: человек, модель или скрипт),
+куда что складывает и как результат используется дальше. Открой в браузере из папки скилла; ссылки — в README тем.
 
 Подробно — в [docs/skill-guide.md](docs/skill-guide.md). Или попроси агента с установленным скиллом `skill-author` — он сделает всю структуру сам.
 
