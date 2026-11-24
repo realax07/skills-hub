@@ -81,6 +81,53 @@ def check_contracts(P, R, plan, inv):
         R.w(P.rel(c), f"разделов, которых больше нет в коде: {stale} — удали их (вместе с заметками) или проверь, куда переехал вход")
 
 
+REF_RX = re.compile(r"[\w./-]+\.[A-Za-z]{1,6}:\d+")
+FILL_LABELS = ("Опирается на", "Что это значит", "Что уходит в модель")
+BIG_FILE = 200_000
+
+
+def check_fills(P, R):
+    """Заполненные агентом места — с фактами, а не общими словами: хотя бы одна ссылка путь:строка."""
+    for name in ("contracts.md", "data.md"):
+        f = P.ctx / name
+        if not f.is_file():
+            continue
+        text = f.read_text(encoding="utf-8")
+        for m in re.finditer(r"^- \*\*(" + "|".join(FILL_LABELS) + r"):\*\*(.*(?:\n(?!### |## |- \*\*|<!-- sa:auto).*)*)", text, re.M):
+            body = m.group(2).strip()
+            if "<!-- заполнить" in body:
+                continue   # о незаполненном скажет check_files
+            head = text[:m.start()].rsplit("\n### ", 1)[-1].split("\n", 1)[0]
+            if not REF_RX.search(body):
+                R.e(P.rel(f), f"«{m.group(1)}» в разделе «{head}» без ссылки путь:строка — общими словами агент доработки ничего не проверит; "
+                              f"открой файлы раздела и запиши факты со ссылками")
+            elif len(body) < 60:
+                R.w(P.rel(f), f"«{m.group(1)}» в разделе «{head}» слишком коротко ({len(body)} симв.) — что именно сломается при изменении?")
+
+
+def check_cards(P, R, plan):
+    d = P.ctx / "caps"
+    srcs = [P.ctx / "contracts.json", P.trace, P.questions, P.ctx / "contracts.md", P.ctx / "data.md"] + \
+           [P.spec(c["id"]) for c in plan["capabilities"]]
+    newest = max((x.stat().st_mtime for x in srcs if x.is_file()), default=0)
+    missing, stale = [], []
+    for c in plan["capabilities"]:
+        f = d / f"{c['id']}.md"
+        if not f.is_file():
+            missing.append(c["id"])
+        elif f.stat().st_mtime + 1 < newest:
+            stale.append(c["id"])
+        elif len(f.read_text(encoding="utf-8")) > 12000:
+            R.w(P.rel(f), "карточка больше бюджета (~3 тыс. токенов) — слабая модель прочтёт её не целиком")
+    if missing:
+        R.e(P.rel(d), f"нет карточек возможностей ({len(missing)}): {', '.join(missing[:6])} — plan.py guide")
+    if stale:
+        R.w(P.rel(d), f"карточки старше спек, контрактов или вопросов ({len(stale)}) — plan.py guide")
+    for f in sorted(P.ctx.glob("*.md")):
+        if f.name != "inventory.md" and f.stat().st_size > BIG_FILE:
+            R.info.append(f"{P.rel(f)}: {f.stat().st_size // 1000} КБ — агенту доработки давай карточки caps/<id>.md, этот файл — только поиском")
+
+
 def entry_named(e, text):
     """Назван ли вход в тексте спеки так, как его видит вызывающий: метод и путь, RPC, операция GraphQL, страница."""
     norm = lambda x: re.sub(r"\{[^}]*\}|(?<=/):\w+|<[^>]+>|(?<=/)\d+(?=/|\b)", "{}", x).lower().rstrip("/")
@@ -409,6 +456,9 @@ def main():
         check_files(P, R)
         check_integrations(P, R, inv)
         check_contracts(P, R, plan, inv)
+        check_fills(P, R)
+        if P.guide.is_file():
+            check_cards(P, R, plan)
         check_changes(P, R)
         check_link(P, R)
         if P.work.is_dir():

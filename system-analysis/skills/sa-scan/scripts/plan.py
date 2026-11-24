@@ -562,6 +562,220 @@ def parallel_section(P, plan):
     return "\n".join(out) + "\n"
 
 
+CARD_BUDGET = 10000   # символов ≈ 3 тыс. токенов: карточка должна целиком влезать в контекст слабой модели
+
+
+def _notes(path):
+    """Текст агента под блоками sa:auto: «### заголовок» → заметки после <!-- sa:auto-end -->."""
+    out = {}
+    if not path.is_file():
+        return out
+    for m in re.finditer(r"^### (.+)\n([\s\S]*?)(?=^### |^## |\Z)", path.read_text(encoding="utf-8"), re.M):
+        tail = m.group(2).split("<!-- sa:auto-end -->", 1)[-1].strip()
+        tail = re.sub(r"<!--[\s\S]*?-->", "", tail).strip()
+        if tail:
+            out[m.group(1).strip()] = re.sub(r"\s+", " ", tail)
+    return out
+
+
+def _short(s, n):
+    s = re.sub(r"\s+", " ", s or "").strip()
+    return s if len(s) <= n else s[:n].rsplit(" ", 1)[0] + " …"
+
+
+def _fields(d, n=12):
+    fs = [f"{x[0]} {x[1]}" for x in d.get("fields", [])]
+    return ", ".join(fs[:n]) + (f" … ещё {len(fs) - n}" if len(fs) > n else "") if fs else "поля не разобраны"
+
+
+def _fit(sections, budget):
+    """Секции [(заголовок, [блоки строк], куда смотреть, приоритет, минимум)] → текст в бюджете.
+    Режем с конца секции с наименьшим приоритетом, пока в ней больше минимума; входы и вызывающие — последними."""
+    secs = [[t, list(b), more, 0, prio, keep] for t, b, more, prio, keep in sections]
+    def size():
+        return sum(len(x[0]) + 4 + sum(len(l) + 1 for blk in x[1] for l in blk) for x in secs)
+    while size() > budget:
+        cand = [x for x in secs if len(x[1]) > x[5]] or [x for x in secs if len(x[1]) > 1]
+        if not cand:
+            break
+        x = min(cand, key=lambda y: (y[4], -sum(len(l) for blk in y[1] for l in blk)))
+        x[1].pop()
+        x[3] += 1
+    out = []
+    for t, blocks, more, cut, _, _ in secs:
+        if not blocks:
+            continue
+        out += ["", f"## {t}"]
+        for blk in blocks:
+            out += blk
+        if cut:
+            out.append(f"- … ещё {cut} — {more}")
+    return out
+
+
+def write_cards(P, plan):
+    """system-context/caps/<cap>.md — всё для правки одной возможности в одном файле, в бюджете CARD_BUDGET."""
+    cj = P.ctx / "contracts.json"
+    js = json.loads(cj.read_text(encoding="utf-8")) if cj.is_file() else {}
+    recs = {r["id"]: r for r in js.get("entries", [])}
+    notes = _notes(P.ctx / "contracts.md")
+    dnotes = _notes(P.ctx / "data.md")
+    trace = sa.parse_trace(P.trace.read_text(encoding="utf-8")) if P.trace.is_file() else {}
+    qs = sa.parse_questions(P.questions.read_text(encoding="utf-8")) if P.questions.is_file() else []
+    ents = {e["name"]: e for e in js.get("data", {}).get("entities", [])}
+    d = P.ctx / "caps"
+    d.mkdir(exist_ok=True)
+    made = []
+    for c in plan["capabilities"]:
+        cap = c["id"]
+        spec = P.spec(cap)
+        sp = sa.parse_spec(spec.read_text(encoding="utf-8")) if spec.is_file() else {"purpose": "", "requirements": []}
+        tr = trace.get(cap, {})
+        files = {r["file"] for i, r in recs.items() if i in c["entries"]} | \
+                {r.get("handler", "").split(":")[0] for i, r in recs.items() if i in c["entries"]} | \
+                {x.split(":")[0] for t in tr.values() for x in t["code"]}
+        files.discard("")
+        ranges = defaultdict(list)   # файл → диапазоны строк из трассировки (None — файл целиком)
+        for t in tr.values():
+            for x in t["code"]:
+                m = re.match(r"^(.+?):(\d+)(?:-(\d+))?$", x)
+                if m:
+                    ranges[m.group(1)].append((int(m.group(2)) - 1, int(m.group(3) or m.group(2)) + 1))
+                else:
+                    ranges[x].append(None)
+        for i, r in recs.items():
+            if i in c["entries"]:
+                m = re.match(r"^(.+?):(\d+)$", r.get("handler") or "")
+                if m:   # тело обработчика: от начала до конца, который нашёл contracts.py
+                    ranges[m.group(1)].append((int(m.group(2)), max(int(m.group(2)), r.get("end") or int(m.group(2)))))
+
+        def in_cap(loc):
+            m = re.match(r"^([^:]+):(\d+)", loc)
+            if not m:
+                return False
+            return any(rg is None or rg[0] <= int(m.group(2)) <= rg[1] for rg in ranges.get(m.group(1), []))
+        consumed = {m.group(1) for i in c["entries"] for m in [re.match(r"^consumer:(?:event|доменное событие)\s+(\w+)", i)] if m}
+        evs = js.get("events", {})
+        # обработчики событий, на которые подписана возможность, публикуют дальше — один шаг по цепочке
+        hop = {l.split(":")[0] for n, x in evs.items() if n in consumed for l in x["subscribers"]}
+        sections = []
+        # требования
+        blocks = []
+        for r in sp["requirements"]:
+            t = tr.get(r["name"], {})
+            code = ", ".join(t.get("code", [])[:2]) or "—"
+            tests = ", ".join(t.get("tests", [])[:2]) or "—"
+            blocks.append([f"- {r['name']}", f"  - код: {code}; тесты: {tests}"])
+        sections.append(("Требования", blocks, f"`openspec/specs/{cap}/spec.md`, строки в `system-context/trace.md` под `## {cap}`", 5, 99))
+        # входы
+        blocks = []
+        for eid in c["entries"]:
+            r = recs.get(eid)
+            if not r:
+                if eid.startswith("consumer:"):
+                    continue
+                blocks.append([f"- `{eid}`"])
+                continue
+            sym = f"`{r['symbol']}`" if r.get("symbol") else "встроенный обработчик"
+            blk = [f"- `{eid}` → {sym} ({r.get('handler') or r['file'] + ':' + str(r['line'])})"]
+            if r.get("headers"):
+                blk.append("  - заголовки: " + ", ".join(r["headers"]))
+            if r.get("codes"):
+                blk.append("  - ответы: " + "; ".join(r["codes"][:6]))
+            for t in r.get("types", [])[:3]:
+                blk.append(f"  - `{t['name']}`: {_fields(t, 10)}")
+            n = notes.get(f"`{eid}`")
+            if n:
+                blk.append("  - заметки: " + _short(re.sub(r"^Заметки:\s*", "", n), 350))
+            blocks.append(blk)
+        sections.append(("Входы и контракты", blocks, f"`grep -n \"### \\`<id входа>\" system-context/contracts.md`", 9, 99))
+        # события
+        blocks = []
+        for name, x in evs.items():
+            pub = any(in_cap(l) for l in x["publishers"])
+            chained = any(l.split(":")[0] in hop for l in x["publishers"])
+            if not (name in consumed or pub or chained):
+                continue
+            mine = "подписана эта возможность" if name in consumed else ("публикует эта возможность" if pub else "публикуется по цепочке из этой возможности")
+            blk = [f"- `{name}` ({'внутреннее' if x.get('internal') else 'между сервисами'}; {mine})"]
+            if x.get("defs"):
+                blk.append("  - поля: " + _fields(x["defs"][0], 10) + (" ⚠ копии в сервисах различаются" if x.get("copies_differ") else
+                                                                     (f"; копий: {len(x['defs'])}" if len(x["defs"]) > 1 else "")))
+            subs = sorted({re.sub(r"^src/|/.*$", "", l) for l in x["subscribers"]})
+            if subs:
+                blk.append("  - подписаны: " + ", ".join(subs) + (f" (возможности: {', '.join(x['caps'])})" if x.get("caps") else ""))
+            n = notes.get(f"`{name}`")
+            if n:
+                blk.append("  - заметки: " + _short(re.sub(r"^Заметки:\s*", "", n), 300))
+            blocks.append(blk)
+        sections.append(("События", blocks, "`system-context/contracts.md`, раздел «События»", 3, 4))
+        # вызывающие
+        blocks = []
+        for g in js.get("callers", []):
+            if cap not in g.get("caps", []) or "только тесты" in g.get("kind", ""):
+                continue
+            head = f"{g['consumer']} → {g['what']}"
+            blk = [f"- {head}" + (" (клиентское приложение)" if g.get("client") else "")]
+            rel_ = notes.get(head)
+            if rel_:
+                blk.append("  - " + _short(rel_.replace("- **Опирается на:**", "опирается на:"), 600))
+            else:
+                blk.append("  - где: " + ", ".join(list(g["files"])[:3]))
+            blocks.append(blk)
+        sections.append(("Кто ещё вызывает эти входы", blocks, "`system-context/contracts.md`, раздел «Кто вызывает входы»", 8, 6))
+        # данные
+        names = {t["name"] for i, r in recs.items() if i in c["entries"] for t in r.get("types", [])}
+        blocks = []
+        for name, e in ents.items():
+            df = (e.get("def") or {}).get("file", e.get("file", ""))
+            if name not in names and df not in files:
+                continue
+            blk = [f"- `{name}` ({df})"]
+            if e.get("creates"):
+                blk.append("  - создаётся: " + ", ".join((e.get("creates_sym") or e["creates"])[:4]) +
+                           (f" … ещё {len(e['creates']) - 4}" if len(e["creates"]) > 4 else ""))
+            if e.get("copies"):
+                blk.append("  - копии полей: " + ", ".join(f"`{x['name']}` ({x['file']})" for x in e["copies"][:5]))
+            if e.get("seeds"):
+                blk.append("  - засев: " + ", ".join(sorted(set(e["seeds"]))[:2]))
+            if e.get("ai"):
+                blk.append("  - уходит в модель ИИ: " + ", ".join(e["ai"][:2]))
+            blocks.append(blk)
+        sections.append(("Данные", blocks, "`grep -n \"### \\`<Сущность>\" system-context/data.md`", 4, 3))
+        # ограничения: общие для системы
+        blocks = []
+        for key in ("Транзакции", "Где проверяется"):
+            txt = (dnotes.get(key) or "").replace("- **Что это значит:**", "").strip()
+            if txt:
+                blocks.append([f"- {key.replace('Где проверяется', 'Валидация')}: " + _short(txt, 500)])
+        sections.append(("Ограничения (общие)", blocks, "`system-context/data.md`, «Конкурентность и транзакции», «Валидация»", 2, 1))
+        # вопросы
+        mine = [q for q in qs if sa.effective_status(q) in ("открыт", "отвечен") and any(x == cap for x, _ in sa.affects(q))]
+        mine.sort(key=lambda q: q["fields"].get("Важность", "") != "блокирует")
+        blocks = [[f"- {q['id']} [{q['fields'].get('Важность', '') or 'уточняет'}] {q['title']}",
+                   f"  - допущение: {_short(q['fields'].get('Допущение', ''), 160)}"] for q in mine]
+        sections.append(("Открытые вопросы", blocks, "`system-context/QUESTIONS.md`", 1, 3))
+        head = [f"# {cap} — {c['title']}", "",
+                "Карточка изменения: всё, что нужно, чтобы поменять эту возможность и ничего не сломать. Собрана скриптом (`plan.py guide`)",
+                "из спеки, трассировки, contracts.md, data.md и QUESTIONS.md — не правь её руками, правь источники.",
+                "Места `путь:строка` — подсказка, строки могли сдвинуться: ищи по символу (`Класс.Метод`) через grep.", "",
+                f"**Назначение:** {first_sentence(sp['purpose']) or '—'}",
+                f"**Спека:** `openspec/specs/{cap}/spec.md` — требований {len(sp['requirements'])}"]
+        tail = ["", "## Перед правкой",
+                "1. Найди требование выше и прочитай его в спеке целиком.",
+                "2. Меняешь вход — проверь «Кто ещё вызывает»: что сломается у каждого.",
+                "3. Меняешь событие или поле — проверь подписчиков и «копии полей»: добавь поле в каждую.",
+                "4. Вопрос с пометкой [блокирует] — не опирайся на допущение молча, спроси.",
+                "5. Поведение меняй через `openspec/changes/<изменение>/`; после правки кода — строки в `trace.md`."]
+        body = _fit(sections, CARD_BUDGET - sum(len(x) + 1 for x in head + tail))
+        (d / f"{cap}.md").write_text("\n".join(head + body + tail) + "\n", encoding="utf-8")
+        made.append(cap)
+    for f in d.glob("*.md"):
+        if f.stem not in made:
+            f.unlink()
+    return made
+
+
 def cmd_guide(a):
     P = sa.Paths(a.repo)
     plan = sa.load_plan(P)
@@ -578,8 +792,9 @@ def cmd_guide(a):
         if spec.is_file():
             s = sa.parse_spec(spec.read_text(encoding="utf-8"))
             purpose, nreq = first_sentence(s["purpose"]), len(s["requirements"])
-        link = f"[`{c['id']}`](../openspec/specs/{c['id']}/spec.md)" if spec.is_file() else f"`{c['id']}` (спеки нет)"
-        rows.append(f"| {link} | {c['title']} | {purpose.replace('|', '/')} | {nreq} | {q_by_cap.get(c['id'], 0) or ''} |")
+        link = f"[`{c['id']}`](caps/{c['id']}.md)"
+        sp_ = f"[спека](../openspec/specs/{c['id']}/spec.md)" if spec.is_file() else "спеки нет"
+        rows.append(f"| {link} | {c['title']} | {purpose.replace('|', '/')} | {sp_}, {nreq} | {q_by_cap.get(c['id'], 0) or ''} |")
     open_q = sum(1 for q in qs if sa.effective_status(q) == "открыт")
     srcs = ", ".join(s["ref"] for s in plan.get("sources", [])) or "нет — только код"
     text = f"""# Системный контекст
@@ -588,10 +803,17 @@ def cmd_guide(a):
 (sa-scan, {plan.get('created', '')}; человеческие спеки: {srcs}). Требования — в `openspec/specs/` (формат OpenSpec),
 карта системы — в этой папке. Грузи только нужный под задачу файл.
 
+## С чего начать
+
+1. Найди в таблице «Возможности» ниже ту, о которой задача (по названию и назначению; задача про несколько — возьми каждую).
+2. Открой её **карточку** `caps/<id>.md` — она короткая и содержит всё главное: требования, входы и ответы, события,
+   кто ещё вызывает, данные, открытые вопросы. Большие файлы ниже открывай, только если карточки не хватило, и ищи в них grep'ом.
+
 ## Задача → файл
 
 | Задача | Открой |
 |---|---|
+| **любая правка возможности — начни здесь** | `caps/<id>.md` (карточка) |
 | понять, что делает возможность, и поменять её поведение | `openspec/specs/<id>/spec.md` → затем `openspec/changes/` (дельта) |
 | где в коде требование и какие тесты его проверяют | [`trace.md`](trace.md) |
 | что значит термин, как назвать новое | [`glossary.md`](glossary.md) |
@@ -604,7 +826,7 @@ def cmd_guide(a):
 
 ## Возможности
 
-| id | Название | Назначение | Требований | Открытых вопросов |
+| Карточка | Название | Назначение | Спека, требований | Открытых вопросов |
 |---|---|---|---|---|
 """ + "\n".join(rows) + """
 
@@ -621,7 +843,10 @@ def cmd_guide(a):
 - Раздаёшь изменения нескольким агентам — сначала раздел «Параллельная работа» ниже.
 """ + parallel_section(P, plan)
     P.guide.write_text(text, encoding="utf-8")
-    print(f"✓ {P.rel(P.guide)}: {len(rows)} возможностей, открытых вопросов {open_q}")
+    cards = write_cards(P, plan)
+    print(f"✓ {P.rel(P.guide)}: {len(rows)} возможностей, открытых вопросов {open_q}; карточки: {P.rel(P.ctx / 'caps')}/ ({len(cards)})")
+    if not (P.ctx / "contracts.json").is_file():
+        print(f"! карточки без контрактов и данных — сначала contracts.py scan {a.repo}, затем plan.py guide")
     return 0
 
 

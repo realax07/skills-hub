@@ -498,6 +498,7 @@ def entry_contract(src, T, e):
                 region = t[m.start():block_end(t, o)] if o > 0 else ""
                 rec["handler"] = f"{relp}:{line_of(t, m.start())}"
                 rec["codes"] = codes_in(region)
+                rec["symbol"] = symbol_at(src, relp, line_of(t, m.start()))
                 rec["auth"] = sorted({squash(x, 60) for x in AUTH_RX.findall(region)})[:4]
                 break
         return rec
@@ -508,6 +509,8 @@ def entry_contract(src, T, e):
     region = text[s:en]
     rec["handler"] = f"{e['file']}:{line_of(text, s)}" if text else ""
     rec["signature"] = sig
+    rec["symbol"] = symbol_at(src, e["file"], line_of(text, s) + max(0, sig.count("\n"))) if text else None
+    rec["end"] = line_of(text, en) if text else e["line"]
     lines_ = src.ln(e["file"]) if text else []
     deco = "\n".join(lines_[max(0, e["line"] - 1):e["line"] + 1]) if lines_ else ""   # status_code= в декораторе
     rec["codes"] = codes_in(deco + "\n" + region) if e["kind"] == "http" else []
@@ -876,51 +879,68 @@ CONC_TAIL = ("- **Что это значит:** <!-- заполнить: что 
 VALID_TAIL = "- **Что это значит:** <!-- заполнить: где проверяются входные данные и что не проверяется (подключена ли валидация вообще) -->"
 
 
+def sub(items, n=MAX_LINES):
+    items = list(items)
+    out = [f"  - {x}" for x in items[:n]]
+    if len(items) > n:
+        out.append(f"  - … ещё {len(items) - n}")
+    return out
+
+
 def contract_body(rec, cap):
-    out = [f"- Возможность: {cap or '— (не отнесён)'}; вход: {rec['file']}:{rec['line']}" +
-           (f"; обработчик: {rec['handler']}" if rec.get("handler") and rec["handler"] != f"{rec['file']}:{rec['line']}" else "")]
+    out = [f"- Возможность: {cap or '— (не отнесён)'}", f"- Вход: {rec['file']}:{rec['line']}"]
+    if rec.get("handler"):
+        out.append(f"- Обработчик: " + (f"`{rec['symbol']}`" if rec.get("symbol") else "встроенный (лямбда)") + f" ({rec['handler']})")
     if rec.get("signature"):
-        out.append(f"- Сигнатура: `{rec['signature'].replace('`', '')}`")
+        out.append(f"- Сигнатура: `{squash(rec['signature'].replace('`', ''), 220)}`")
     if rec.get("headers"):
         out.append("- Заголовки: " + ", ".join(f"`{h}`" for h in rec["headers"]))
     if rec.get("auth"):
-        out.append("- Доступ (в обработчике): " + "; ".join(f"`{x}`" for x in rec["auth"]))
+        out.append("- Доступ (в обработчике):")
+        out += sub(f"`{x}`" for x in rec["auth"])
     if rec.get("codes"):
-        out.append("- Ответы из кода обработчика: " + "; ".join(rec["codes"]) + " (исключения из глубины вызовов сюда не попадают)")
+        out.append("- Ответы из кода обработчика (исключения из глубины вызовов сюда не попадают):")
+        out += sub(rec["codes"])
     elif rec["kind"] == "http":
-        out.append("- Ответы из кода обработчика: не найдены явно — по умолчанию 200; ошибки — смотри исключения и общий обработчик")
-    for d in rec.get("types", []):
-        out.append("- Тип " + fmt_type(d))
-    if rec.get("more_types"):
-        out.append(f"- … ещё типов: {rec['more_types']}")
+        out.append("- Ответы из кода обработчика: явных нет — по умолчанию 200; ошибки — исключения и общий обработчик")
+    if rec.get("types"):
+        out.append("- Типы запроса и ответа:")
+        out += sub(fmt_type(d) for d in rec["types"])
+        if rec.get("more_types"):
+            out.append(f"  - … ещё типов: {rec['more_types']}")
     return "\n".join(out)
 
 
 def event_body(x):
     out = []
     if x["defs"]:
-        for d in x["defs"]:
-            out.append("- Поля: " + fmt_type(d))
+        out.append("- Поля (по определению в каждом сервисе):")
+        out += sub(fmt_type(d) for d in x["defs"])
         if x.get("copies_differ"):
             out.append("- ⚠ копии события в разных сервисах различаются по полям — подписчик может не получить нужное")
         elif len(x["defs"]) > 1:
-            out.append(f"- Копий определения: {len(x['defs'])} (поля совпадают) — новое поле добавляй во все")
+            out.append(f"- Копий определения: {len(x['defs'])}, поля совпадают — новое поле добавляй во все")
     else:
-        out.append("- Поля: тип не найден (событие по имени/теме) — смотри место публикации")
-    out.append("- Публикует: " + ("; ".join(x["publishers"]) if x["publishers"] else "не найдено (публикация вне репозитория или по другому имени?)"))
-    out.append("- Подписаны: " + ("; ".join(x["subscribers"]) if x["subscribers"] else "не найдено в репозитории (внешние подписчики?)"))
+        out.append("- Поля: тип не найден (событие по имени или теме) — смотри место публикации")
+    out.append("- Публикует:" if x["publishers"] else "- Публикует: не найдено (публикация вне репозитория или по другому имени?)")
+    out += sub(x.get("publishers_sym") or x["publishers"])
+    out.append("- Подписаны:" if x["subscribers"] else "- Подписаны: не найдено в репозитории (внешние подписчики?)")
+    out += sub(x["subscribers"])
     if x["registrations"]:
-        out.append("- Регистрация подписки: " + "; ".join(x["registrations"]))
+        out.append("- Регистрация подписки:")
+        out += sub(x["registrations"])
     if x["caps"]:
         out.append("- Возможности подписчиков: " + ", ".join(x["caps"]))
     return "\n".join(out)
 
 
 def caller_body(g):
-    out = [f"- Что вызывает: {g['what']} ({g['target']}), вид: {g['kind']}" + (" — клиентское приложение" if g["client"] else "")]
-    out.append("- Где: " + "; ".join(f"{f} ({k})" for f, k in list(g["files"].items())[:MAX_LINES]))
+    out = [f"- Что вызывает: {g['what']} ({g['target']})", f"- Вид: {g['kind']}" + (" — клиентское приложение" if g["client"] else "")]
+    out.append("- Где:")
+    out += sub(f"{f} ({k})" for f, k in g["files"].items())
     if g["calls"]:
-        out.append("- Пути в коде вызывающего: " + "; ".join(f"{loc} `{lit.replace('`', '')}`" for loc, lit in list(g["calls"].items())[:MAX_LINES]))
+        out.append("- Пути в коде вызывающего:")
+        out += sub(f"{loc} `{squash(lit.replace('`', ''), 120)}`" for loc, lit in g["calls"].items())
     if g["caps"]:
         out.append("- Возможности: " + ", ".join(g["caps"]))
     return "\n".join(out)
@@ -929,22 +949,68 @@ def caller_body(g):
 def entity_body(r):
     out = []
     if r["def"]:
-        out.append("- Поля: " + fmt_type(r["def"], show_attrs=True))
+        d = r["def"]
+        out.append(f"- Определение: `{d['name']}` ({d['file']}:{d['line']})")
+        out.append("- Поля: " + (", ".join(f"{n} {t}" for n, t in d["fields"]) or "не разобраны — смотри определение") +
+                   (f" … ещё {d['more']}" if d.get("more") else ""))
+        if d.get("attrs"):
+            out.append("- Атрибуты полей:")
+            out += sub(f"`{a}`" for a in d["attrs"])
     else:
         out.append(f"- Определение: {r['file']}:{r['line']} ({r['how']}) — поля не разобраны, смотри код")
     if r["config"]:
-        out.append("- Схема и ограничения: " + "; ".join(r["config"]))
-    out.append("- Создаётся: " + ("; ".join(r["creates"]) if r["creates"] else "явных мест не найдено (фабрика, маппер, ORM?)") +
-               (f"; в тестах: {r['creates_tests']}" if r["creates_tests"] else ""))
+        out.append("- Схема и ограничения:")
+        out += sub(r["config"], 15)
+    out.append("- Создаётся:" if r["creates"] else "- Создаётся: явных мест не найдено (фабрика, маппер, ORM?)")
+    out += sub(r.get("creates_sym") or r["creates"])
+    if r["creates_tests"]:
+        out.append(f"- Создаётся в тестах: {r['creates_tests']} мест")
     if r["copies"]:
-        out.append("- Копии полей (DTO, модели клиентов, события) — новое поле проверь в каждой: " + "; ".join(
-            f"`{c['name']}` {c['file']}:{c['line']} (общих полей {c['common']} из {c['of']}" +
-            (f", нет: {', '.join(c['missing'][:5])}" if c["missing"] else "") + ")" for c in r["copies"]))
+        out.append("- Копии полей (DTO, модели клиентов, события) — новое поле проверь в каждой:")
+        out += sub(f"`{c['name']}` {c['file']}:{c['line']} — общих полей {c['common']} из {c['of']}" +
+                   (f", нет: {', '.join(c['missing'][:5])}" if c["missing"] else "") for c in r["copies"])
     if r["seeds"]:
-        out.append("- Засев: " + ", ".join(sorted(set(r["seeds"]))[:6]))
+        out.append("- Засев:")
+        out += sub(sorted(set(r["seeds"])), 6)
     if r.get("ai"):
-        out.append("- Уходит в модель ИИ (промпт, эмбеддинг — новое поле может попасть туда само): " + "; ".join(r["ai"][:5]))
+        out.append("- Уходит в модель ИИ (промпт, эмбеддинг — новое поле может попасть туда само):")
+        out += sub(r["ai"], 5)
     return "\n".join(out)
+
+
+SYM_METHOD = re.compile(r"^[ \t]*(?:(?:public|private|protected|internal|static|async|override|virtual|export|final|suspend)\s+)*"
+                        r"(?:[\w.?\[\]]+(?:<[\w<>\[\],.? ]*>)?\??\s+)?(\w+)\s*(?:<[^>\n]*>)?\s*\([^;]*$|^[ \t]*(?:async\s+)?def\s+(\w+)|"
+                        r"^[ \t]*(?:export\s+)?(?:async\s+)?function\s+(\w+)|^func\s+(?:\([^)]*\)\s*)?(\w+)")
+SYM_CLASS = re.compile(r"^\s*(?:\w+\s+)*(?:class|record|struct|interface|object)\s+(\w+)")
+NOT_METHOD = {"if", "for", "foreach", "while", "switch", "catch", "using", "return", "lock", "await", "new", "else", "when", "nameof", "typeof",
+              "async", "function", "Map", "MapGet", "MapPost", "MapPut", "MapDelete"}
+
+
+def symbol_at(src, relp, line):
+    """`Класс.Метод` вокруг строки: символ переживает правки файла, номер строки — нет."""
+    lines = src.ln(relp)
+    meth = cls = None
+    for i in range(min(line, len(lines)) - 1, -1, -1):
+        ln = lines[i]
+        if meth is None and line - i < 400:
+            m = SYM_METHOD.match(ln)
+            name = m and next((g for g in m.groups() if g), None)
+            if name and name not in NOT_METHOD and not re.match(r"^\s*(?:return|await|var|new)\b", ln):
+                meth = name
+        c = SYM_CLASS.match(ln)
+        if c:
+            cls = c.group(1)
+            break
+    return ".".join(x for x in (cls, meth) if x) or None
+
+
+def with_sym(src, locs):
+    out = []
+    for loc in locs:
+        m = re.match(r"^([^:]+):(\d+)(.*)$", loc)
+        sym = m and symbol_at(src, m.group(1), int(m.group(2)))
+        out.append(f"`{sym}` {loc}" if sym else loc)
+    return out
 
 
 def cmd_scan(a):
@@ -960,6 +1026,10 @@ def cmd_scan(a):
     evs = events(src, T, inv, plan_caps)
     calls, ai = callers(src, inv, plan_caps)
     data = data_map(src, T, inv)
+    for r in data["entities"]:
+        r["creates_sym"] = with_sym(src, r["creates"])
+    for x in evs.values():
+        x["publishers_sym"] = with_sym(src, x["publishers"])
     for r in data["entities"]:   # сущность в файлах, откуда данные уходят в модель ИИ
         r["ai"] = [x.split(": `")[0] for x in ai if re.search(rf"\b{re.escape(r['name'])}\b", src.texts.get(x.split(":")[0], ""))]
 
