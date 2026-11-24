@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite>
+  <id>S3</id>
+  <name>Магазин — регресс</name>
+  <description>Основной регресс веб-магазина</description>
+  <sections>
+    <section>
+      <name>Оформление заказа</name>
+      <description/>
+      <cases>
+        <case>
+          <id>C101</id>
+          <title>Оформление заказа из корзины</title>
+          <template>Test Case (Steps)</template>
+          <type>Functional</type>
+          <priority>Critical</priority>
+          <estimate>5m</estimate>
+          <references>SHOP-12, SHOP-15</references>
+          <custom>
+            <automation_type><id>1</id><value>Automated</value></automation_type>
+            <preconds>Покупатель вошёл: логин buyer@example.com, пароль: Qwerty!2024</preconds>
+            <steps_separated>
+              <step><index>1</index><content>Добавить в корзину 2 товара</content><expected>В корзине 2 позиции, сумма пересчитана</expected></step>
+              <step><index>2</index><content>Нажать «Оформить заказ»</content><expected>Открыта страница оплаты, заказ в статусе **NEW**</expected></step>
+              <step><index>3</index><content>Ввести карту 4242 4242 4242 4242 и оплатить</content><expected>Заказ PAID, на почту пришёл чек</expected></step>
+            </steps_separated>
+          </custom>
+        </case>
+        <case>
+          <id>C102</id>
+          <title>Пустой заказ не оформляется</title>
+          <template>Test Case (Steps)</template>
+          <type>Functional</type>
+          <priority>Medium</priority>
+          <references>SHOP-12</references>
+          <custom>
+            <automation_type><id>1</id><value>Automated</value></automation_type>
+            <steps_separated>
+              <step><index>1</index><content>Отправить POST /api/orders с пустым списком товаров</content><expected>Ответ 422</expected></step>
+            </steps_separated>
+          </custom>
+        </case>
+        <case>
+          <id>C103</id>
+          <title>Заказ больше 50 позиций</title>
+          <template>Test Case (Text)</template>
+          <type>Functional</type>
+          <priority>High</priority>
+          <custom>
+            <steps>1. Добавить в корзину 51 позицию
+2. Оформить заказ</steps>
+            <expected>Работает</expected>
+          </custom>
+        </case>
+      </cases>
+    </section>
+    <section>
+      <name>Отмена заказа</name>
+      <sections>
+        <section>
+          <name>Покупатель</name>
+          <cases>
+            <case>
+              <id>C110</id>
+              <title>Покупатель не может отменить оплаченный заказ</title>
+              <type>Functional</type>
+              <priority>High</priority>
+              <references>SHOP-31</references>
+              <custom>
+                <automation_type><id>1</id><value>Automated</value></automation_type>
+                <steps_separated>
+                  <step><index>1</index><content>Открыть свой заказ в статусе PAID</content><expected>Кнопки «Отменить» нет</expected></step>
+                  <step><index>2</index><content>Вызвать PUT /api/orders/{id}/cancel с токеном покупателя: token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJidXllciJ9.c2lnbmF0dXJlLXNpZ24</content><expected>Ответ 409, статус не изменился</expected></step>
+                </steps_separated>
+              </custom>
+            </case>
+            <case>
+              <id>C111</id>
+              <title>Отмена неоплаченного заказа</title>
+              <type>Functional</type>
+              <priority>Medium</priority>
+              <custom>
+                <steps_separated>
+                  <step><index>1</index><content>Открыть свой заказ в статусе NEW</content><expected>Есть кнопка «Отменить»</expected></step>
+                  <step><index>2</index><content>Нажать «Отменить»</content><expected/></step>
+                </steps_separated>
+              </custom>
+            </case>
+          </cases>
+        </section>
+        <section>
+          <name>Менеджер</name>
+          <cases>
+            <case>
+              <id>C120</id>
+              <title>Менеджер отменяет оплаченный заказ с возвратом</title>
+              <type>Functional</type>
+              <priority>Critical</priority>
+              <custom>
+                <preconds><p>Вход менеджером: <b>manager</b> / пароль <code>Mgr#2024secret</code></p><p>Звонить в поддержку: +7 916 123-45-67</p></preconds>
+                <steps_separated>
+                  <step><index>1</index><content>Открыть заказ в статусе PAID в админке</content><expected>Доступна кнопка «Отменить с возвратом»</expected></step>
+                  <step><index>2</index><content>Нажать «Отменить с возвратом»</content><expected>Заказ REFUNDED, в Stripe создан возврат на полную сумму ![](index.php?/attachments/get/77)</expected></step>
+                </steps_separated>
+              </custom>
+            </case>
+          </cases>
+        </section>
+      </sections>
+    </section>
+    <section>
+      <name>Доставка</name>
+      <cases>
+        <case>
+          <id>C130</id>
+          <title>Передача заказа на склад</title>
+          <type>Functional</type>
+          <priority>Low</priority>
+          <custom>
+            <steps_separated>
+              <step><index>1</index><content>Менеджер запускает отгрузку оплаченного заказа</content><expected>Заказ SHIPPING, склад получил задание</expected></step>
+            </steps_separated>
+            <component><value>Склад</value></component>
+          </custom>
+        </case>
+        <case>
+          <id>C131</id>
+          <title>Передача заказа на склад</title>
+          <type>Functional</type>
+          <priority>Low</priority>
+          <custom>
+            <steps_separated>
+              <step><index>1</index><content>Менеджер запускает отгрузку оплаченного заказа</content><expected>Заказ SHIPPING, склад получил задание</expected></step>
+            </steps_separated>
+          </custom>
+        </case>
+      </cases>
+    </section>
+  </sections>
+</suite>

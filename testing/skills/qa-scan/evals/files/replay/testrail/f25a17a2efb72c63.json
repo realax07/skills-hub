@@ -1,0 +1,8 @@
+{
+ "key": "GET get_project/1",
+ "body": {
+  "id": 1,
+  "name": "Магазин",
+  "suite_mode": 1
+ }
+}

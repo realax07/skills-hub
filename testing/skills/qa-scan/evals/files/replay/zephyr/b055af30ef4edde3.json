@@ -1,0 +1,20 @@
+{
+ "key": "GET /testcases/SHOP-T2/teststeps?maxResults=100&startAt=0",
+ "body": {
+  "isLast": true,
+  "values": [
+   {
+    "testCase": {
+     "testCaseKey": "SHOP-T1"
+    }
+   },
+   {
+    "inline": {
+     "description": "Открыть заказ NEW и нажать «Отменить»",
+     "testData": "",
+     "expectedResult": "Статус CANCELLED"
+    }
+   }
+  ]
+ }
+}

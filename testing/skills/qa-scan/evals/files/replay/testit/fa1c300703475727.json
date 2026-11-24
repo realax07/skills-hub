@@ -1,0 +1,71 @@
+{
+ "key": "GET /workItems/wi-0002",
+ "body": {
+  "id": "wi-0002",
+  "globalId": 1002,
+  "name": "Оформление заказа с картой",
+  "entityTypeName": "TestCases",
+  "sectionId": "aaaa0000-0000-0000-0000-000000000001",
+  "state": "Ready",
+  "priority": "High",
+  "isAutomated": true,
+  "tags": [
+   {
+    "name": "smoke"
+   },
+   {
+    "name": "checkout"
+   }
+  ],
+  "links": [
+   {
+    "title": "SHOP-12 Оформление",
+    "url": "https://jira.example.com/browse/SHOP-12",
+    "type": "Requirement"
+   }
+  ],
+  "preconditionSteps": [
+   {
+    "action": "В каталоге есть товары"
+   }
+  ],
+  "steps": [
+   {
+    "workItemId": "wi-0001"
+   },
+   {
+    "action": "<ol><li>Добавить товар в корзину</li><li>Нажать <b>Оформить</b></li></ol>",
+    "expected": "<p>Открыта оплата, сумма = цене товара</p>",
+    "testData": "Карта: {card}"
+   },
+   {
+    "action": "Оплатить",
+    "expected": "Заказ в статусе PAID",
+    "testData": ""
+   }
+  ],
+  "iterations": [
+   {
+    "parameters": [
+     {
+      "name": "card",
+      "value": "4242 4242 4242 4242"
+     }
+    ]
+   },
+   {
+    "parameters": [
+     {
+      "name": "card",
+      "value": "5555 5555 5555 4444"
+     }
+    ]
+   }
+  ],
+  "attributes": {
+   "attr-1": "opt-1"
+  },
+  "versionNumber": 3,
+  "modifiedDate": "2026-10-02T10:00:00Z"
+ }
+}

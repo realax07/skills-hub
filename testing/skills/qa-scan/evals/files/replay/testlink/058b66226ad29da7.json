@@ -1,0 +1,8 @@
+{
+ "key": "xmlrpc tl.getTestSuitesForTestSuite {\"testsuiteid\": \"10\"}",
+ "body": {
+  "id": "11",
+  "name": "Возвраты",
+  "parent_id": "10"
+ }
+}

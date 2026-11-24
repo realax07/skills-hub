@@ -1,0 +1,16 @@
+{
+ "key": "GET /priorities?projectKey=SHOP&maxResults=100&startAt=0",
+ "body": {
+  "isLast": true,
+  "values": [
+   {
+    "id": 10,
+    "name": "High"
+   },
+   {
+    "id": 11,
+    "name": "Normal"
+   }
+  ]
+ }
+}

@@ -1,0 +1,13 @@
+{
+ "key": "xmlrpc tl.getTestCasesForTestSuite {\"deep\": false, \"details\": \"full\", \"testsuiteid\": \"11\"}",
+ "body": [
+  {
+   "id": "101",
+   "name": "Возврат при отмене",
+   "tc_external_id": "8",
+   "importance": "2",
+   "execution_type": "2",
+   "status": "1"
+  }
+ ]
+}

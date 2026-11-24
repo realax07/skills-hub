@@ -1,0 +1,13 @@
+{
+ "key": "GET get_case_types",
+ "body": [
+  {
+   "id": 1,
+   "name": "Acceptance"
+  },
+  {
+   "id": 6,
+   "name": "Functional"
+  }
+ ]
+}

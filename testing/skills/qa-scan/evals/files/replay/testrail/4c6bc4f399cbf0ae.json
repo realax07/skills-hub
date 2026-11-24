@@ -1,0 +1,9 @@
+{
+ "key": "GET get_suites/1",
+ "body": [
+  {
+   "id": 1,
+   "name": "Master"
+  }
+ ]
+}

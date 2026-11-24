@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="skill-hash" content="82fc51c2393b5407">
+<title>qa-scan — гайд</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --surface-2: #f0eee8; --text: #1d1c1a; --muted: #6b6760; --line: #e2dfd7;
+  --accent: #2f5bd3; --accent-soft: #e6ecfb;
+  --human: #b4561f; --human-soft: #fbeee4;
+  --model: #6a3fc1; --model-soft: #efe8fb;
+  --script: #1f7a54; --script-soft: #e3f4ec;
+  --warn: #9a6a00; --warn-soft: #fbf1d9;
+  --code-bg: #f3f1ec; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --surface: #1d1c1b; --surface-2: #262523; --text: #ecebe7; --muted: #a29f97; --line: #34322f;
+    --accent: #8aa8ff; --accent-soft: #1f2840;
+    --human: #f0a070; --human-soft: #35241a; --model: #b79af5; --model-soft: #2a2140;
+    --script: #6fd3a5; --script-soft: #17302a; --warn: #e7c062; --warn-soft: #332a14;
+    --code-bg: #232220; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --surface: #1d1c1b; --surface-2: #262523; --text: #ecebe7; --muted: #a29f97; --line: #34322f;
+  --accent: #8aa8ff; --accent-soft: #1f2840;
+  --human: #f0a070; --human-soft: #35241a; --model: #b79af5; --model-soft: #2a2140;
+  --script: #6fd3a5; --script-soft: #17302a; --warn: #e7c062; --warn-soft: #332a14;
+  --code-bg: #232220; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+header.top .wrap { display: flex; align-items: center; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.crumbs { color: var(--muted); font-size: 14px; }
+.crumbs a { color: var(--muted); }
+nav.toc { margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--text); }
+.theme-btn { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.hero { padding: 48px 0 28px; }
+.hero .kicker { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 8px 0 14px; letter-spacing: -.01em; }
+.hero p.lead { font-size: 19px; color: var(--muted); max-width: 760px; margin: 0; }
+section { padding: 34px 0; border-top: 1px solid var(--line); }
+section h2 { font-size: 24px; margin: 0 0 6px; }
+section .sub { color: var(--muted); margin: 0 0 22px; max-width: 760px; }
+.grid { display: grid; gap: 14px; }
+.cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.two { grid-template-columns: 1fr 1fr; }
+.list { margin: 0; padding-left: 20px; }
+.list li { margin: 4px 0; }
+.yes h3 { color: var(--script); } .no h3 { color: var(--human); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; }
+.tablebox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+
+/* поток: три дорожки */
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+.chip.human { background: var(--human-soft); color: var(--human); }
+.chip.model { background: var(--model-soft); color: var(--model); }
+.chip.script { background: var(--script-soft); color: var(--script); }
+.chip.file { background: var(--surface-2); color: var(--text); font-family: var(--mono); font-weight: 500; font-size: 12px; text-decoration: none; border-color: var(--line); }
+.chip.file:hover { border-color: var(--accent); }
+.flow { position: relative; }
+.lanes-head, .frow { display: grid; grid-template-columns: 44px repeat(3, 1fr); gap: 12px; }
+.lanes-head { padding: 8px 0; }
+.lanes-head div { font-size: 13px; font-weight: 700; text-align: center; padding: 6px; border-radius: 8px; }
+.lanes-head .h { background: var(--human-soft); color: var(--human); }
+.lanes-head .m { background: var(--model-soft); color: var(--model); }
+.lanes-head .s { background: var(--script-soft); color: var(--script); }
+.frow { position: relative; padding: 6px 0; }
+.frow .num { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 14px; margin-top: 10px; position: relative; z-index: 1; }
+.frow::before { content: ""; position: absolute; left: 21px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.frow:first-of-type::before { top: 24px; } .frow:last-child::before { bottom: calc(100% - 24px); }
+.lane { min-width: 0; }
+.lane.dim { display: flex; align-items: center; justify-content: center; }
+.lane.dim::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.lane.also::after { background: currentColor; opacity: .5; }
+.step { border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+.step.human { border-left: 4px solid var(--human); } .step.model { border-left: 4px solid var(--model); } .step.script { border-left: 4px solid var(--script); }
+.step h4 { margin: 0 0 4px; font-size: 15px; }
+.step p { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+.step .cmd { display: block; background: var(--code-bg); border-radius: 6px; padding: 6px 8px; font-size: 12px; margin: 6px 0; overflow-x: auto; white-space: pre; }
+.step .outs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.step .badge-mob { display: none; }
+
+/* дерево результата */
+.tree td.path { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.tree td.path .ind { display: inline-block; }
+.tree tr.dir td.path { color: var(--muted); }
+.tree tr:target, .tree tr.hl { background: var(--accent-soft); }
+.tree .who { font-size: 13px; color: var(--muted); }
+.git { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.git.yes { background: var(--script-soft); color: var(--script); }
+.git.no { background: var(--human-soft); color: var(--human); }
+.git.opt { background: var(--warn-soft); color: var(--warn); }
+
+/* жизненный цикл */
+.pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.stage { flex: 1 1 200px; display: flex; align-items: stretch; }
+.stage .box { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+.stage.cur .box { border: 2px solid var(--accent); background: var(--accent-soft); }
+.stage .box h4 { margin: 0 0 4px; font-size: 15px; }
+.stage .box p { margin: 0; font-size: 14px; color: var(--muted); }
+.stage .box .skill { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.stage .arrow { width: 28px; display: grid; place-items: center; color: var(--muted); font-size: 20px; }
+.stage:last-child .arrow { display: none; }
+.modes { margin-top: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.modes .card h3 { display: flex; gap: 8px; align-items: center; }
+
+/* примеры */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tabs button { border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.example { display: none; }
+.example.on { display: block; }
+.example .note { color: var(--muted); margin: 0 0 10px; font-size: 15px; }
+pre.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; margin: 0; white-space: pre; max-height: 520px; }
+@media print { .example { display: block; } .tabs { display: none; } }
+
+/* замеры */
+.metric { margin-bottom: 18px; }
+.metric h4 { margin: 0 0 8px; font-size: 15px; }
+.bar { display: grid; grid-template-columns: 180px 1fr 70px; gap: 10px; align-items: center; margin: 5px 0; font-size: 14px; }
+.bar .track { background: var(--surface-2); border-radius: 6px; height: 18px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 6px; }
+.bar .fill.alt { background: var(--muted); }
+.bar .val { font-variant-numeric: tabular-nums; text-align: right; }
+.metric .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+
+.rules li { margin: 8px 0; }
+.rules b { display: block; }
+footer { color: var(--muted); font-size: 13px; padding: 30px 0 50px; border-top: 1px solid var(--line); }
+
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px; }
+  nav.toc { display: none; }
+  .two { grid-template-columns: 1fr; }
+  .lanes-head { display: none; }
+  .frow { grid-template-columns: 36px 1fr; }
+  .frow::before { left: 17px; }
+  .frow .num { width: 28px; height: 28px; font-size: 13px; }
+  .lane.dim { display: none; }
+  .step .badge-mob { display: inline-flex; margin-bottom: 6px; }
+  .stage { flex-basis: 100%; flex-direction: column; }
+  .stage .arrow { width: auto; height: 26px; transform: rotate(90deg); }
+  .bar { grid-template-columns: 110px 1fr 54px; }
+  .tree table, .tree tbody, .tree tr, .tree td { display: block; width: 100%; }
+  .tree tr:first-child { display: none; }
+  .tree tr { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .tree td { border: 0; padding: 2px 8px; }
+  .tree td.path { white-space: normal; font-weight: 600; }
+  .tree td:empty { display: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="crumbs"><a href="../../README.md">testing</a> / <b>qa-scan</b></span><nav class="toc"><a href=#gives>Что даёт</a><a href=#when>Когда звать</a><a href=#flow>Как работает</a><a href=#tree>Куда складывает</a><a href=#life>Что дальше</a><a href=#examples>Примеры</a><a href=#rules>Правила</a></nav><button class="theme-btn" id="theme" type="button">тема</button></div></header><div class="hero"><div class="wrap"><div class="kicker">Тестирование · qa-scan</div><h1>qa-scan: тест-кейсы из TMS — в репозиторий, и md становится главным</h1><p class="lead">Скилл переносит тест-кейсы из Test IT, Zephyr Scale, TestRail или TestLink в md внутри проекта: файл на кейс, иерархия TMS папками, общие шаги, параметры, требования, автотесты. Секреты из шагов скрываются до записи на диск, а агенты получают роутинг — как найти кейсы под задачу по возможности, файлу кода, требованию или тегу.</p></div></div><section id="gives"><div class="wrap"><h2>Что даёт</h2><p class="sub">Кейсы в TMS агент не видит: ни при доработке, ни при написании автотестов, ни при сверке со спекой. После переноса это файлы рядом с кодом, с картой и индексами, которые влезают в контекст даже слабой модели.</p><div class="grid cards"><div class="card"><h3>Кейс — md-файл</h3><p><code>test-cases/&lt;раздел&gt;/TC-0001-&lt;slug&gt;.md</code>: front-matter (приоритет, статус, теги, требования, возможности, код, автотесты, откуда из TMS) и разделы «Цель», «Предусловия», «Шаги» с «Ожидается», «Параметры». Номер <code>TC-0001</code> постоянный.</p></div><div class="card"><h3>Роутинг для агентов</h3><p><code>ROUTING.md</code> (~3 тыс. токенов) и <code>_index/</code>: кейсы по возможностям sa-scan, по файлам кода (через <code>trace.md</code>), по требованиям, тегам, автотестам. <code>route.py find</code> — то же одной командой.</p></div><div class="card"><h3>Секреты не уходят в git</h3><p>Пароли, токены, ключи, реальные карты из шагов скрываются в <code>fetch.py</code> до записи на диск: <code>[скрыто: S-01]</code>. В <code>QUESTIONS.md</code> — где они были, без значений. <code>check.py</code> ловит и вписанные позже руками.</p></div><div class="card"><h3>Связь со спекой и кодом</h3><p><code>map.py auto</code> ставит кейсам возможности из <code>openspec/</code> и находит автотесты по аннотациям (<code>TC-0001</code>, <code>C123</code>, <code>SHOP-T12</code>, <code>WorkItemIds</code>). Пробелы видны сразу: «у order-payment 0 кейсов».</p></div><div class="card"><h3>Качество — отчётом, а не правкой</h3><p><code>QUALITY.md</code>: дубли, шаги без ожидаемого, «Работает» вместо результата, картинки-ссылки на TMS. Кейсы не переписываются — это решение владельцев тестов.</p></div><div class="card"><h3>md первичен, но переезд бывает долгим</h3><p>Повторный импорт обновляет только то, что не правили в md; правленое и изменённое в TMS — конфликт на решение человека. Исчезнувшие из TMS кейсы не удаляются.</p></div></div></div></section><section id="when"><div class="wrap"><h2>Когда звать</h2><p class="sub">Когда команда уходит из TMS в репозиторий или хочет, чтобы агенты видели тест-кейсы.</p><div class="grid two"><div class="card yes"><h3>Подходит</h3><ul class="list"><li>Есть ссылка на TMS или файл выгрузки, и кейсы нужны в репозитории в markdown.</li><li>Агенты дорабатывают проект и должны знать, какие кейсы проверяют меняемое поведение.</li><li>Нужно связать тест-кейсы со спекой (sa-scan) и автотестами, найти непокрытые возможности.</li><li>Переезд идёт постепенно: в TMS ещё правят, в md уже правят — режим обновления.</li></ul></div><div class="card no"><h3>Не подходит</h3><ul class="list"><li>Написать автотесты по кейсам — это следующий шаг, не этот скилл.</li><li>Прогоны, результаты, отчёты о тестировании — их TMS хранит сама, скилл переносит только дизайн тестов.</li><li>Zephyr Squad и Zephyr Enterprise по API — только через выгрузку CSV/xlsx.</li></ul></div></div><h3 style="margin:26px 0 10px">Что нужно на входе</h3><div class="tablebox"><table><tr><th>Что</th><th>Нужно</th><th>Зачем и как</th></tr><tr><td><b>TMS по API</b></td><td>или файл</td><td>Адрес и проект; токен — переменной окружения (<code>TESTRAIL_USER</code>+<code>TESTRAIL_KEY</code>, <code>TESTIT_TOKEN</code>, <code>ZEPHYR_TOKEN</code>, <code>TESTLINK_DEVKEY</code>), не в чат.</td></tr><tr><td><b>Файл выгрузки</b></td><td>или API</td><td>XML TestRail / TestLink / Zephyr Scale, JSON Test IT, CSV и xlsx любой TMS (колонки находятся по синонимам, остальное — <code>--map</code>).</td></tr><tr><td><b>Репозиторий проекта</b></td><td>обязательно</td><td>Куда положить <code>test-cases/</code>. Есть <code>openspec/</code> от sa-scan — кейсы свяжутся с возможностями.</td></tr><tr><td><b>Что переносить</b></td><td>по умолчанию — всё</td><td>Ветка (<code>--section</code>), тег, пробный <code>--limit 50</code> для больших проектов; язык заголовков <code>--lang ru|en</code>.</td></tr></table></div></div></section><section id="flow"><div class="wrap"><h2>Как работает</h2><p class="sub">Всё механическое — скрипты на Python без зависимостей: разбор форматов, HTML → md, номера, хеши, индексы, поиск секретов. Модель решает спорные сопоставления и пишет отчёт, человек — секреты, ПДн и конфликты.</p><div class="legend"><span class="chip human">Человек</span><span class="chip model">Модель</span><span class="chip script">Скрипт</span><span style="color:var(--muted)">— кто делает шаг; файлы под шагом — что он создаёт (нажми, чтобы найти в дереве)</span></div><div class="flow"><div class="lanes-head"><span></span><div class="h">Человек</div><div class="m">Модель</div><div class="s">Скрипт</div></div><div class="frow"><div class="num">1</div><div class="lane"><div class="step human"><span class="chip human badge-mob">Человек</span><h4>Доступ</h4><p>Адрес и проект TMS с токеном в переменной окружения — или файл выгрузки. Что переносить.</p></div></div><div class="lane dim"></div><div class="lane dim"></div></div><div class="frow"><div class="num">2</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Забрать</h4><p>Адаптер TMS → единый снимок: шаги, общие шаги, параметры, поля, требования; HTML → md; приоритеты и статусы к одной шкале; секреты скрыты.</p><code class="cmd">scripts/fetch.py api|file</code><div class="outs"><a class="chip file" href="#f-test-cases-source">test-cases/.source/</a></div></div></div></div><div class="frow"><div class="num">3</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Разложить в md</h4><p>Кейс — файл, разделы TMS — папки, постоянные номера TC, общие шаги в <code>_shared/</code>, индексы и карта, вопросы человеку.</p><code class="cmd">scripts/build.py</code><div class="outs"><a class="chip file" href="#f-test-cases-routing-md">test-cases/ROUTING.md</a><a class="chip file" href="#f-test-cases-index">test-cases/_index/</a><a class="chip file" href="#f-test-cases-questions-md">test-cases/QUESTIONS.md</a></div></div></div></div><div class="frow"><div class="num">4</div><div class="lane dim"></div><div class="lane dim also" style="color:var(--model)"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Связать</h4><p>Скрипт ставит возможности по требованиям и словам и находит автотесты в коде; модель решает оставшееся по папкам — или оставляет пустым.</p><code class="cmd">scripts/map.py auto|list|set</code><div style="margin-top:6px"><span class="chip model">Модель</span> </div></div></div></div><div class="frow"><div class="num">5</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Качество</h4><p>Отчёт о дублях, размытом ожидаемом, пустых шагах — без правки кейсов.</p><code class="cmd">scripts/lint.py</code><div class="outs"><a class="chip file" href="#f-test-cases-quality-md">test-cases/QUALITY.md</a></div></div></div></div><div class="frow"><div class="num">6</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Указатель и проверка</h4><p>Блок в AGENTS.md: как найти кейсы под задачу; проверка формата, ссылок, секретов, свежести индексов.</p><code class="cmd">scripts/link.py, scripts/check.py</code><div class="outs"><a class="chip file" href="#f-agents-md">AGENTS.md</a></div></div></div></div><div class="frow"><div class="num">7</div><div class="lane dim"></div><div class="lane"><div class="step model"><span class="chip model badge-mob">Модель</span><h4>Отчёт</h4><p>Сколько перенесено и связано, что скрыто, что решить человеку, что непокрыто, что коммитить.</p></div></div><div class="lane dim"></div></div><div class="frow"><div class="num">8</div><div class="lane"><div class="step human"><span class="chip human badge-mob">Человек</span><h4>Решения</h4><p>Откуда тесты берут настоящие секреты, реальные ли ПДн, конфликты повторного импорта, что делать с дублями.</p></div></div><div class="lane dim"></div><div class="lane dim"></div></div></div></div></section><section id="tree"><div class="wrap"><h2>Куда что складывает</h2><p class="sub">Всё в <code>test-cases/</code> коммитится, кроме снимка TMS и временных файлов в <code>.source/</code> (там свой <code>.gitignore</code>). <code>ids.json</code> коммитить обязательно — в нём связь номеров TC с TMS.</p><div class="tablebox tree"><table><tr><th>Путь</th><th>Что внутри</th><th>Кто пишет → кто читает</th><th>Git</th></tr><tr id="f-agents-md" class=""><td class="path"><span class="ind" style="width:0px"></span>📄 AGENTS.md</td><td>Блок <code>&lt;!-- qa-scan:start/end --&gt;</code>: 6 шагов — ROUTING.md, индексы и grep, что не сломать, как менять кейсы.</td><td class="who">link.py<br>→ любой агент в проекте</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:0px"></span>📁 test-cases/</td><td></td><td></td><td></td></tr><tr id="f-test-cases-routing-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 ROUTING.md</td><td>Карта: таблица «задача → где искать», области с числом кейсов, возможности, формат, как менять.</td><td class="who">build.py, route.py index<br>→ агент</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 &lt;раздел&gt;/</td><td></td><td></td><td></td></tr><tr id="f-test-cases-tc-0001-slug-md" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 TC-0001-&lt;slug&gt;.md</td><td>Кейс: front-matter и разделы. Правят люди и агенты — md первичен.</td><td class="who">build.py, new.py<br>→ агент, тестировщик</td><td><span class="git yes">в git</span></td></tr><tr id="f-test-cases-index-md" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 INDEX.md</td><td>Строка на кейс: номер, название, приоритет, статус, теги, возможность, требования.</td><td class="who">route.py index<br>→ агент</td><td><span class="git yes">в git</span></td></tr><tr id="f-test-cases-shared" class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 _shared/</td><td>Общие шаги <code>SS-001-*.md</code>; в кейсах — ссылка, а не копия.</td><td class="who">build.py<br>→ агент, тестировщик</td><td><span class="git yes">в git</span></td></tr><tr id="f-test-cases-index" class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 _index/</td><td><code>by-capability.md</code>, <code>by-code.md</code>, <code>by-requirement.md</code>, <code>by-tag.md</code>, <code>by-autotest.md</code>, <code>index.json</code>.</td><td class="who">route.py index<br>→ агент, route.py</td><td><span class="git yes">в git</span></td></tr><tr id="f-test-cases-questions-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 QUESTIONS.md</td><td>Секреты (без значений), ПДн, конфликты, исчезнувшие из TMS, несопоставленные кейсы.</td><td class="who">build.py, map.py<br>→ человек</td><td><span class="git yes">в git</span></td></tr><tr id="f-test-cases-quality-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 QUALITY.md</td><td>Качество кейсов по 11 проверкам с номерами кейсов.</td><td class="who">lint.py<br>→ человек</td><td><span class="git yes">в git</span></td></tr><tr id="f-test-cases-source" class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 .source/</td><td><code>ids.json</code>, <code>config.json</code>, <code>redactions.json</code> — коммитятся; <code>snapshot.json</code>, <code>incoming/</code>, <code>files/</code> — нет.</td><td class="who">fetch.py, build.py<br>→ скрипты</td><td><span class="git opt">по желанию</span></td></tr></table></div></div></section><section id="life"><div class="wrap"><h2>Что дальше</h2><p class="sub">Первый скилл набора qa-*: дальше по этим md будут работать покрытие, автотесты и выгрузка обратно в TMS.</p><div class="pipe"><div class="stage"><div class="box"><h4>Спека «как есть»</h4><p>Возможности и трассировка «требование → код» — ключ роутинга кейсов.</p><a class="skill" href="../../../system-analysis/skills/sa-scan/guide.html">sa-scan →</a></div><div class="arrow">→</div></div><div class="stage cur"><div class="box"><h4>Перенести кейсы</h4><p>Режим A: TMS → <code>test-cases/</code>, связь со спекой и автотестами.</p><span class="skill">qa-scan · этот скилл</span></div><div class="arrow">→</div></div><div class="stage"><div class="box"><h4>Переезд</h4><p>Режим B: повторный импорт, пока в TMS ещё правят; конфликты решает человек.</p></div><div class="arrow">→</div></div><div class="stage"><div class="box"><h4>Работа в md</h4><p>Режим C: агент доработки находит кейсы под задачу, обновляет их вместе с кодом, заводит новые (<code>new.py</code>).</p></div><div class="arrow">→</div></div><div class="stage"><div class="box"><h4>Дальше (план)</h4><p>Покрытие кейсы ↔ спека ↔ автотесты, автотесты по кейсам, выгрузка md → TMS для прогонов.</p></div><div class="arrow">→</div></div></div><div class="grid modes"><div class="card"><h3>A · Перенести</h3><p><b>Когда:</b> первый импорт</p><p style="margin-top:6px">Шаги 1–9: забрать, разложить, связать, качество, указатель, проверка, отчёт. Большой проект — сначала <code>--limit 50</code>.</p></div><div class="card"><h3>B · Обновить из TMS</h3><p><b>Когда:</b> «в TMS поменяли, обнови»</p><p style="margin-top:6px"><code>build.py --dry-run</code>, затем сборка: правленое в md не трогается, конфликт — <code>--accept</code> или <code>--keep</code> по решению человека.</p></div><div class="card"><h3>C · Вести в md</h3><p><b>Когда:</b> найти, добавить, поправить кейс</p><p style="margin-top:6px"><code>route.py find</code> по возможности, пути кода, требованию, словам; <code>new.py</code> — следующий номер и каркас; <code>check.py</code> после правок.</p></div></div><h3 style="margin:26px 0 10px">Как результат используется потом</h3><div class="grid cards"><div class="card"><h3>Агент доработки</h3><p>AGENTS.md → ROUTING.md → <code>_index/by-capability.md</code> или grep по <code>by-code.md</code> → читает 3–15 кейсов, а не тысячи. Меняет поведение — обновляет кейсы вместе с кодом.</p></div><div class="card"><h3>Агент автотестов</h3><p>Берёт шаги и «Ожидается» как сценарий, номер <code>TC-0001</code> — в аннотацию теста; <code>map.py autotests</code> потом найдёт связь.</p></div><div class="card"><h3>Тестировщик</h3><p>Правит кейсы в md через ревью, как код; видит дубли и размытые кейсы в QUALITY.md.</p></div><div class="card"><h3>Человек (лид)</h3><p>Решает по QUESTIONS.md: откуда брать секреты, реальные ли ПДн, какой версии верить при конфликте.</p></div></div></div></section><section id="examples"><div class="wrap"><h2>Примеры из прогонов</h2><p class="sub">Прогон на фикстуре <code>evals/files/shop</code>: сервис заказов со спекой sa-scan и выгрузка TestRail на 8 кейсов.</p><div data-tabs><div class="tabs" role="tablist"><button type="button" aria-selected="true">Сводка импорта</button><button type="button" aria-selected="false">Кейс в md</button><button type="button" aria-selected="false">Роутинг под изменение</button></div><div class="example on"><p class="note">fetch.py и map.py: секреты скрыты, все кейсы связаны с возможностями, у трёх найдены автотесты.</p><pre class="code">✓ test-cases/.source/snapshot.json: кейсов 8, шагов 14, общих шагов 0
+  секреты скрыты: 3 (S-01 пароль, S-02 токен, S-03 пароль)
+  ПДн найдено: 1 (не скрыты — вопрос в QUESTIONS.md)
+возможности: назначено 8, не решено 0 (из 8)
+  TC-0006 → order-cancellation  (слова: менед, отмен, оплач, заказ, возвр)
+автотесты: найдены для 3 кейсов, обновлено 3
+  TC-0001 ← test/orders.test.ts:4</pre></div><div class="example"><p class="note">Пароль из предусловия скрыт; текст — как в TMS.</p><pre class="code"># TC-0006 Менеджер отменяет оплаченный заказ с возвратом
+
+## Предусловия
+
+Вход менеджером: **manager** / пароль [скрыто: S-03]
+
+## Шаги
+
+1. Открыть заказ в статусе PAID в админке
+   - **Ожидается:** Доступна кнопка «Отменить с возвратом»
+2. Нажать «Отменить с возвратом»
+   - **Ожидается:** Заказ REFUNDED, в Stripe создан возврат на полную сумму</pre></div><div class="example"><p class="note">Какие кейсы задевает изменение отмены.</p><pre class="code">$ route.py find . --cap order-cancellation
+TC-0006  highest ready  test-cases/otmena-zakaza/menedzher/TC-0006-…md  — Менеджер отменяет оплаченный заказ с возвратом
+TC-0004  high    ready  test-cases/otmena-zakaza/pokupatel/TC-0004-…md  — Покупатель не может отменить оплаченный заказ
+TC-0005  medium  ready  test-cases/otmena-zakaza/pokupatel/TC-0005-…md  — Отмена неоплаченного заказа
+найдено: 3</pre></div></div></div></section><section id="rules"><div class="wrap"><h2>Главные правила</h2><p class="sub">Почему скилл ведёт себя так, а не иначе.</p><ul class="list rules"><li><b>Перенос, а не переписывание.</b>Кейсы — договорённость команды о том, что проверять. «Причёсанные» агентом 500 кейсов незаметно меняют смысл; замечания — в QUALITY.md.</li><li><b>Секреты скрываются до записи на диск.</b>Репозиторий живёт годами и читается всеми, у кого есть доступ к коду. Значения не попадают ни в md, ни в снимок, ни в отчёт.</li><li><b>Токен — переменной окружения.</b>Не в чат и не в файлы: переписка и логи агента сохраняются.</li><li><b>Номер TC постоянный.</b>На него ссылаются автотесты и задачи; номера удалённых кейсов не переиспользуются.</li><li><b>Правки в md важнее TMS.</b>Повторный импорт не перезаписывает правленое; конфликт решает человек.</li><li><b>Сопоставление — только уверенное.</b>Неверная возможность уводит агента к не тем кейсам, а пустая видна в отчёте.</li></ul><h3 style="margin:26px 0 10px">Если что-то пошло не так</h3><div class="tablebox"><table><tr><th>Симптом</th><th>Что делать</th></tr><tr><td>Человек присылает токен в чат</td><td>Попросить задать переменную окружения в своём терминале; токен в переписке считать скомпрометированным.</td></tr><tr><td>Таблица не разобралась: 0 кейсов или шаги пустые</td><td><code>fetch.py columns --file …</code>, затем <code>--map title=… --map steps=…</code>.</td></tr><tr><td>Ответы API не похожи на ожидаемые (новая версия TMS)</td><td><code>--record</code> в папку вне репозитория, сверить поля с адаптером (references/tms.md), прогонять через <code>--replay</code>.</td></tr><tr><td>check.py: «индексы устарели»</td><td>Кейсы правили после сборки — <code>route.py index</code>.</td></tr><tr><td>Агент хочет «заодно поправить» кейсы</td><td>Сначала перенос как есть, правки — отдельным шагом по QUALITY.md с согласия человека.</td></tr></table></div></div></section><footer><div class="wrap">Подробно для агента — <a href="SKILL.md">SKILL.md</a>. Гайд собран <code>tools/build_guides.py</code> из <code>guide.json</code>; правь его, а не этот файл.</div></footer>
+<script>
+(function () {
+  // вкладки примеров
+  document.querySelectorAll("[data-tabs]").forEach(function (box) {
+    var btns = box.querySelectorAll(".tabs button"), panes = box.querySelectorAll(".example");
+    btns.forEach(function (b, i) {
+      b.addEventListener("click", function () {
+        btns.forEach(function (x, j) { x.setAttribute("aria-selected", i === j ? "true" : "false"); });
+        panes.forEach(function (p, j) { p.classList.toggle("on", i === j); });
+      });
+    });
+  });
+  // переключатель темы
+  var btn = document.getElementById("theme");
+  if (btn) {
+    var key = "guide-theme", root = document.documentElement;
+    try { var saved = localStorage.getItem(key); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+    btn.addEventListener("click", function () {
+      var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark"
+                                                 : matchMedia("(prefers-color-scheme: dark)").matches;
+      var next = dark ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem(key, next); } catch (e) {}
+    });
+  }
+  // подсветка файла из шага потока
+  document.querySelectorAll("a.chip.file").forEach(function (a) {
+    a.addEventListener("click", function () {
+      var row = document.getElementById(a.getAttribute("href").slice(1));
+      if (!row) return;
+      document.querySelectorAll(".tree tr.hl").forEach(function (r) { r.classList.remove("hl"); });
+      row.classList.add("hl");
+    });
+  });
+})();
+</script>
+</body>
+</html>

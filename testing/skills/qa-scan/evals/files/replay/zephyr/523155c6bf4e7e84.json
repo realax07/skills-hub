@@ -1,0 +1,15 @@
+{
+ "key": "GET /testcases/SHOP-T1/teststeps?maxResults=100&startAt=0",
+ "body": {
+  "isLast": true,
+  "values": [
+   {
+    "inline": {
+     "description": "Открыть /login",
+     "testData": "login=buyer@example.com; password=Buyer#2024",
+     "expectedResult": "Кабинет открыт"
+    }
+   }
+  ]
+ }
+}

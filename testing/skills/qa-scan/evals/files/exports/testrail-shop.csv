@@ -1,0 +1,6 @@
+ID,Title,Section Hierarchy,Priority,Type,References,Preconditions,Steps (Step),Steps (Expected Result),Automation Type
+C301,Оформление заказа,Заказы > Оформление,High,Functional,SHOP-12,Пользователь вошёл,Добавить товар в корзину,Товар в корзине,Automated
+,,,,,,,Оформить заказ,Заказ NEW,
+,,,,,,,Оплатить,Заказ PAID,
+C302,Отмена заказа,Заказы > Отмена,Medium,Functional,,,"Открыть заказ
+и нажать «Отменить»",Заказ CANCELLED,None

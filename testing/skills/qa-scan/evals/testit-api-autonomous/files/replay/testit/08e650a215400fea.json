@@ -1,0 +1,29 @@
+{
+ "key": "GET /projects/11111111-0000-0000-0000-000000000001/workItems?Skip=0&Take=100&includeIterations=true",
+ "body": [
+  {
+   "id": "wi-0001",
+   "globalId": 1001,
+   "name": "Вход покупателем",
+   "entityTypeName": "SharedSteps"
+  },
+  {
+   "id": "wi-0002",
+   "globalId": 1002,
+   "name": "Оформление заказа с картой",
+   "entityTypeName": "TestCases"
+  },
+  {
+   "id": "wi-0003",
+   "globalId": 1003,
+   "name": "Покупатель не отменяет оплаченный заказ",
+   "entityTypeName": "TestCases"
+  },
+  {
+   "id": "wi-0004",
+   "globalId": 1004,
+   "name": "Чек-лист отмены менеджером",
+   "entityTypeName": "CheckLists"
+  }
+ ]
+}

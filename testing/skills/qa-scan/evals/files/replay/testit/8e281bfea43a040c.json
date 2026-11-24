@@ -1,0 +1,21 @@
+{
+ "key": "GET /workItems/wi-0004",
+ "body": {
+  "id": "wi-0004",
+  "globalId": 1004,
+  "name": "Чек-лист отмены менеджером",
+  "entityTypeName": "CheckLists",
+  "sectionId": "aaaa0000-0000-0000-0000-000000000002",
+  "state": "Ready",
+  "priority": "Low",
+  "steps": [
+   {
+    "action": "Возврат в Stripe создан"
+   },
+   {
+    "action": "Письмо покупателю ушло"
+   }
+  ],
+  "modifiedDate": "2026-10-04T10:00:00Z"
+ }
+}

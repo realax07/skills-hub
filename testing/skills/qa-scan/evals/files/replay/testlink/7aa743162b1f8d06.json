@@ -1,0 +1,10 @@
+{
+ "key": "xmlrpc tl.getFirstLevelTestSuitesForTestProject {\"testprojectid\": \"1\"}",
+ "body": [
+  {
+   "id": "10",
+   "name": "Оплата",
+   "parent_id": "1"
+  }
+ ]
+}

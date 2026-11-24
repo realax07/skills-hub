@@ -1,0 +1,82 @@
+{
+ "key": "GET /testcases?projectKey=SHOP&maxResults=100&startAt=0",
+ "body": {
+  "isLast": true,
+  "values": [
+   {
+    "id": 1,
+    "key": "SHOP-T1",
+    "name": "Вход покупателем",
+    "folder": {
+     "id": 1
+    },
+    "priority": {
+     "id": 11
+    },
+    "status": {
+     "id": 20
+    },
+    "labels": [
+     "auth"
+    ],
+    "testScript": {
+     "self": "https://api.zephyrscale.smartbear.com/v2/testcases/SHOP-T1/teststeps"
+    }
+   },
+   {
+    "id": 2,
+    "key": "SHOP-T2",
+    "name": "Отмена неоплаченного заказа",
+    "folder": {
+     "id": 2
+    },
+    "priority": {
+     "id": 10
+    },
+    "status": {
+     "id": 20
+    },
+    "labels": [
+     "regress"
+    ],
+    "objective": "<p>Покупатель отменяет заказ <b>NEW</b></p>",
+    "links": {
+     "issues": [
+      {
+       "issueId": 10042
+      }
+     ],
+     "webLinks": [
+      {
+       "url": "https://wiki.example.com/cancel",
+       "description": "Правила отмены"
+      }
+     ]
+    },
+    "customFields": {
+     "Компонент": "Заказы"
+    },
+    "testScript": {
+     "self": "https://api.zephyrscale.smartbear.com/v2/testcases/SHOP-T2/teststeps"
+    }
+   },
+   {
+    "id": 3,
+    "key": "SHOP-T3",
+    "name": "Автоотмена через 30 минут",
+    "folder": {
+     "id": 2
+    },
+    "priority": {
+     "id": 11
+    },
+    "status": {
+     "id": 21
+    },
+    "testScript": {
+     "self": "https://api.zephyrscale.smartbear.com/v2/testcases/SHOP-T3/testscript"
+    }
+   }
+  ]
+ }
+}

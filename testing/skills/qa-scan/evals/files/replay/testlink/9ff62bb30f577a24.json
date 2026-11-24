@@ -1,0 +1,15 @@
+{
+ "key": "xmlrpc tl.getTestCase {\"testcaseid\": \"101\"}",
+ "body": [
+  {
+   "id": "101",
+   "steps": [
+    {
+     "step_number": "1",
+     "actions": "Отменить оплаченный заказ",
+     "expected_results": "Возврат создан"
+    }
+   ]
+  }
+ ]
+}

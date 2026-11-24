@@ -1,0 +1,18 @@
+{
+ "key": "GET /folders?projectKey=SHOP&folderType=TEST_CASE&maxResults=100&startAt=0",
+ "body": {
+  "isLast": true,
+  "values": [
+   {
+    "id": 1,
+    "parentId": null,
+    "name": "Заказы"
+   },
+   {
+    "id": 2,
+    "parentId": 1,
+    "name": "Отмена"
+   }
+  ]
+ }
+}

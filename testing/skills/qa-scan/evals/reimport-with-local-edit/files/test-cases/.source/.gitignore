@@ -1,0 +1,4 @@
+# снимок TMS и временное — не коммитить; ids.json, config.json, redactions.json — коммитить
+snapshot.json
+incoming/
+files/

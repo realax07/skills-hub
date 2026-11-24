@@ -1,0 +1,8 @@
+{
+ "key": "xmlrpc tl.getTestProjectByName {\"testprojectname\": \"Магазин\"}",
+ "body": {
+  "id": "1",
+  "name": "Магазин",
+  "prefix": "SHOP"
+ }
+}

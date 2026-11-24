@@ -1,0 +1,23 @@
+{
+ "key": "xmlrpc tl.getTestCasesForTestSuite {\"deep\": false, \"details\": \"full\", \"testsuiteid\": \"10\"}",
+ "body": [
+  {
+   "id": "100",
+   "name": "Оплата картой",
+   "tc_external_id": "7",
+   "summary": "<p>Оплата <em>картой</em></p>",
+   "preconditions": "",
+   "importance": "3",
+   "execution_type": "1",
+   "status": "7",
+   "version": "2",
+   "steps": [
+    {
+     "step_number": "1",
+     "actions": "<p>Ввести карту</p>",
+     "expected_results": "<p>Платёж прошёл</p>"
+    }
+   ]
+  }
+ ]
+}

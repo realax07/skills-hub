@@ -1,0 +1,43 @@
+{
+ "key": "GET get_cases/1&suite_id=1",
+ "body": {
+  "offset": 0,
+  "limit": 2,
+  "size": 2,
+  "_links": {
+   "next": "/api/v2/get_cases/1&suite_id=1&limit=2&offset=2"
+  },
+  "cases": [
+   {
+    "id": 201,
+    "title": "Оформление из корзины",
+    "section_id": 10,
+    "priority_id": 4,
+    "type_id": 6,
+    "refs": "SHOP-12",
+    "custom_automation_type": 1,
+    "custom_preconds": "Есть товары",
+    "updated_on": 1760000000,
+    "custom_steps_separated": [
+     {
+      "shared_step_id": 5
+     },
+     {
+      "content": "Оформить заказ",
+      "expected": "Заказ NEW"
+     }
+    ]
+   },
+   {
+    "id": 202,
+    "title": "Пустая корзина",
+    "section_id": 10,
+    "priority_id": 2,
+    "type_id": 6,
+    "custom_automation_type": 0,
+    "custom_steps": "1. Открыть пустую корзину\n2. Нажать «Оформить»",
+    "custom_expected": "Кнопка неактивна"
+   }
+  ]
+ }
+}

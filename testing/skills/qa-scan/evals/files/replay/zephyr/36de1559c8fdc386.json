@@ -1,0 +1,7 @@
+{
+ "key": "GET /testcases/SHOP-T3/testscript",
+ "body": {
+  "type": "bdd",
+  "text": "Given заказ NEW\nWhen прошло 30 минут\nThen заказ CANCELLED"
+ }
+}

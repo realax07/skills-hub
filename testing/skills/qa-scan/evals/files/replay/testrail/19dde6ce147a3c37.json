@@ -1,0 +1,23 @@
+{
+ "key": "GET get_shared_steps/1",
+ "body": {
+  "offset": 0,
+  "limit": 250,
+  "size": 1,
+  "_links": {
+   "next": null
+  },
+  "shared_steps": [
+   {
+    "id": 5,
+    "title": "Вход покупателем",
+    "custom_steps_separated": [
+     {
+      "content": "Войти как buyer@example.com",
+      "expected": "Кабинет открыт"
+     }
+    ]
+   }
+  ]
+ }
+}

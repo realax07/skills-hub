@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: testit-api-autonomous
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Автономный прогон: агент не задаёт вопросов, запускает fetch.py api --tms testit --url https://testit.example.com --project 12
+  --replay replay/testit, затем build.py. Общий шаг «Вход покупателем» вынесен в _shared/SS-001 и связан ссылкой из кейсов,
+  итерации параметров — таблицей «Параметры», чек-лист — type: checklist, привязанный автотест — autotests: [ext:…], атрибут
+  «Компонент» — в custom по имени. Bearer-токен из шага скрыт. openspec нет — агент не выдумывает возможности, а пишет в отчёте, что роутинг
+  по папкам, тегам, требованиям, и советует sa-scan. AGENTS.md создан с указателем, check.py без ошибок, вопросы — в QUESTIONS.md.

@@ -1,0 +1,27 @@
+{
+ "key": "GET get_cases/1&suite_id=1&limit=2&offset=2",
+ "body": {
+  "offset": 2,
+  "limit": 2,
+  "size": 1,
+  "_links": {
+   "next": null
+  },
+  "cases": [
+   {
+    "id": 203,
+    "title": "Передача на склад",
+    "section_id": 12,
+    "priority_id": 1,
+    "type_id": 6,
+    "custom_component": 2,
+    "custom_steps_separated": [
+     {
+      "content": "Запустить отгрузку",
+      "expected": "Склад получил задание"
+     }
+    ]
+   }
+  ]
+ }
+}

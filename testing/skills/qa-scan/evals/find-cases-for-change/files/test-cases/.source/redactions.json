@@ -1,0 +1,42 @@
+[
+ {
+  "id": "P-04",
+  "kind": "телефон",
+  "secret": false,
+  "masked": false,
+  "length": 16,
+  "where": [
+   "C120|preconditions"
+  ]
+ },
+ {
+  "id": "S-01",
+  "kind": "пароль",
+  "secret": true,
+  "masked": true,
+  "length": 11,
+  "where": [
+   "C101|preconditions"
+  ]
+ },
+ {
+  "id": "S-02",
+  "kind": "токен",
+  "secret": true,
+  "masked": true,
+  "length": 61,
+  "where": [
+   "C110|шаг 2"
+  ]
+ },
+ {
+  "id": "S-03",
+  "kind": "пароль",
+  "secret": true,
+  "masked": true,
+  "length": 16,
+  "where": [
+   "C120|preconditions"
+  ]
+ }
+]

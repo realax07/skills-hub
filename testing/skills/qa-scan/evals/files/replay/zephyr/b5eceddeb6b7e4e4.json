@@ -1,0 +1,16 @@
+{
+ "key": "GET /statuses?projectKey=SHOP&statusType=TEST_CASE&maxResults=100&startAt=0",
+ "body": {
+  "isLast": true,
+  "values": [
+   {
+    "id": 20,
+    "name": "Approved"
+   },
+   {
+    "id": 21,
+    "name": "Draft"
+   }
+  ]
+ }
+}

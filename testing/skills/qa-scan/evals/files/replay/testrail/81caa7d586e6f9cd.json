@@ -1,0 +1,28 @@
+{
+ "key": "GET get_sections/1&suite_id=1",
+ "body": {
+  "offset": 0,
+  "limit": 250,
+  "size": 3,
+  "_links": {
+   "next": null
+  },
+  "sections": [
+   {
+    "id": 10,
+    "name": "Оформление",
+    "parent_id": null
+   },
+   {
+    "id": 11,
+    "name": "Доставка",
+    "parent_id": null
+   },
+   {
+    "id": 12,
+    "name": "Склад",
+    "parent_id": 11
+   }
+  ]
+ }
+}

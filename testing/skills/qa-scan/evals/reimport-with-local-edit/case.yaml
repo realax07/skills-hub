@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: reimport-with-local-edit
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Режим B. Агент запускает fetch.py file с v2, build.py --dry-run, затем build.py. Не правленный в md кейс «Пустой заказ не оформляется»
+  обновлён (новый текст ошибки) и сохранил capabilities и autotests. TC-0004 правили и в md, и в TMS — конфликт: файл в md не изменён,
+  версия TMS в .source/incoming/TC-0004.md; агент не решает сам, а показывает разницу и спрашивает (--accept или --keep).
+  Новый кейс «Промокод на заказ» получил следующий номер TC-0009, старые номера не сдвинулись. Удалённый в TMS дубль «Передача заказа на склад»
+  не удалён из md, а вынесен вопросом. map.py auto и check.py без ошибок.

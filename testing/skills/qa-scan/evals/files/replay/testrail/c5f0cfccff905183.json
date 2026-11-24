@@ -1,0 +1,29 @@
+{
+ "key": "GET get_case_fields",
+ "body": [
+  {
+   "system_name": "custom_automation_type",
+   "label": "Automation Type",
+   "type_id": 6,
+   "configs": [
+    {
+     "options": {
+      "items": "0, None\n1, Automated"
+     }
+    }
+   ]
+  },
+  {
+   "system_name": "custom_component",
+   "label": "Компонент",
+   "type_id": 6,
+   "configs": [
+    {
+     "options": {
+      "items": "1, Корзина\n2, Склад"
+     }
+    }
+   ]
+  }
+ ]
+}

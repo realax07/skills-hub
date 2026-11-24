@@ -1,0 +1,30 @@
+{
+ "key": "GET /workItems/wi-0003",
+ "body": {
+  "id": "wi-0003",
+  "globalId": 1003,
+  "name": "Покупатель не отменяет оплаченный заказ",
+  "entityTypeName": "TestCases",
+  "sectionId": "aaaa0000-0000-0000-0000-000000000002",
+  "state": "NeedsWork",
+  "priority": "Medium",
+  "isAutomated": false,
+  "tags": [],
+  "steps": [
+   {
+    "workItemId": "wi-0001"
+   },
+   {
+    "action": "Открыть оплаченный заказ",
+    "expected": "Кнопки «Отменить» нет",
+    "testData": ""
+   },
+   {
+    "action": "Вызвать API с заголовком Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123",
+    "expected": "409",
+    "testData": ""
+   }
+  ],
+  "modifiedDate": "2026-10-03T10:00:00Z"
+ }
+}

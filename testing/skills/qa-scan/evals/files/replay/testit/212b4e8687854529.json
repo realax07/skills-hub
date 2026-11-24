@@ -1,0 +1,23 @@
+{
+ "key": "GET /workItems/wi-0001",
+ "body": {
+  "id": "wi-0001",
+  "globalId": 1001,
+  "name": "Вход покупателем",
+  "entityTypeName": "SharedSteps",
+  "sectionId": "aaaa0000-0000-0000-0000-000000000000",
+  "steps": [
+   {
+    "action": "<p>Открыть /login</p>",
+    "expected": "",
+    "testData": ""
+   },
+   {
+    "action": "Ввести логин buyer@example.com и пароль из $SHOP_BUYER_PASSWORD",
+    "expected": "Открыт личный кабинет",
+    "testData": ""
+   }
+  ],
+  "modifiedDate": "2026-10-01T10:00:00Z"
+ }
+}

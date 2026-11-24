@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="1" name="Магазин">
+  <node_order><![CDATA[1]]></node_order>
+  <details><![CDATA[]]></details>
+  <testsuite id="10" name="Оплата">
+    <testcase internalid="100" name="Оплата картой">
+      <node_order><![CDATA[1]]></node_order>
+      <externalid><![CDATA[7]]></externalid>
+      <version><![CDATA[2]]></version>
+      <summary><![CDATA[<p>Оплата <em>картой</em> по ссылке из письма</p>]]></summary>
+      <preconditions><![CDATA[<p>Заказ в статусе NEW</p>]]></preconditions>
+      <execution_type><![CDATA[1]]></execution_type>
+      <importance><![CDATA[3]]></importance>
+      <status><![CDATA[7]]></status>
+      <steps>
+        <step><step_number><![CDATA[1]]></step_number><actions><![CDATA[<p>Ввести карту 4000 0000 0000 0002</p>]]></actions><expectedresults><![CDATA[<p>Отказ банка, заказ остаётся NEW</p>]]></expectedresults><execution_type><![CDATA[1]]></execution_type></step>
+        <step><step_number><![CDATA[2]]></step_number><actions><![CDATA[<p>Ввести карту 4242 4242 4242 4242</p>]]></actions><expectedresults><![CDATA[<table><tr><th>Поле</th><th>Значение</th></tr><tr><td>Статус</td><td>PAID</td></tr></table>]]></expectedresults><execution_type><![CDATA[1]]></execution_type></step>
+      </steps>
+      <keywords><keyword name="smoke"><notes><![CDATA[]]></notes></keyword><keyword name="payment"><notes><![CDATA[]]></notes></keyword></keywords>
+      <custom_fields><custom_field><name><![CDATA[Браузер]]></name><value><![CDATA[Chrome]]></value></custom_field></custom_fields>
+      <requirements><requirement><req_spec_title><![CDATA[Оплата]]></req_spec_title><doc_id><![CDATA[REQ-PAY-1]]></doc_id><title><![CDATA[Оплата картой]]></title></requirement></requirements>
+    </testcase>
+    <testsuite id="11" name="Возвраты">
+      <testcase internalid="101" name="Возврат при отмене">
+        <externalid><![CDATA[8]]></externalid>
+        <summary><![CDATA[]]></summary>
+        <execution_type><![CDATA[2]]></execution_type>
+        <importance><![CDATA[2]]></importance>
+        <status><![CDATA[5]]></status>
+        <steps><step><step_number>1</step_number><actions><![CDATA[Отменить оплаченный заказ]]></actions><expectedresults><![CDATA[Возврат создан]]></expectedresults></step></steps>
+      </testcase>
+    </testsuite>
+  </testsuite>
+</testsuite>

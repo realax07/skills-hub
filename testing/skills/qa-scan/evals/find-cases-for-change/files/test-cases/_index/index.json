@@ -1,0 +1,229 @@
+{
+ "files_hash": "ac0f3c87d3eb9f3e",
+ "cases": [
+  {
+   "id": "TC-0007",
+   "kind": "case",
+   "title": "Передача заказа на склад",
+   "path": "dostavka/TC-0007-peredacha-zakaza-na-sklad.md",
+   "dir": "dostavka",
+   "priority": "low",
+   "status": "ready",
+   "type": "manual",
+   "tags": [],
+   "requirements": [],
+   "capabilities": [
+    "order-shipping"
+   ],
+   "code": [],
+   "autotests": [],
+   "section": "Доставка",
+   "key": "C130",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0008",
+   "kind": "case",
+   "title": "Передача заказа на склад",
+   "path": "dostavka/TC-0008-peredacha-zakaza-na-sklad.md",
+   "dir": "dostavka",
+   "priority": "low",
+   "status": "ready",
+   "type": "manual",
+   "tags": [],
+   "requirements": [],
+   "capabilities": [
+    "order-shipping"
+   ],
+   "code": [],
+   "autotests": [],
+   "section": "Доставка",
+   "key": "C131",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0001",
+   "kind": "case",
+   "title": "Оформление заказа из корзины",
+   "path": "oformlenie-zakaza/TC-0001-oformlenie-zakaza-iz-korziny.md",
+   "dir": "oformlenie-zakaza",
+   "priority": "highest",
+   "status": "ready",
+   "type": "automated",
+   "tags": [],
+   "requirements": [
+    "SHOP-12",
+    "SHOP-15"
+   ],
+   "capabilities": [
+    "order-checkout"
+   ],
+   "code": [],
+   "autotests": [
+    "test/orders.test.ts:4"
+   ],
+   "section": "Оформление заказа",
+   "key": "C101",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0002",
+   "kind": "case",
+   "title": "Пустой заказ не оформляется",
+   "path": "oformlenie-zakaza/TC-0002-pustoy-zakaz-ne-oformlyaetsya.md",
+   "dir": "oformlenie-zakaza",
+   "priority": "medium",
+   "status": "ready",
+   "type": "automated",
+   "tags": [],
+   "requirements": [
+    "SHOP-12"
+   ],
+   "capabilities": [
+    "order-checkout"
+   ],
+   "code": [],
+   "autotests": [
+    "test/orders.test.ts:6"
+   ],
+   "section": "Оформление заказа",
+   "key": "C102",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0003",
+   "kind": "case",
+   "title": "Заказ больше 50 позиций",
+   "path": "oformlenie-zakaza/TC-0003-zakaz-bolshe-50-pozitsiy.md",
+   "dir": "oformlenie-zakaza",
+   "priority": "high",
+   "status": "ready",
+   "type": "manual",
+   "tags": [],
+   "requirements": [],
+   "capabilities": [
+    "order-checkout"
+   ],
+   "code": [],
+   "autotests": [],
+   "section": "Оформление заказа",
+   "key": "C103",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0006",
+   "kind": "case",
+   "title": "Менеджер отменяет оплаченный заказ с возвратом",
+   "path": "otmena-zakaza/menedzher/TC-0006-menedzher-otmenyaet-oplachennyy-zakaz-s.md",
+   "dir": "otmena-zakaza/menedzher",
+   "priority": "highest",
+   "status": "ready",
+   "type": "manual",
+   "tags": [],
+   "requirements": [],
+   "capabilities": [
+    "order-cancellation"
+   ],
+   "code": [],
+   "autotests": [],
+   "section": "Отмена заказа / Менеджер",
+   "key": "C120",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0004",
+   "kind": "case",
+   "title": "Покупатель не может отменить оплаченный заказ",
+   "path": "otmena-zakaza/pokupatel/TC-0004-pokupatel-ne-mozhet-otmenit-oplachennyy.md",
+   "dir": "otmena-zakaza/pokupatel",
+   "priority": "high",
+   "status": "ready",
+   "type": "automated",
+   "tags": [],
+   "requirements": [
+    "SHOP-31"
+   ],
+   "capabilities": [
+    "order-cancellation"
+   ],
+   "code": [],
+   "autotests": [
+    "test/orders.test.ts:8"
+   ],
+   "section": "Отмена заказа / Покупатель",
+   "key": "C110",
+   "tms": "testrail"
+  },
+  {
+   "id": "TC-0005",
+   "kind": "case",
+   "title": "Отмена неоплаченного заказа",
+   "path": "otmena-zakaza/pokupatel/TC-0005-otmena-neoplachennogo-zakaza.md",
+   "dir": "otmena-zakaza/pokupatel",
+   "priority": "medium",
+   "status": "ready",
+   "type": "manual",
+   "tags": [],
+   "requirements": [],
+   "capabilities": [
+    "order-cancellation"
+   ],
+   "code": [],
+   "autotests": [],
+   "section": "Отмена заказа / Покупатель",
+   "key": "C111",
+   "tms": "testrail"
+  }
+ ],
+ "shared": [],
+ "capabilities": {
+  "order-cancellation": {
+   "title": "Отмена и возврат",
+   "files": [
+    "src/routes/orders.ts",
+    "src/integrations/stripe.ts",
+    "src/jobs/scheduler.ts"
+   ],
+   "tests": [
+    "test/orders.test.ts"
+   ]
+  },
+  "order-checkout": {
+   "title": "Оформление заказа",
+   "files": [
+    "src/auth.ts",
+    "src/routes/orders.ts",
+    "src/integrations/stripe.ts"
+   ],
+   "tests": [
+    "test/orders.test.ts"
+   ]
+  },
+  "order-payment": {
+   "title": "Оплата заказа",
+   "files": [
+    "src/routes/webhooks.ts",
+    "src/server.ts",
+    "src/integrations/mailer.ts"
+   ],
+   "tests": []
+  },
+  "order-shipping": {
+   "title": "Отгрузка",
+   "files": [
+    "src/routes/orders.ts",
+    "src/auth.ts",
+    "src/jobs/queues.ts",
+    "src/integrations/warehouse.ts"
+   ],
+   "tests": []
+  },
+  "order-viewing": {
+   "title": "Просмотр заказов",
+   "files": [
+    "src/routes/orders.ts"
+   ],
+   "tests": []
+  }
+ }
+}

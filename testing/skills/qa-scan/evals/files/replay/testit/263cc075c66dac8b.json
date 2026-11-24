@@ -1,0 +1,9 @@
+{
+ "key": "GET /workItems/wi-0002/autoTests",
+ "body": [
+  {
+   "externalId": "shop.checkout.test_card_payment",
+   "name": "test_card_payment"
+  }
+ ]
+}
