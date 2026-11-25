@@ -236,7 +236,8 @@ def main():
                 stats["gone"].append(tid)
 
     print(f"{'(проба) ' if a.dry_run else ''}новых {len(stats['new'])}, обновлено {len(stats['updated'])}, перенесено {len(stats['moved'])}, "
-          f"без изменений {len(stats['same'])}, правлены в md {len(stats['edited'])}, конфликтов {len(stats['conflict'])}, "
+          f"без изменений {len(stats['same'])}, правлены только в md {len(stats['edited'])}, "
+          f"конфликтов {len(stats['conflict'])} (правлены и в md, и в TMS), "
           f"нет в TMS {len(stats['gone'])}")
     if a.dry_run:
         for k in ("updated", "moved", "conflict", "gone"):

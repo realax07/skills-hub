@@ -273,6 +273,29 @@ def cmd_api(a):
     finish(snap, a, P, red, {"origin": clean_origin(a.url or ""), "mode": "api"})
 
 
+def warn_export_in_repo(path, P, red):
+    """Выгрузка внутри репозитория: в ней секреты открытым текстом — md чистые, а сам файл нет."""
+    try:
+        rel = path.resolve().relative_to(P.repo)
+    except ValueError:
+        return
+    secrets = [e for e in red.entries() if e["secret"]]
+    tracked = False
+    try:
+        import subprocess
+        r = subprocess.run(["git", "-C", str(P.repo), "ls-files", "--error-unmatch", str(rel)], capture_output=True)
+        tracked = r.returncode == 0
+    except OSError:
+        pass
+    if secrets or tracked:
+        msg = f"выгрузка {rel.as_posix()} лежит в репозитории"
+        if secrets:
+            msg += f" и содержит секреты открытым текстом ({len(secrets)})"
+        msg += (" и уже в git — скажи человеку: убрать файл из истории и сменить эти пароли и токены" if tracked and secrets else
+                " и уже в git" if tracked else " — не коммить её (держи выгрузку вне репозитория)")
+        qa.warn(msg)
+
+
 def cmd_file(a):
     P = qa.Paths(a.repo)
     red = qa.Redactor(a.mask_pii)
@@ -283,6 +306,7 @@ def cmd_file(a):
     normalize(snap, a, red)
     apply_filters(snap, a)
     finish(snap, a, P, red, {"origin": Path(a.file).name, "mode": "file"})
+    warn_export_in_repo(Path(a.file), P, red)
 
 
 def cmd_columns(a):

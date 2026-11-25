@@ -8,6 +8,8 @@
   python3 map.py set <repo> --section otmena-zakaza --cap order-cancellation   # вся папка
   python3 map.py autotests <repo> [--tests test/ --tests e2e/]               # только автотесты
 
+Автотесты «путь:строка» каждый раз пересчитываются по коду (устаревшие уходят); ext:… из TMS и записи без строки сохраняются.
+Скрытые папки (.opencode, .claude, .agents …) и папки скиллов не сканируются.
 Пишет поля capabilities, code, autotests во front-matter (это обогащение — повторный импорт его сохраняет),
 блок «Сопоставление» в QUESTIONS.md и пересобирает индексы.
 """
@@ -111,6 +113,12 @@ def guess(r, ctext, caps, docs, idf, min_score):
     return scores[0][1], scores[0][0], "слова: " + ", ".join(common)
 
 
+def merge_autotests(old, found):
+    """ext:… (из TMS) и ручные записи без номера строки сохраняются; «путь:строка» — результат поиска, пересчитывается."""
+    keep = [x for x in old if x.startswith("ext:") or not re.search(r":\d+$", x)]
+    return keep + [x for x in found if x not in keep]
+
+
 def find_autotests(P, recs, dirs):
     """Ищет в коде тестов упоминания кейсов: TC-0001, ключи TMS в аннотациях (C123, SHOP-T12, WorkItemIds(123))."""
     by_token = {}
@@ -144,8 +152,10 @@ def find_autotests(P, recs, dirs):
             if f.is_dir() or f.suffix.lower() not in CODE_EXT:
                 continue
             rel = f.relative_to(P.repo).parts
-            if any(x in SKIP for x in rel[:-1]):
+            if any(x in SKIP or x.startswith(".") for x in rel[:-1]):
                 continue
+            if f.parent.joinpath("SKILL.md").exists() or any((P.repo.joinpath(*rel[:i]) / "SKILL.md").exists() for i in range(1, len(rel))):
+                continue  # папка скилла (в том числе этот скилл): примеры TC-0001 в его скриптах — не автотесты
             try:
                 lines = f.read_text(encoding="utf-8", errors="replace").splitlines()
             except OSError:
@@ -203,10 +213,7 @@ def cmd_auto(a):
         found = find_autotests(P, recs, a.tests)
         n = 0
         for r in recs:
-            refs = found.get(r["id"])
-            if not refs:
-                continue
-            merged = list(r["autotests"]) + [x for x in refs if x not in r["autotests"]]
+            merged = merge_autotests(r["autotests"], found.get(r["id"]) or [])
             if merged != r["autotests"]:
                 n += 1
                 if not a.dry_run:
@@ -301,6 +308,8 @@ def cmd_set(a):
             ch["capabilities"] = []
         if a.clear_code:
             ch["code"] = []
+        if a.clear_autotests:
+            ch["autotests"] = []
         if ch and update_meta(files[tid], ch):
             n += 1
     indexer.build(P, quiet=True)
@@ -316,8 +325,7 @@ def cmd_autotests(a):
     found = find_autotests(P, recs, a.tests)
     n = 0
     for r in recs:
-        refs = found.get(r["id"]) or []
-        merged = list(r["autotests"]) + [x for x in refs if x not in r["autotests"]]
+        merged = merge_autotests(r["autotests"], found.get(r["id"]) or [])
         if merged != r["autotests"] and update_meta(files[r["id"]], {"autotests": merged}):
             n += 1
     indexer.build(P, quiet=True)
@@ -356,6 +364,7 @@ def main():
     p.add_argument("--replace", action="store_true", help="заменить, а не добавить")
     p.add_argument("--clear-cap", action="store_true", help="убрать все возможности")
     p.add_argument("--clear-code", action="store_true", help="убрать все пути кода")
+    p.add_argument("--clear-autotests", action="store_true", help="убрать все автотесты (map.py autotests найдёт заново)")
     p.set_defaults(func=cmd_set)
     p = sub.add_parser("autotests")
     p.add_argument("repo")

@@ -24,7 +24,7 @@ LONG = 25
 
 CHECKS = [
     ("no_steps", "Нет шагов", "Кейс без шагов и без ожидаемого результата — проверять нечего."),
-    ("no_expected", "Шаги без ожидаемого результата", "Больше половины шагов без «Ожидается», и общего ожидаемого результата нет."),
+    ("no_expected", "Есть шаги без ожидаемого результата", "У части шагов нет «Ожидается», и общего ожидаемого результата нет — что проверять на этих шагах?"),
     ("vague", "Размытое ожидаемое", "«Работает», «корректно» — агент не поймёт, что именно проверить."),
     ("vague_step", "Размытый шаг", "«Проверить» без того, что именно проверить."),
     ("dup_title", "Одинаковые названия в одной папке", "Возможно, дубли."),
@@ -56,7 +56,7 @@ def main():
         if not steps and not overall:
             found["no_steps"].append(tid)
         own = [s for s in steps if not s.get("shared")]
-        if own and not overall and sum(1 for s in own if not s["expected"]) > len(own) / 2:
+        if own and not overall and str(c["meta"].get("type")) != "checklist" and any(not s["expected"] for s in own):
             found["no_expected"].append(tid)
         if any(VAGUE.match(s["expected"]) for s in steps if s["expected"]) or (overall and VAGUE.match(overall)):
             found["vague"].append(tid)
