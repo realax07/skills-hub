@@ -321,6 +321,48 @@ def build_items(L, caps, entries, events, entities, extra_files):
             items.append(("Q", f"q:{q['id']}", f"[блокирует] {q['title']}", det))
         else:
             info.setdefault("Уточняющие вопросы по затронутым возможностям", []).append(f"{q['id']} {q['title']}")
+    # смежные возможности: связаны событиями или меняют ту же сущность — их риски живут в их спеках и вопросах
+    file_cap = defaultdict(set)
+    for c in L.caps():
+        for f in cap_files(L, c):
+            file_cap[f].add(c)
+    why = defaultdict(list)
+    consumed = {re.sub(r"^consumer:(?:event|доменное событие)\s+", "", e) for c in caps for e in L.caps().get(c, {}).get("entries", [])
+                if e.startswith("consumer:")}
+    for name, x in cj.get("events", {}).items():
+        pub = any(in_ranges(rg, l) for l in x.get("publishers", []))
+        if pub or name in events:
+            for c in x.get("caps", []):
+                why[c].append(f"подписана на `{name}`")
+        if name in consumed:
+            for l in x.get("publishers", []):
+                for c in file_cap.get(sa.strip_loc(l.split(" ")[0]), ()):
+                    why[c].append(f"публикует `{name}`, на которое подписано изменяемое")
+    for en in entities:
+        e = ents.get(en) or {}
+        locs = [x.split(" ")[-1] if " " in x else x for x in (e.get("creates") or [])] + [(e.get("def") or {}).get("file", e.get("file", ""))]
+        for loc in locs:
+            for c in file_cap.get(sa.strip_loc(loc), ()):
+                why[c].append(f"меняет ту же сущность `{en}`")
+    ring1 = [c for c in why if c not in caps]
+    for c in (ring1 if len(ring1) <= 3 else []):   # второй круг — только при узком первом, иначе это вся система
+        cf = cap_files(L, c)
+        for name, x in cj.get("events", {}).items():
+            if x.get("internal") or not any(sa.strip_loc(l.split(" ")[0]) in cf for l in x.get("publishers", [])):
+                continue
+            for c2 in x.get("caps", []):
+                if c2 not in caps and c2 not in ring1:
+                    why[c2].append(f"через `{c}`: подписана на `{name}`")
+    for c, reasons in sorted(why.items(), key=lambda kv: (kv[0] not in ring1, kv[0])):
+        if c in caps:
+            continue
+        blk = [q for q in L.qs if sa.effective_status(q) == "открыт" and q["fields"].get("Важность") == "блокирует"
+               and any(x == c for x, _ in sa.affects(q))]
+        det = ["связь: " + "; ".join(sorted(set(reasons))[:4]),
+               f"открой карточку system-context/caps/{c}.md: её требования с «возможная ошибка», блокирующие вопросы"
+               + (f" ({', '.join(q['id'] for q in blk[:5])})" if blk else "") + " — не держится ли изменение на них",
+               "решение: добавить её в --cap (меняется её поведение), задача, или «не затрагивается: почему»"]
+        items.append(("N", f"cap:{c}", f"`{c}` — {L.caps()[c].get('title', '')}", det))
     # тест-кейсы qa-scan
     if L.cases is not None:
         for c in L.cases:
@@ -355,6 +397,7 @@ IMPACT_HEAD = """# Влияние изменения `{id}`
 """
 KIND_TITLE = OrderedDict([("C", "Кто вызывает затронутые входы"), ("S", "События: публикуемые и названные"),
                           ("E", "Сущности: где поле потеряется молча"), ("Q", "Блокирующие вопросы затронутых возможностей — опирается ли на них изменение?"),
+                          ("N", "Смежные возможности — связаны событиями или той же сущностью"),
                           ("T", "Тест-кейсы (qa-scan)"), ("D", "Проверка интерфейса"), ("X", "Добавлено вручную")])
 
 
