@@ -5,6 +5,7 @@
   python3 link.py <repo> --file AGENTS.md [--file CLAUDE.md]
   python3 link.py <repo> --file AGENTS.md --remove
 
+Для AGENTS.md: если CLAUDE.md нет — создаёт его со строкой @AGENTS.md (Claude Code читает только CLAUDE.md).
 Пишет блок между <!-- qa-scan:start --> и <!-- qa-scan:end -->: когда открывать test-cases/ROUTING.md,
 как найти кейсы под задачу и как их менять. Текст вне меток не трогает.
 """
@@ -94,7 +95,22 @@ def main():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(new, encoding="utf-8")
         print(f"✓ {f}: {action}")
+    if not a.remove and "AGENTS.md" in a.file:
+        claude_import(P)
     return 0
+
+
+def claude_import(P):
+    """Claude Code читает CLAUDE.md, а не AGENTS.md: без импорта указатель он не увидит."""
+    cm = P.repo / "CLAUDE.md"
+    if not cm.is_file():
+        cm.write_text("@AGENTS.md\n", encoding="utf-8")
+        print("✓ CLAUDE.md: создан со строкой @AGENTS.md (Claude Code читает CLAUDE.md, импорт подтянет AGENTS.md)")
+        return
+    text = cm.read_text(encoding="utf-8", errors="replace")
+    if "@AGENTS.md" not in text and START not in text:
+        print("! CLAUDE.md есть, но не подключает AGENTS.md и без указателя — Claude Code не увидит кейсы. "
+              "Добавь в CLAUDE.md строку @AGENTS.md или запусти link.py с --file CLAUDE.md")
 
 
 if __name__ == "__main__":

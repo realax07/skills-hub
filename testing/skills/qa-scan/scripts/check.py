@@ -110,6 +110,10 @@ def main():
         has = [f for f in INSTR if (P.repo / f).is_file() and POINTER in (P.repo / f).read_text(encoding="utf-8", errors="replace")]
         if not has:
             warn.append("нет указателя на test-cases/ в AGENTS.md (link.py --file AGENTS.md) — агенты проекта не найдут кейсы")
+        elif "AGENTS.md" in has and "CLAUDE.md" not in has:
+            cm = P.repo / "CLAUDE.md"
+            if not cm.is_file() or "@AGENTS.md" not in cm.read_text(encoding="utf-8", errors="replace"):
+                warn.append("указатель только в AGENTS.md, а Claude Code читает CLAUDE.md — добавь в CLAUDE.md строку @AGENTS.md (link.py --file AGENTS.md создаст его сам)")
     n_cases = sum(1 for k in seen if k.startswith("TC-"))
     if a.json:
         print(json.dumps({"cases": n_cases, "errors": err, "warnings": warn}, ensure_ascii=False, indent=1))
