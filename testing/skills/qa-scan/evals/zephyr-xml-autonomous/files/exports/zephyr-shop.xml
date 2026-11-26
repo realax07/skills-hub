@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <projectId>10000</projectId>
+  <projectKey>SHOP</projectKey>
+  <folders><folder fullPath="Заказы" index="0"/><folder fullPath="Заказы/Отмена" index="1"/></folders>
+  <testCases>
+    <testCase id="1" key="SHOP-T1">
+      <name><![CDATA[Вход покупателем]]></name>
+      <folder><![CDATA[Заказы]]></folder>
+      <priority><![CDATA[Normal]]></priority>
+      <status><![CDATA[Approved]]></status>
+      <labels><label><![CDATA[auth]]></label></labels>
+      <testScript type="steps"><steps>
+        <step index="0"><description><![CDATA[Открыть /login]]></description><testData><![CDATA[login=buyer@example.com; password=Buyer#2024]]></testData><expectedResult><![CDATA[Кабинет открыт]]></expectedResult></step>
+      </steps></testScript>
+    </testCase>
+    <testCase id="2" key="SHOP-T2">
+      <name><![CDATA[Отмена неоплаченного заказа]]></name>
+      <folder><![CDATA[Заказы/Отмена]]></folder>
+      <objective><![CDATA[<p>Покупатель отменяет заказ <b>NEW</b></p>]]></objective>
+      <priority><![CDATA[High]]></priority>
+      <status><![CDATA[Approved]]></status>
+      <labels><label><![CDATA[regress]]></label></labels>
+      <issues><issue><key><![CDATA[SHOP-31]]></key></issue></issues>
+      <customFields><customField name="Компонент" type="SINGLE_CHOICE_SELECT_LIST"><value><![CDATA[Заказы]]></value></customField></customFields>
+      <testScript type="steps"><steps>
+        <step index="0"><testCaseKey><![CDATA[SHOP-T1]]></testCaseKey></step>
+        <step index="1"><description><![CDATA[Открыть заказ NEW и нажать «Отменить»]]></description><expectedResult><![CDATA[Статус CANCELLED]]></expectedResult></step>
+      </steps></testScript>
+    </testCase>
+    <testCase id="3" key="SHOP-T3">
+      <name><![CDATA[Автоотмена через 30 минут]]></name>
+      <folder><![CDATA[Заказы/Отмена]]></folder>
+      <priority><![CDATA[Normal]]></priority>
+      <status><![CDATA[Draft]]></status>
+      <testScript type="bdd"><![CDATA[Given заказ NEW
+When прошло 30 минут
+Then заказ CANCELLED]]></testScript>
+    </testCase>
+  </testCases>
+</project>

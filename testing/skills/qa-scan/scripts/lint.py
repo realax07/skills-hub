@@ -55,7 +55,7 @@ def main():
         overall = c["sections"].get("expected", "")
         if not steps and not overall:
             found["no_steps"].append(tid)
-        own = [s for s in steps if not s.get("shared")]
+        own = [s for s in steps if not s.get("shared") and "```gherkin" not in s["action"]]  # BDD: ожидаемое внутри Then
         if own and not overall and str(c["meta"].get("type")) != "checklist" and any(not s["expected"] for s in own):
             found["no_expected"].append(tid)
         if any(VAGUE.match(s["expected"]) for s in steps if s["expected"]) or (overall and VAGUE.match(overall)):

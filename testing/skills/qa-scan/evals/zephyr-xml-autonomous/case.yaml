@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: zephyr-xml-autonomous
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Автономный импорт XML Zephyr Scale без вопросов: fetch.py file (формат определяется сам), build.py. 3 кейса в папках «Заказы» и
+  «Заказы/Отмена»; пароль из тестовых данных шага (Buyer#2024) скрыт; шаг «вызов кейса» SHOP-T1 стал ссылкой «Вызов кейса TC-0001»;
+  BDD-скрипт — блоком gherkin; SHOP-31 — в requirements; статус Draft → draft. openspec нет — возможностей не выдумывает, советует sa-scan.
+  Указатель — AGENTS.md и CLAUDE.md с @AGENTS.md созданы. Агент предупреждает, что выгрузка с паролем лежит в репозитории.
+  check.py без ошибок, ничего не закоммичено.

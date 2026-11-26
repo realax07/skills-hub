@@ -27,7 +27,7 @@ python3 <skill>/scripts/build.py .
 python3 <skill>/scripts/map.py auto .
 ```
 ```
-новых 8, обновлено 0, перенесено 0, без изменений 0, правлены в md 0, конфликтов 0, нет в TMS 0
+новых 8, обновлено 0, перенесено 0, без изменений 0, правлены только в md 0, конфликтов 0 (правлены и в md, и в TMS), нет в TMS 0
 возможности: назначено 8, не решено 0 (из 8)
   TC-0006 → order-cancellation  (слова: менед, отмен, оплач, заказ, возвр)
   TC-0001 → order-checkout  (слова: оформ, заказ, позиц, сумма, оплат)
@@ -47,6 +47,7 @@ python3 <skill>/scripts/check.py .
 ```
 ✓ test-cases/QUALITY.md: размытое ожидаемое 1, одинаковые названия в одной папке 1, одинаковые шаги 1, картинки со ссылкой на tms 1, скрытые секреты 3
 ✓ AGENTS.md: создан
+✓ CLAUDE.md: создан со строкой @AGENTS.md (Claude Code читает CLAUDE.md, импорт подтянет AGENTS.md)
 ✓ кейсов 8, общих шагов 0: ошибок 0, предупреждений 0
 ```
 
@@ -63,6 +64,7 @@ test-cases/
   _index/                 by-capability.md, by-code.md, by-requirement.md, by-tag.md, by-autotest.md, index.json
   QUESTIONS.md  QUALITY.md  .source/
 AGENTS.md                 # блок <!-- qa-scan:start --> … <!-- qa-scan:end -->
+CLAUDE.md                 # @AGENTS.md — чтобы указатель видел Claude Code
 ```
 
 Фрагмент кейса — пароль скрыт, текст «Работает» сохранён как был:
@@ -89,7 +91,8 @@ AGENTS.md                 # блок <!-- qa-scan:start --> … <!-- qa-scan:end
 > Качество (`QUALITY.md`): TC-0007 и TC-0008 — дубли, в TC-0003 ожидаемое «Работает», в TC-0006 картинка ссылкой на TestRail.
 > Кейсы я не менял.
 >
-> Коммитить всё в `test-cases/` (кроме того, что в `.source/.gitignore`) и `AGENTS.md`. Не коммитил.
+> Выгрузка `exports/testrail-shop.xml` лежит в репозитории с паролями открытым текстом — не коммитьте её (если уже в git — убрать
+> из истории и сменить пароли). Коммитить всё в `test-cases/` (кроме того, что в `.source/.gitignore`), `AGENTS.md` и `CLAUDE.md`. Не коммитил.
 
 ## Почему так
 

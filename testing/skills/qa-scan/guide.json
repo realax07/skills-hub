@@ -122,7 +122,8 @@
       "text": "Блок в AGENTS.md: как найти кейсы под задачу; проверка формата, ссылок, секретов, свежести индексов.",
       "cmd": "scripts/link.py, scripts/check.py",
       "out": [
-        "AGENTS.md"
+        "AGENTS.md",
+        "CLAUDE.md"
       ]
     },
     {
@@ -145,6 +146,13 @@
       "desc": "Блок `<!-- qa-scan:start/end -->`: 6 шагов — ROUTING.md, индексы и grep, что не сломать, как менять кейсы.",
       "by": "link.py",
       "for": "любой агент в проекте",
+      "git": "yes"
+    },
+    {
+      "path": "CLAUDE.md",
+      "desc": "Строка `@AGENTS.md`, если файла не было: Claude Code читает только CLAUDE.md и иначе не увидит указатель.",
+      "by": "link.py",
+      "for": "Claude Code",
       "git": "yes"
     },
     {
