@@ -279,8 +279,7 @@ def build_items(L, caps, entries, events, entities, extra_files):
             det.append(f"копий определения: {len(x['defs'])} — новое поле добавлять во все")
         subs = x.get("subscribers", [])
         det.append("подписаны: " + ("; ".join(subs[:5]) if subs else "в репозитории никто — внешние подписчики?"))
-        det.append("проверь: хватит ли этих полей новому поведению? (возврату нужны ссылка на платёж и сумма, уведомлению — получатель…) "
-                   "Не хватает — это задача на событие и его издателя, а не «не затрагивается»")
+        det.append("проверь в «Цепочке»: хватит ли этих полей новому поведению? Не хватает — задача на событие и его издателя, а не «не затрагивается»")
         n = L.notes.get(f"`{name}`")
         if n:
             det.append("заметки: " + n[:400])
@@ -534,7 +533,18 @@ def overlap(L, me, files):
 
 
 def tasks_of(text):
-    return OrderedDict((m.group(1), m.group(2)) for m in (TASK_RX.match(ln) for ln in text.splitlines()) if m)
+    """Задачи `- [ ] 1.1 …` вместе со строками-продолжениями (с отступом) — задачу пишут в несколько строк."""
+    out, cur = OrderedDict(), None
+    for ln in text.splitlines():
+        m = TASK_RX.match(ln)
+        if m:
+            cur = m.group(1)
+            out[cur] = m.group(2)
+        elif cur and ln.startswith((" ", "\t")) and ln.strip():
+            out[cur] += " " + ln.strip()
+        elif not ln.strip() or ln.startswith("#"):
+            cur = None
+    return out
 
 
 def cmd_check(a):
@@ -555,6 +565,21 @@ def cmd_check(a):
     tasks = tasks_of((d / "tasks.md").read_text(encoding="utf-8")) if (d / "tasks.md").is_file() else OrderedDict()
     if (d / "tasks.md").is_file() and not tasks:
         err.append(f"{rel(d / 'tasks.md')}: нет задач вида `- [ ] 1.1 …`")
+    # цепочка в design: звенья и четыре вопроса — то, чем модель проверяет решение до задач
+    dp = d / "design.md"
+    if dp.is_file():
+        dt = dp.read_text(encoding="utf-8")
+        ch = re.search(r"^##\s+Цепочка\s*$([\s\S]*?)(?=^##\s|\Z)", dt, re.M)
+        if not ch:
+            err.append(f"{rel(dp)}: нет раздела «## Цепочка» — прогон сценария по звеньям (повтор, гонка, отказ, данные)")
+        elif PLACEHOLDER not in ch.group(1):
+            body = ch.group(1).lower()
+            steps = len(re.findall(r"^\s*\d+\.", ch.group(1), re.M))
+            miss = [w for w in ("повтор", "гонк", "отказ", "данн") if w not in body]
+            if steps < 2:
+                err.append(f"{rel(dp)}: в «Цепочке» меньше двух звеньев — пройди сценарий до последнего эффекта (события, подписчики)")
+            if miss:
+                err.append(f"{rel(dp)}: в «Цепочке» не разобраны: {', '.join(miss)} — у каждого звена четыре вопроса")
     # дельты
     deltas = sorted((d / "specs").glob("*/spec.md"))
     if not deltas:
@@ -597,7 +622,7 @@ def cmd_check(a):
             dec = dm.group(1).strip()
             if not dec or PLACEHOLDER in dec:
                 continue   # о заглушке уже сказано
-            refs = re.findall(r"\b(\d+\.\d+)\b", dec)
+            refs = [r for grp in re.findall(r"задач[аиеу]?\s+((?:\d+\.\d+(?:\s*(?:,|и)\s*)?)+)", dec) for r in re.findall(r"\d+\.\d+", grp)]
             low = dec.lower()
             if refs:
                 missing = [r for r in refs if r not in tasks]
