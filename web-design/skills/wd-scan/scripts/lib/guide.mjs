@@ -1,7 +1,7 @@
 // Указатель на дизайн-контекст в файле инструкций проекта (AGENTS.md, CLAUDE.md…): короткий блок
 // между метками — какие вопросы решает и путь до GUIDE.md. Текст вне меток не трогаем.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { dirname, relative, sep } from "node:path";
+import { dirname, relative, sep, basename, join } from "node:path";
 import { posix } from "node:path";
 import { ensureDir } from "./runtime.mjs";
 
@@ -59,8 +59,23 @@ export function linkContext(files, guideAbs, doc, log) {
     ensureDir(dirname(file));
     writeFileSync(file, text);
     out.push({ file, action });
+    if (basename(file) === "AGENTS.md") claudeImport(dirname(file), out, log);
   }
   return out;
+}
+
+// Claude Code читает CLAUDE.md, а не AGENTS.md: без импорта блок в AGENTS.md он не увидит.
+// Нет CLAUDE.md (ни в корне, ни в .claude/) — создаём его со строкой @AGENTS.md; есть, но без импорта и без блока — предупреждаем.
+function claudeImport(dir, out, log) {
+  const files = [join(dir, "CLAUDE.md"), join(dir, ".claude", "CLAUDE.md")].filter((f) => existsSync(f));
+  if (!files.length) {
+    const f = join(dir, "CLAUDE.md");
+    writeFileSync(f, "@AGENTS.md\n");
+    out.push({ file: f, action: "создан со строкой @AGENTS.md (Claude Code читает CLAUDE.md)" });
+    return;
+  }
+  const ok = files.some((f) => { const t = readFileSync(f, "utf8"); return /^@AGENTS\.md\s*$/m.test(t) || findBlock(t).a !== -1; });
+  if (!ok) log.warnings.push(`${files[0]}: не подключает AGENTS.md и без блока дизайн-контекста — Claude Code его не увидит. Добавь строку @AGENTS.md или впиши блок и туда (--into ${basename(files[0])})`);
 }
 
 // Убирает блок wd-scan из файлов (остальной текст не трогает).

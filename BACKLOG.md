@@ -189,8 +189,9 @@ TestLink можно поднять в Docker для живой сверки. Eva
   Та же проблема была у sa-scan — перенесено (2026-11-26): `link.py` создаёт `CLAUDE.md` с `@AGENTS.md`, `check.py` предупреждает.
 - Сверка «всё ли учли» (2026-11-27): добавлен 5-й eval **zephyr-xml-autonomous** (был в плане) — GLM-5.3-Flash 6/6; lint больше не считает
   BDD-сценарий «шагом без ожидаемого»; пример 01, гайд (CLAUDE.md в дереве) и ожидания reimport-eval сведены с правилом про `--keep`.
-- ⏳ **Указатель для Claude Code в wd-scan / wd-forge** (`link-context.mjs`, `approve.mjs` пишут в AGENTS.md без CLAUDE.md-импорта) — та же
-  проблема, что была в qa-scan и sa-scan.
+- Указатель для Claude Code в wd-scan / wd-forge — перенесено (2026-11-27): `linkContext` (wd-scan `lib/guide.mjs`, через него же
+  `capture.mjs`, `link-context.mjs` и `approve.mjs --context` wd-forge) создаёт `CLAUDE.md` с `@AGENTS.md`, если нет ни `CLAUDE.md`, ни
+  `.claude/CLAUDE.md`; есть без импорта и без блока — предупреждение в логе.
 - ⏳ `by-autotest.md` считает покрытием и тесты-заглушки (`expect(true)`) — помечать их, как делает опись sa-scan.
 - ⏳ Сверить адаптеры с живыми TMS (`--record`): форма ответов Test IT (`workItems` GET или POST search, ссылка на общий шаг),
   xlsx-выгрузка Test IT, XML Zephyr Scale; прогон evals на GLM/DeepSeek/Qwen.
