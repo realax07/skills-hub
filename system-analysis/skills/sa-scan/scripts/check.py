@@ -53,7 +53,7 @@ def check_files(P, R):
         if not re.search(r"^context:\s*\|", t, re.M):
             R.e(P.rel(P.config), "нет `context: |`")
         if "# sa-scan:rules-start" not in t:
-            R.w(P.rel(P.config), "правила OpenSpec для слоя прежней версии — стандартные скилы OpenSpec не узнают о карточках, "
+            R.w(P.rel(P.config), "правила OpenSpec для слоя прежней версии — стандартные скиллы OpenSpec не узнают о карточках, "
                                  "вызывающих и копиях полей: plan.py config <repo> (свои правила сохранятся)")
         rules = re.search(r"^rules:\s*\n((?:[ \t]+.*\n?|\s*\n)*)", t, re.M)
         if rules:
