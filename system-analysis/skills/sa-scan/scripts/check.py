@@ -397,6 +397,11 @@ def check_link(P, R):
     for f in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", "QWEN.md", ".github/copilot-instructions.md"):
         fp = P.repo / f
         if fp.is_file() and "<!-- sa-scan:start -->" in fp.read_text(encoding="utf-8", errors="replace"):
+            cm = P.repo / "CLAUDE.md"
+            if f == "AGENTS.md" and not (cm.is_file() and ("@AGENTS.md" in cm.read_text(encoding="utf-8", errors="replace")
+                                                            or "<!-- sa-scan:start -->" in cm.read_text(encoding="utf-8", errors="replace"))):
+                R.w("CLAUDE.md", "указатель только в AGENTS.md, а Claude Code читает CLAUDE.md — добавь в CLAUDE.md строку @AGENTS.md "
+                                 "(link.py --file AGENTS.md создаст его сам)")
             return
     R.w("AGENTS.md", "указатель на system-context не вписан ни в один файл инструкций (link.py) — если пользователь не просил не трогать их")
 

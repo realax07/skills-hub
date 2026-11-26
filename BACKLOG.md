@@ -180,7 +180,7 @@ TestLink можно поднять в Docker для живой сверки. Eva
   Найдено: **Claude Code читает CLAUDE.md, а не AGENTS.md** — указатель не виден, модель листала файлы вместо роутинга → `link.py` создаёт
   `CLAUDE.md` со строкой `@AGENTS.md`, если его нет (и подсказывает, если есть без импорта), `check.py` предупреждает. Повтор на GLM:
   ROUTING.md → by-capability.md, 12 ходов вместо 16. Правило режима B: явное «не затирай мои правки» — это решение человека, `--keep`.
-  ⏳ Та же проблема у sa-scan (`link.py` пишет только в AGENTS.md) — перенести `CLAUDE.md`-импорт туда.
+  Та же проблема была у sa-scan — перенесено (2026-11-26): `link.py` создаёт `CLAUDE.md` с `@AGENTS.md`, `check.py` предупреждает.
 - ⏳ Сверить адаптеры с живыми TMS (`--record`): форма ответов Test IT (`workItems` GET или POST search, ссылка на общий шаг),
   xlsx-выгрузка Test IT, XML Zephyr Scale; прогон evals на GLM/DeepSeek/Qwen.
 
