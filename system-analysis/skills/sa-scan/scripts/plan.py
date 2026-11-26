@@ -14,6 +14,7 @@
   python3 plan.py set <repo> <cap> [--status todo|done] [--title …] [--notes …]
   python3 plan.py drop-cap <repo> <cap>
   python3 plan.py guide <repo>
+  python3 plan.py config <repo>                                 (правила OpenSpec для слоя: rules и operations)
   python3 plan.py brief <repo> <cap> [<cap>…] | --all          (режим раздачи)
   python3 plan.py collect <repo> [<cap>…]                       (режим раздачи)
 
@@ -776,6 +777,99 @@ def write_cards(P, plan):
     return made
 
 
+RULES_START, RULES_END = "# sa-scan:rules-start", "# sa-scan:rules-end"
+OLD_RULES = {   # правила прежних версий шаблона — при обновлении заменяются новыми
+    "Перед предложением открой system-context/QUESTIONS.md — нет ли открытых вопросов по затронутым возможностям; блокирующий — упомяни в proposal.",
+    "Новые термины предметной области — сначала в system-context/glossary.md.",
+    "Требование — наблюдаемое поведение системы, без имён файлов, классов и библиотек: ссылки на код ведутся в system-context/trace.md.",
+    "Одно поведение — одно требование; каждое с SHALL или MUST и хотя бы одним сценарием WHEN/THEN.",
+    "Термины — как в system-context/glossary.md.",
+    "Последней задачей — обновить system-context/trace.md (требование → код) и integrations.md, если менялся внешний вызов.",
+}
+
+
+def _template_block():
+    t = (sa.SKILL_DIR / "assets" / "config.template.yaml").read_text(encoding="utf-8")
+    return t[t.index(RULES_START):t.index(RULES_END) + len(RULES_END)]
+
+
+def _own_rules(text):
+    """Свои правила пользователя: строки `- "…"  # своё` внутри блока или правила вне известных шаблонов (миграция)."""
+    own = defaultdict(list)
+    art = None
+    for ln in text.splitlines():
+        m = re.match(r"^  (\w+):\s*$", ln)
+        if m:
+            art = m.group(1)
+            continue
+        m = re.match(r"^    - (.+?)\s*$", ln)
+        if m and art:
+            item = m.group(1)
+            bare = re.sub(r"\s+#\s*своё\s*$", "", item).strip().strip('"\'')
+            if "# своё" in item or bare not in OLD_RULES and not _in_template(bare):
+                own[art].append(re.sub(r"\s+#\s*своё\s*$", "", item) + "  # своё")
+    return own
+
+
+def _in_template(rule):
+    return rule in _template_block()
+
+
+def cmd_config(a):
+    """Обновить правила OpenSpec для слоя sa-scan в openspec/config.yaml; context и свои правила не трогает."""
+    P = sa.Paths(a.repo)
+    if not P.config.is_file():
+        sa.die(f"нет {P.rel(P.config)} — plan.py init создаст его из шаблона")
+    text = P.config.read_text(encoding="utf-8")
+    block = _template_block()
+    if RULES_START in text and RULES_END in text:
+        i, j = text.index(RULES_START), text.index(RULES_END) + len(RULES_END)
+        old = text[i:j]
+        rest = text[:i] + text[j:]
+    else:
+        # старый конфиг: вынуть верхнеуровневые rules: и operations: целиком
+        old_parts, keep, cur = [], [], None
+        for ln in text.splitlines(keepends=True):
+            top = re.match(r"^(\w[\w-]*):", ln)
+            if top:
+                cur = top.group(1)
+            (old_parts if cur in ("rules", "operations") else keep).append(ln)
+        old, rest = "".join(old_parts), "".join(keep)
+    own = _own_rules(old)
+    if own:
+        lines = block.splitlines()
+        for art, items in own.items():
+            at = next((k for k, ln in enumerate(lines) if ln == f"  {art}:"), None)
+            if at is None:   # артефакта нет в шаблоне — добавить перед operations:
+                op = next(k for k, ln in enumerate(lines) if ln.startswith("operations:"))
+                lines[op:op] = [f"  {art}:"] + [f"    - {x}" for x in items]
+                continue
+            end = at + 1
+            while end < len(lines) and lines[end].startswith("    "):
+                end += 1
+            lines[end:end] = [f"    - {x}" for x in items]
+        block = "\n".join(lines)
+    if "caps/" not in rest:   # строка о карточках — в конец context (если он блочный)
+        m = re.search(r"^context:\s*\|[^\n]*\n((?:[ \t]+.*\n|\s*\n)*)", rest, re.M)
+        if m:
+            add = ("  По каждой возможности есть короткая карточка system-context/caps/<id>.md — начинай с неё, большие файлы\n"
+                   "  (contracts.md, data.md, QUESTIONS.md) не читай целиком, ищи в них grep по имени входа, события или сущности.\n")
+            body = m.group(1).rstrip("\n") + "\n"
+            rest = rest[:m.start(1)] + body + add + rest[m.end(1):]
+    new = rest.rstrip("\n") + "\n\n" + block + "\n"
+    if new == text:
+        print(f"· {P.rel(P.config)}: правила уже актуальны")
+        return 0
+    P.config.write_text(new, encoding="utf-8")
+    n = sum(len(v) for v in own.values())
+    print(f"✓ {P.rel(P.config)}: правила и указания OpenSpec для слоя sa-scan обновлены" + (f", своих правил сохранено: {n} (помечены # своё)" if n else ""))
+    if shutil.which("openspec"):
+        import subprocess
+        r = subprocess.run(["openspec", "validate", "--all", "--strict", "--no-interactive"], cwd=P.repo, capture_output=True, text=True)
+        print("  openspec validate: " + ("ок" if r.returncode == 0 else "есть ошибки — запусти check.py"))
+    return 0
+
+
 def cmd_guide(a):
     P = sa.Paths(a.repo)
     plan = sa.load_plan(P)
@@ -1167,6 +1261,7 @@ def main():
     p.add_argument("--notes")
     sp("drop-cap", cmd_drop, "удалить пустую возможность").add_argument("cap")
     sp("guide", cmd_guide, "собрать system-context/GUIDE.md")
+    sp("config", cmd_config, "обновить правила OpenSpec (rules, operations) для слоя sa-scan в openspec/config.yaml")
     p = sp("brief", cmd_brief, "режим раздачи: бриф работнику в system-context/.work/<cap>/")
     p.add_argument("caps", nargs="*")
     p.add_argument("--all", action="store_true", help="все возможности со статусом todo")

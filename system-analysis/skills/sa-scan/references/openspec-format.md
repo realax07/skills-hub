@@ -83,15 +83,28 @@ openspec/
 schema: spec-driven
 context: |
   2–4 строки о продукте + указатель на system-context/GUIDE.md
+# sa-scan:rules-start
 rules:
   proposal: [...]
   specs: [...]
+  design: [...]
   tasks: [...]
+operations:
+  apply:
+    guidance: [...]
+  archive:
+    guidance: [...]
+# sa-scan:rules-end
 ```
 
 - `context` подмешивается во все артефакты — держи коротким. Документация проекта сюда не идёт (так советует сам OpenSpec): она в `system-context/`.
 - `rules.<артефакт>` — правила только для этого артефакта. **Каждое правило — в кавычках:** строка с «: » без кавычек становится
   в YAML парой ключ–значение, и OpenSpec молча игнорирует все правила этого артефакта (`check.py` это ловит).
+- `operations.apply.guidance` и `operations.archive.guidance` — указания для реализации и архивации; CLI отдаёт их
+  в `openspec instructions apply` как `operationGuidance` (проверено на 2.1.0, как и подстановка `rules` в proposal, specs, design, tasks).
+- Блок между метками `# sa-scan:rules-start/end` — правила слоя: стандартные скиллы OpenSpec через них открывают карточку,
+  пишут раздел «Влияние», раскладывают задачи по вызывающим и копиям полей, пересобирают слой после apply и archive.
+  Обновить в готовом проекте — `plan.py config <repo>`; свои правила — с `# своё` в конце строки, они сохранятся.
 - `openspec init --language ru` пишет в `context` строку о языке — если `config.yaml` уже создан CLI, не затирай её.
 
 ## CLI (необязателен)

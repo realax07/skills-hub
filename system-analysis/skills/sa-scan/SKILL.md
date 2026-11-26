@@ -97,7 +97,10 @@ description: Восстанавливает по готовому проекту
      (мобильный клиент показывает отмену только для `Submitted`, ловит только 400) — это ломается первым; «Что уходит в модель» — для ИИ.
      В каждом заполненном месте — факты со ссылками `путь:строка`: общие слова («использует поля заказа») `check.py` не примет;
    - `data.md` — «Что это значит» под конкурентностью и транзакциями (что защищено от гонок, что публикуется вне транзакции) и под валидацией;
-   - `openspec/config.yaml` — 2–4 строки `context` о продукте (подробности — не сюда, а в `system-context/`).
+   - `openspec/config.yaml` — 2–4 строки `context` о продукте (подробности — не сюда, а в `system-context/`). Правила `rules` и
+     `operations` для слоя уже вписаны из шаблона: CLI OpenSpec подставляет их в каждый шаг стандартных скиллов OpenSpec
+     (propose, apply, archive) — агент доработки сам откроет карточку, перечислит вызывающих и копии полей, пересоберёт слой.
+     Свои правила — строкой с `# своё` в конце: `plan.py config` их сохранит.
 
 7. **Гайд, карточки и указатель.** `python3 <skill>/scripts/plan.py guide <repo>` → `system-context/GUIDE.md` (с чего начать, задача → файл,
    таблица возможностей, правила, «Параллельная работа» — волны изменений без конфликтов) и **карточки** `system-context/caps/<id>.md`:
@@ -121,7 +124,8 @@ description: Восстанавливает по готовому проекту
 ## Режим B: внести ответы
 
 Слой собран прежней версией скилла (нет `contracts.md`, `data.md` или `caps/`) — сначала дострой его: `contracts.py scan <repo>`,
-заполни места «заполнить» (шаг 6), затем `plan.py guide <repo>`. Иначе `check.py` не пройдёт, а агент доработки не получит карточек.
+заполни места «заполнить» (шаг 6), затем `plan.py guide <repo>` и `plan.py config <repo>` (правила OpenSpec под новый слой).
+Иначе `check.py` не пройдёт, а агент доработки не получит карточек.
 
 1. `python3 <skill>/scripts/questions.py sync <repo>`, затем `questions.py list <repo> --status отвечен` — вопросы с ответом.
    Ответ пришёл в чате — сначала `questions.py answer <repo> Q-… "текст"`.
@@ -164,7 +168,7 @@ description: Восстанавливает по готовому проекту
 
 ```
 openspec/
-  config.yaml                    schema, короткий context, правила для proposal/specs/tasks
+  config.yaml                    schema, короткий context, правила для proposal/specs/design/tasks и указания для apply/archive
   specs/<cap>/spec.md            по возможности: Purpose, Requirements с SHALL/MUST, Scenarios с WHEN/THEN
   changes/<id>/                  (режим B) предложения исправлений: proposal.md, tasks.md, specs/<cap>/spec.md (дельта)
 system-context/
@@ -197,6 +201,7 @@ AGENTS.md                        блок-указатель <!-- sa-scan:start/
 | `check.py`: «нужны шаги WHEN и THEN» | шаги — строками списка `- **WHEN** …`, `- **THEN** …` сразу под `#### Scenario:` |
 | `check.py`: «внешний хост … не описан» | опиши систему в `integrations.md`; если это не интеграция (ссылка в письме, документация) — строкой в «Инфраструктура» с пояснением |
 | `check.py`: «MODIFIED заменяет требование целиком — перенеси и сценарии» | в дельту — все сценарии текущей версии с теми же именами, текст поправь под новое поведение |
+| `check.py`: «правила OpenSpec для слоя прежней версии» | `plan.py config <repo>` — заменит блок правил sa-scan, свои правила (`# своё` или не из шаблона) сохранит |
 | `check.py`: «… без ссылки путь:строка» | открой файлы раздела и запиши факты со ссылками: какое поле, какой статус, что сломается |
 | `check.py`: «нет карточек» или «карточки старше …» | `plan.py guide <repo>` — карточки пересобираются из спек, контрактов и вопросов |
 | `check.py`: «входы не названы ни в одном требовании» | впиши метод и путь (RPC, страницу) в текст требования или шаг сценария; путь с параметром — как в коде: `/api/orders/{id}` |
@@ -233,7 +238,7 @@ AGENTS.md                        блок-указатель <!-- sa-scan:start/
 | `assets/` (`*.template.md`, `config.template.yaml`) | заготовки `system-context/` и `config.yaml` — их копирует `plan.py init` | читать не нужно |
 | `scripts/inventory.py` | `scan` — опись репозитория, `show` — выборка | шаг 2, режим C |
 | `scripts/contracts.py` | `scan` — contracts.md и data.md, `show --cap/--entry/--event/--entity` — разделы | шаг 4, 5, режим C |
-| `scripts/plan.py` | `init`, `status`, `next`, `rename`, `merge`, `move`, `exclude`, `add-entry`, `prune`, `set`, `guide` (с карточками); раздача — `brief`, `collect` | шаги 4, 5, 7 |
+| `scripts/plan.py` | `init`, `status`, `next`, `rename`, `merge`, `move`, `exclude`, `add-entry`, `prune`, `set`, `guide` (с карточками), `config` (правила OpenSpec); раздача — `brief`, `collect` | шаги 4, 5, 7 |
 | `scripts/questions.py` | `add`, `edit`, `answer`, `set`, `list`, `top`, `sync`, `merge` (дубли) | шаги 5, 9, режим B |
 | `scripts/check.py` | проверка всего слоя (`--cap`, `--work` — результат работника, `--partial`, `--no-cli`, `--json`) | шаги 5, 8 |
 | `scripts/link.py` | указатель в AGENTS.md и др. (`--suggest`, `--remove`) | шаг 7 |
