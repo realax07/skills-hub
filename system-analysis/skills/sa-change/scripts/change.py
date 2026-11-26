@@ -347,11 +347,12 @@ IMPACT_HEAD = """# Влияние изменения `{id}`
 
 Собрано `change.py analyze` из слоя sa-scan{extra}. Затронуто: возможности {caps}{more}.
 У каждого пункта — **Решение**: `задача N.N` (номер из tasks.md, можно несколько) или `не затрагивается: <почему>`.
-Для вопросов [блокирует]: `ответ: …` (если человек ответил) или `в proposal: <что принято до ответа>`.
+Для вопросов [блокирует]: изменение на него не опирается — `не затрагивается: <почему>`; опирается — `ответ: …` (человек ответил)
+или `в proposal: <что принято до ответа>` (тогда вопрос — в «Открытые вопросы» proposal и в чат).
 Повторный `analyze` обновит пункты и сохранит решения. Пункты, которых нет в слое, добавь сам в конце с буквой X (X-01…).
 """
 KIND_TITLE = OrderedDict([("C", "Кто вызывает затронутые входы"), ("S", "События: публикуемые и названные"),
-                          ("E", "Сущности: где поле потеряется молча"), ("Q", "Блокирующие вопросы"),
+                          ("E", "Сущности: где поле потеряется молча"), ("Q", "Блокирующие вопросы затронутых возможностей — опирается ли на них изменение?"),
                           ("T", "Тест-кейсы (qa-scan)"), ("D", "Проверка интерфейса"), ("X", "Добавлено вручную")])
 
 
@@ -574,8 +575,20 @@ def cmd_check(a):
         blocking = [x["key"][2:] for x in json.loads((d / "impact.json").read_text(encoding="utf-8"))["items"]
                     if x["kind"] == "Q"] if (d / "impact.json").is_file() else []
         sec = re.search(r"^##\s+Открытые вопросы\s*$([\s\S]*?)(?=^##\s|\Z)", pt, re.M)
+        decisions = {}
+        if imp.is_file():
+            cur = None
+            for ln in imp.read_text(encoding="utf-8").splitlines():
+                m = ITEM_RX.match(ln)
+                if m:
+                    cur = m.group(1)
+                dm = DECISION_RX.match(ln)
+                if dm and cur:
+                    decisions[cur] = dm.group(1).strip().lower()
         for qid in blocking:
             q = next((x for x in L.qs if x["id"] == qid), None)
+            if decisions.get(qid, "").startswith("не затрагивается"):
+                continue   # изменение на этот вопрос не опирается — в proposal ему не место
             if q and sa.effective_status(q) == "открыт" and (not sec or qid not in sec.group(1)):
                 err.append(f"{rel(pp)}: блокирующий вопрос {qid} не назван в «Открытые вопросы» — dev-агент опрётся на допущение молча")
     # пересечения с другими изменениями
