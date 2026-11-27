@@ -56,7 +56,7 @@ TIMEOUT_RX = [(re.compile(r"\btimeout\s*[:=]\s*([\d.]+)"), "s?"), (re.compile(r"
               (re.compile(r"TimeSpan\.FromSeconds\(\s*([\d.]+)"), "s"), (re.compile(r"TimeSpan\.FromMilliseconds\(\s*([\d.]+)"), "ms"),
               (re.compile(r"\bTimeout\s*=\s*([\d.]+)\s*\*\s*time\.Second"), "s"), (re.compile(r"timeout\s*\(\s*([\d.]+)"), "s?")]
 DECISION_V = re.compile(r"^(нарушение:\s*(.{20,})|исключение:\s*(.{20,})|ложное:\s*(.{20,})|вопрос\s+(Q-\d{3,}))$", re.I)
-DECISION_K = re.compile(r"^(принцип\s+(P-\d{2,})|дубль\s+(P-\d{2,})|не принцип:\s*(.{15,}))$", re.I)
+DECISION_K = re.compile(r"^(принцип\s+(P-\d{2,})\b.*|дубль\s+(P-\d{2,})\b.*|не принцип:\s*(.{15,}))$", re.I)
 REF_RX = re.compile(r"[\w./-]+\.\w{1,6}(?::\d+)?|https?://\S+|\bчат\b|\bчеловек\b|Q-\d{3}")
 
 
