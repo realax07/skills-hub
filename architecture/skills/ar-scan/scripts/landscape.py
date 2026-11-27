@@ -1627,6 +1627,52 @@ def cmd_status(a):
 
 # ---------------------------------------------------------------- link
 
+def slice_for(A, ss, arch_ref):
+    """Срез ландшафта для проекта: кто в других системах потребляет наши события, HTTP и gRPC, общие ресурсы.
+    Читает sa-change (analyze): внешние потребители становятся пунктами влияния."""
+    if not A.landscape_json.is_file():
+        sa.die(f"нет {A.landscape_json} — landscape.py build")
+    js = json.loads(A.landscape_json.read_text(encoding="utf-8"))
+    sysd = js.get("systems", {})
+    mine = set(ss)
+
+    def who(s):
+        x = sysd.get(s, {})
+        return OrderedDict([("system", s), ("title", x.get("title", s)), ("repo", x.get("repo", "")), ("owner", x.get("owner", "")),
+                            ("external", bool(x.get("external")))])
+
+    def ev_evidence(a, b, name):
+        for e in js.get("edges", []):
+            if e["from"] == a and e["to"] == b and e["kind"] == "event" and name in e["what"]:
+                return e["evidence"][:2]
+        return []
+    consumers = []
+    for name, ev in js.get("events", {}).items():
+        for p in ev.get("publishers", []):
+            if p not in mine:
+                continue
+            for s in ev.get("subscribers", []):
+                if s not in mine:
+                    consumers.append(OrderedDict([("kind", "event"), ("what", name), ("owner", p), ("consumer", who(s)),
+                                                  ("evidence", ev_evidence(p, s, name))]))
+    for h in js.get("http", []):
+        if h["owner"] in mine:
+            for s, locs in h.get("consumers", {}).items():
+                if s not in mine:
+                    consumers.append(OrderedDict([("kind", "http"), ("what", h["prefix"]), ("entries", h.get("entries", [])), ("owner", h["owner"]),
+                                                  ("consumer", who(s)), ("evidence", locs[:3])]))
+    for g in js.get("grpc", []):
+        if g["owner"] in mine:
+            for s, locs in g.get("consumers", {}).items():
+                if s not in mine:
+                    consumers.append(OrderedDict([("kind", "grpc"), ("what", g["service"]), ("owner", g["owner"]), ("consumer", who(s)),
+                                                  ("evidence", locs[:3])]))
+    shared = [OrderedDict([("name", n), ("kind", x.get("kind", "")), ("ours", sorted(set(x["users"]) & mine)),
+                           ("others", sorted(set(x["users"]) - mine))])
+              for n, x in js.get("infra", {}).items() if set(x.get("users", [])) & mine and set(x.get("users", [])) - mine]
+    return OrderedDict([("source", arch_ref), ("built", A.data.get("built", "")), ("systems", ss), ("consumers", consumers), ("shared", shared)])
+
+
 LINK_START, LINK_END = "<!-- ar-scan:start -->", "<!-- ar-scan:end -->"
 
 
@@ -1652,6 +1698,7 @@ def cmd_link(a):
         if p.is_file():
             parts.append(re.sub(r"^# ", "## ", p.read_text(encoding="utf-8"), flags=re.M).replace("\n## Заметки", "\n### Заметки"))
     (ctx / "landscape.md").write_text("\n".join(parts), encoding="utf-8")
+    (ctx / "landscape.json").write_text(json.dumps(slice_for(A, ss, arch_ref), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     block = (f"{LINK_START}\n## Архитектура за рамками проекта\n\n"
              f"Кто ещё вызывает наши входы и слушает наши события, кого вызываем мы — `system-context/landscape.md` "
              f"(копия из слоя архитектуры: `{arch_ref}`). Меняешь вход, событие или общие данные, у которых там есть потребители, — "

@@ -1,0 +1,312 @@
+{
+ "entries": [
+  {
+   "id": "schedule:scheduler.ts [*/15 * * * *] (node-cron)",
+   "kind": "schedule",
+   "file": "src/jobs/scheduler.ts",
+   "line": 6
+  },
+  {
+   "id": "http:POST /api/orders",
+   "kind": "http",
+   "file": "src/routes/orders.ts",
+   "line": 13,
+   "handler": "src/routes/orders.ts:13",
+   "signature": "ordersRouter.post(\"/\", async (req, res) =>",
+   "symbol": null,
+   "end": 24,
+   "codes": [
+    "422 тело `{ error: \"items\" }`",
+    "201 тело `{ id: order.id, clientSecret: intent.client_secret }`"
+   ],
+   "headers": [],
+   "auth": [],
+   "types": [],
+   "more_types": 0
+  },
+  {
+   "id": "http:GET /api/orders",
+   "kind": "http",
+   "file": "src/routes/orders.ts",
+   "line": 26,
+   "handler": "src/routes/orders.ts:26",
+   "signature": "ordersRouter.get(\"/\", async (req, res) =>",
+   "symbol": null,
+   "end": 29,
+   "codes": [],
+   "headers": [],
+   "auth": [],
+   "types": [],
+   "more_types": 0
+  },
+  {
+   "id": "http:GET /api/orders/{id}",
+   "kind": "http",
+   "file": "src/routes/orders.ts",
+   "line": 31,
+   "handler": "src/routes/orders.ts:31",
+   "signature": "ordersRouter.get(\"/:id\", async (req, res) =>",
+   "symbol": null,
+   "end": 35,
+   "codes": [
+    "404"
+   ],
+   "headers": [],
+   "auth": [],
+   "types": [],
+   "more_types": 0
+  },
+  {
+   "id": "http:POST /api/orders/{id}/cancel",
+   "kind": "http",
+   "file": "src/routes/orders.ts",
+   "line": 38,
+   "handler": "src/routes/orders.ts:38",
+   "signature": "ordersRouter.post(\"/:id/cancel\", async (req, res) =>",
+   "symbol": null,
+   "end": 51,
+   "codes": [
+    "404",
+    "409 тело `{ error: \"state\" }`"
+   ],
+   "headers": [],
+   "auth": [],
+   "types": [],
+   "more_types": 0
+  },
+  {
+   "id": "http:POST /api/orders/{id}/ship",
+   "kind": "http",
+   "file": "src/routes/orders.ts",
+   "line": 53,
+   "handler": "src/routes/orders.ts:53",
+   "signature": "ordersRouter.post(\"/:id/ship\", requireRole(\"MANAGER\"), async (req, res) =>",
+   "symbol": null,
+   "end": 58,
+   "codes": [
+    "409 тело `{ error: \"state\" }`",
+    "202 тело `{ queued: true }`"
+   ],
+   "headers": [],
+   "auth": [],
+   "types": [],
+   "more_types": 0
+  },
+  {
+   "id": "http:POST /webhooks/stripe",
+   "kind": "http",
+   "file": "src/routes/webhooks.ts",
+   "line": 8,
+   "handler": "src/routes/webhooks.ts:8",
+   "signature": "webhooksRouter.post(\"/stripe\", async (req, res) =>",
+   "symbol": null,
+   "end": 23,
+   "codes": [
+    "400 «bad signature»"
+   ],
+   "headers": [
+    "stripe-signature"
+   ],
+   "auth": [],
+   "types": [],
+   "more_types": 0
+  }
+ ],
+ "events": {
+  "ship": {
+   "name": "ship",
+   "internal": false,
+   "defs": [],
+   "publishers": [
+    "src/routes/orders.ts:56"
+   ],
+   "subscribers": [
+    "src/jobs/queues.ts:8 (bullmq-queue)"
+   ],
+   "registrations": [],
+   "caps": [
+    "order-shipping"
+   ],
+   "copies_differ": false,
+   "publishers_sym": [
+    "src/routes/orders.ts:56"
+   ]
+  }
+ },
+ "callers": [],
+ "ai": [],
+ "data": {
+  "entities": [
+   {
+    "name": "User",
+    "how": "Prisma",
+    "file": "prisma/schema.prisma",
+    "line": 3,
+    "def": {
+     "name": "User",
+     "file": "prisma/schema.prisma",
+     "line": 3,
+     "kind": "prisma",
+     "fields": [
+      [
+       "id",
+       "String"
+      ],
+      [
+       "email",
+       "String"
+      ],
+      [
+       "role",
+       "Role"
+      ],
+      [
+       "orders",
+       "Order[]"
+      ]
+     ],
+     "more": 0,
+     "base": "",
+     "attrs": [
+      "id @id @default(uuid())",
+      "email @unique",
+      "role @default(CUSTOMER)"
+     ]
+    },
+    "config": [],
+    "creates": [],
+    "creates_tests": 0,
+    "copies": [],
+    "seeds": [],
+    "creates_sym": [],
+    "ai": []
+   },
+   {
+    "name": "Order",
+    "how": "Prisma",
+    "file": "prisma/schema.prisma",
+    "line": 10,
+    "def": {
+     "name": "Order",
+     "file": "prisma/schema.prisma",
+     "line": 10,
+     "kind": "prisma",
+     "fields": [
+      [
+       "id",
+       "String"
+      ],
+      [
+       "userId",
+       "String"
+      ],
+      [
+       "status",
+       "OrderStatus"
+      ],
+      [
+       "totalCents",
+       "Int"
+      ],
+      [
+       "paymentId",
+       "String?"
+      ],
+      [
+       "createdAt",
+       "DateTime"
+      ],
+      [
+       "items",
+       "OrderItem[]"
+      ],
+      [
+       "user",
+       "User"
+      ]
+     ],
+     "more": 0,
+     "base": "",
+     "attrs": [
+      "id @id @default(uuid())",
+      "status @default(NEW)",
+      "createdAt @default(now())",
+      "user @relation(fields: [userId], references: [id])"
+     ]
+    },
+    "config": [],
+    "creates": [
+     "src/routes/orders.ts:18"
+    ],
+    "creates_tests": 0,
+    "copies": [],
+    "seeds": [],
+    "creates_sym": [
+     "src/routes/orders.ts:18"
+    ],
+    "ai": []
+   },
+   {
+    "name": "OrderItem",
+    "how": "Prisma",
+    "file": "prisma/schema.prisma",
+    "line": 21,
+    "def": {
+     "name": "OrderItem",
+     "file": "prisma/schema.prisma",
+     "line": 21,
+     "kind": "prisma",
+     "fields": [
+      [
+       "id",
+       "String"
+      ],
+      [
+       "orderId",
+       "String"
+      ],
+      [
+       "sku",
+       "String"
+      ],
+      [
+       "qty",
+       "Int"
+      ],
+      [
+       "priceCents",
+       "Int"
+      ],
+      [
+       "order",
+       "Order"
+      ]
+     ],
+     "more": 0,
+     "base": "",
+     "attrs": [
+      "id @id @default(uuid())",
+      "order @relation(fields: [orderId], references: [id])"
+     ]
+    },
+    "config": [],
+    "creates": [],
+    "creates_tests": 0,
+    "copies": [],
+    "seeds": [],
+    "creates_sym": [],
+    "ai": []
+   }
+  ],
+  "seeds": [],
+  "migrations": [
+   "prisma: файлов миграций рядом не найдено; схема или снимок: prisma/schema.prisma — сверь с моделью перед новой миграцией (расхождение уйдёт в миграцию)"
+  ],
+  "concurrency": [],
+  "locks": [],
+  "transactions": [],
+  "validation_wiring": [],
+  "validation": [],
+  "validation_unwired": []
+ }
+}

@@ -214,7 +214,7 @@
     },
     {
       "path": "<repo>/system-context/landscape.md",
-      "desc": "Копия карточек систем этого репозитория + указатель в AGENTS.md.",
+      "desc": "Копия карточек систем этого репозитория + `landscape.json` (срез для sa-change: внешние потребители, общие базы) + указатель в AGENTS.md.",
       "by": "landscape.py link",
       "for": "dev-агент, sa-scan, sa-change",
       "git": "yes"

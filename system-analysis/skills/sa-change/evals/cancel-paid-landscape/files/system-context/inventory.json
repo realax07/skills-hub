@@ -1,0 +1,431 @@
+{
+ "version": 1,
+ "root": "t1",
+ "summary": {
+  "code_files": 11,
+  "files_by_ext": {
+   ".ts": 11,
+   ".prisma": 1
+  },
+  "entries": {
+   "http": 7,
+   "schedule": 1,
+   "consumer": 1
+  },
+  "outbound_calls": 3,
+  "external_hosts": 1,
+  "env_vars": 10,
+  "entities": 3,
+  "enums": 2,
+  "test_files": 1,
+  "docs": 3,
+  "todos": 2
+ },
+ "stack": [
+  {
+   "dir": ".",
+   "name": "orders-service",
+   "manifests": [
+    "package.json"
+   ],
+   "frameworks": [
+    "Express"
+   ],
+   "integrations": {
+    "базы данных": [
+     "@prisma/client",
+     "prisma"
+    ],
+    "очереди задач": [
+     "bullmq"
+    ],
+    "почта": [
+     "nodemailer"
+    ],
+    "платежи": [
+     "stripe"
+    ]
+   }
+  }
+ ],
+ "entries": [
+  {
+   "id": "http:GET /health",
+   "kind": "http",
+   "name": "GET /health",
+   "file": "src/server.ts",
+   "line": 10,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [
+    "служебное"
+   ],
+   "also": []
+  },
+  {
+   "id": "consumer:bullmq-queue ship",
+   "kind": "consumer",
+   "name": "bullmq-queue ship",
+   "file": "src/jobs/queues.ts",
+   "line": 8,
+   "how": "bullmq-queue",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "schedule:scheduler.ts [*/15 * * * *] (node-cron)",
+   "kind": "schedule",
+   "name": "scheduler.ts [*/15 * * * *] (node-cron)",
+   "file": "src/jobs/scheduler.ts",
+   "line": 6,
+   "how": "node-cron",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "http:POST /api/orders",
+   "kind": "http",
+   "name": "POST /api/orders",
+   "file": "src/routes/orders.ts",
+   "line": 13,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "http:GET /api/orders",
+   "kind": "http",
+   "name": "GET /api/orders",
+   "file": "src/routes/orders.ts",
+   "line": 26,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "http:GET /api/orders/{id}",
+   "kind": "http",
+   "name": "GET /api/orders/{id}",
+   "file": "src/routes/orders.ts",
+   "line": 31,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "http:POST /api/orders/{id}/cancel",
+   "kind": "http",
+   "name": "POST /api/orders/{id}/cancel",
+   "file": "src/routes/orders.ts",
+   "line": 38,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "http:POST /api/orders/{id}/ship",
+   "kind": "http",
+   "name": "POST /api/orders/{id}/ship",
+   "file": "src/routes/orders.ts",
+   "line": 53,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [],
+   "also": []
+  },
+  {
+   "id": "http:POST /webhooks/stripe",
+   "kind": "http",
+   "name": "POST /webhooks/stripe",
+   "file": "src/routes/webhooks.ts",
+   "line": 8,
+   "how": "Express-подобный роутер",
+   "package": ".",
+   "tags": [
+    "webhook"
+   ],
+   "also": []
+  }
+ ],
+ "outbound": {
+  "calls": [
+   {
+    "file": "src/integrations/mailer.ts",
+    "line": 4,
+    "code": "const transport = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: 587 });",
+    "host": null,
+    "env": "SMTP_HOST"
+   },
+   {
+    "file": "src/integrations/warehouse.ts",
+    "line": 4,
+    "code": "const res = await fetch(`${BASE}/shipments`, {",
+    "host": null,
+    "env": null
+   },
+   {
+    "file": "src/models/db.ts",
+    "line": 2,
+    "code": "export const prisma = new PrismaClient();",
+    "host": null,
+    "env": null
+   }
+  ],
+  "hosts": {
+   "api.warehouse-partner.ru": {
+    "count": 1,
+    "files": [
+     "src/integrations/warehouse.ts:1"
+    ]
+   }
+  },
+  "sdk": [
+   {
+    "file": "src/integrations/mailer.ts",
+    "line": 1,
+    "sdk": "nodemailer",
+    "category": "почта"
+   },
+   {
+    "file": "src/integrations/stripe.ts",
+    "line": 1,
+    "sdk": "stripe",
+    "category": "платежи"
+   },
+   {
+    "file": "src/jobs/queues.ts",
+    "line": 1,
+    "sdk": "bullmq",
+    "category": "очереди задач"
+   },
+   {
+    "file": "src/models/db.ts",
+    "line": 1,
+    "sdk": "@prisma/client",
+    "category": "базы данных"
+   }
+  ]
+ },
+ "env": {
+  "DATABASE_URL": {
+   "files": [
+    ".env.example:1"
+   ],
+   "tags": [
+    "адрес"
+   ]
+  },
+  "FEATURE_PARTIAL_REFUNDS": {
+   "files": [
+    ".env.example:7"
+   ],
+   "tags": [
+    "флаг"
+   ]
+  },
+  "JWT_SECRET": {
+   "files": [
+    ".env.example:6",
+    "src/auth.ts:7"
+   ],
+   "tags": [
+    "секрет"
+   ]
+  },
+  "PORT": {
+   "files": [
+    "src/server.ts:13"
+   ],
+   "tags": []
+  },
+  "REDIS_URL": {
+   "files": [
+    ".env.example:2",
+    "src/jobs/queues.ts:5"
+   ],
+   "tags": [
+    "адрес"
+   ]
+  },
+  "SMTP_HOST": {
+   "files": [
+    ".env.example:5",
+    "src/integrations/mailer.ts:4"
+   ],
+   "tags": [
+    "адрес"
+   ]
+  },
+  "STRIPE_SECRET_KEY": {
+   "files": [
+    ".env.example:3",
+    "src/integrations/stripe.ts:3"
+   ],
+   "tags": [
+    "секрет"
+   ]
+  },
+  "STRIPE_WEBHOOK_SECRET": {
+   "files": [
+    ".env.example:4",
+    "src/routes/webhooks.ts:11"
+   ],
+   "tags": [
+    "секрет"
+   ]
+  },
+  "WAREHOUSE_API_URL": {
+   "files": [
+    ".env.example:8",
+    "src/integrations/warehouse.ts:1"
+   ],
+   "tags": [
+    "адрес"
+   ]
+  },
+  "WAREHOUSE_TOKEN": {
+   "files": [
+    "src/integrations/warehouse.ts:6"
+   ],
+   "tags": [
+    "секрет"
+   ]
+  }
+ },
+ "entities": [
+  {
+   "name": "User",
+   "how": "Prisma",
+   "file": "prisma/schema.prisma",
+   "line": 3,
+   "also": []
+  },
+  {
+   "name": "Order",
+   "how": "Prisma",
+   "file": "prisma/schema.prisma",
+   "line": 10,
+   "also": []
+  },
+  {
+   "name": "OrderItem",
+   "how": "Prisma",
+   "file": "prisma/schema.prisma",
+   "line": 21,
+   "also": []
+  }
+ ],
+ "enums": [
+  {
+   "name": "OrderStatus",
+   "file": "prisma/schema.prisma",
+   "line": 30,
+   "values": [
+    "NEW",
+    "PAID",
+    "SHIPPED",
+    "CANCELLED",
+    "REFUNDED"
+   ]
+  },
+  {
+   "name": "Role",
+   "file": "prisma/schema.prisma",
+   "line": 38,
+   "values": [
+    "CUSTOMER",
+    "MANAGER",
+    "ADMIN"
+   ]
+  }
+ ],
+ "migrations": {},
+ "authz": [
+  {
+   "file": "src/auth.ts",
+   "line": 14,
+   "code": "export function requireRole(role: \"MANAGER\" | \"ADMIN\") {"
+  },
+  {
+   "file": "src/auth.ts",
+   "line": 17,
+   "code": "if (user.role === \"ADMIN\" || user.role === role) return next();"
+  },
+  {
+   "file": "src/routes/orders.ts",
+   "line": 27,
+   "code": "const where = req.user.role === \"CUSTOMER\" ? { userId: req.user.id } : {};"
+  },
+  {
+   "file": "src/routes/orders.ts",
+   "line": 33,
+   "code": "if (!order || (req.user.role === \"CUSTOMER\" && order.userId !== req.user.id)) return res.status(404).end();"
+  },
+  {
+   "file": "src/routes/orders.ts",
+   "line": 41,
+   "code": "const isCustomer = req.user.role === \"CUSTOMER\";"
+  },
+  {
+   "file": "src/routes/orders.ts",
+   "line": 53,
+   "code": "ordersRouter.post(\"/:id/ship\", requireRole(\"MANAGER\"), async (req, res) => {"
+  }
+ ],
+ "tests": [
+  {
+   "file": "test/orders.test.ts",
+   "kind": "unit/integration",
+   "count": 4,
+   "titles": [
+    "orders",
+    "creates an order and returns client secret",
+    "rejects empty order with 422",
+    "customer cannot cancel paid order"
+   ]
+  }
+ ],
+ "docs": [
+  {
+   "file": "AGENTS.md",
+   "title": "",
+   "lines": 15
+  },
+  {
+   "file": "README.md",
+   "title": "orders-service",
+   "lines": 8
+  },
+  {
+   "file": "docs/prd.md",
+   "title": "PRD: Сервис заказов (v1)",
+   "lines": 17
+  }
+ ],
+ "openapi": {
+  "files": [],
+  "only_in_openapi": []
+ },
+ "todos": [
+  {
+   "file": "src/integrations/stripe.ts",
+   "line": 10,
+   "tag": "FIXME",
+   "text": "частичный возврат за флагом FEATURE_PARTIAL_REFUNDS ещё не сделан"
+  },
+  {
+   "file": "src/routes/orders.ts",
+   "line": 17,
+   "tag": "TODO",
+   "text": "брать цены из каталога, а не из запроса клиента"
+  }
+ ],
+ "openspec_exists": true,
+ "warnings": []
+}

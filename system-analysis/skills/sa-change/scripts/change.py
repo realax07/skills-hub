@@ -59,6 +59,8 @@ class Layer:
         self.design = (P.repo / "design-context" / "GUIDE.md").is_file()
         tc = P.repo / "test-cases" / "_index" / "index.json"
         self.cases = json.loads(tc.read_text(encoding="utf-8")).get("cases", []) if tc.is_file() else None
+        lj = P.ctx / "landscape.json"   # срез ландшафта ar-scan: потребители в других системах
+        self.land = json.loads(lj.read_text(encoding="utf-8")) if lj.is_file() else None
 
     @staticmethod
     def _notes(path):
@@ -123,6 +125,11 @@ def cmd_layer(a):
     else:
         print("· git-история слоя не найдена — свежесть не проверить")
     print(f"· design-context/: {'есть — интерфейсные правки проверяются wd-fit' if L.design else 'нет'}")
+    if L.land is not None:
+        print(f"· ландшафт (ar-scan): есть, собран {L.land.get('built', '?')}, потребителей в других системах {len(L.land.get('consumers', []))}, "
+              f"общих ресурсов {len(L.land.get('shared', []))}")
+    else:
+        print("· ландшафт (ar-scan): нет — потребители в других репозиториях не посчитаны, внешние подписчики и клиенты — вопросы")
     print(f"· test-cases/: {'есть, кейсов ' + str(len(L.cases)) if L.cases is not None else 'нет (или нет индекса — qa-scan: route.py index)'}")
     active = [d.name for d in sorted((P.openspec / "changes").glob("*")) if d.is_dir() and d.name != "archive"]
     print(f"· активные изменения: {', '.join(active) or 'нет'}")
@@ -362,6 +369,31 @@ def build_items(L, caps, entries, events, entities, extra_files):
                + (f" ({', '.join(q['id'] for q in blk[:5])})" if blk else "") + " — не держится ли изменение на них",
                "решение: добавить её в --cap (меняется её поведение), задача, или «не затрагивается: почему»"]
         items.append(("N", f"cap:{c}", f"`{c}` — {L.caps()[c].get('title', '')}", det))
+    # ландшафт: потребители затронутых входов и событий в других системах, общие базы
+    if L.land is not None:
+        ev_names = {it[1].split(":", 1)[1] for it in items if it[0] == "S"} | set(events)
+        paths = {e.split(":", 1)[1].split(" ", 1)[-1] for e in target_entries if e.startswith("http:")}
+        svcs = {e.split(":", 1)[1].split(".")[0] for e in target_entries if e.startswith("grpc:")}
+        for c in L.land.get("consumers", []):
+            k, what, who = c["kind"], c["what"], c["consumer"]
+            hit = (k == "event" and what in ev_names) or (k == "grpc" and what in svcs) or \
+                  (k == "http" and any(p == what or p.startswith(what.rstrip("/") + "/") for p in paths))
+            if not hit:
+                continue
+            det = [f"система `{who['system']}`" + (f" ({who['title']})" if who.get("title") not in (None, "", who["system"]) else "") +
+                   (", внешняя" if who.get("external") else f", репозиторий `{who.get('repo') or '?'}`") +
+                   f"; владелец: {who.get('owner') or 'не известен — спросить через владельца ландшафта'}",
+                   "где у неё: " + ("; ".join(c.get("evidence", [])[:2]) or "см. system-context/landscape.md"),
+                   "выкатывается отдельно и ломается первым: изменение контракта — задача на совместимость (поле необязательное, "
+                   "старый код ответа, версия) или согласование с владельцем; «не затрагивается» — только с причиной по её коду"]
+            items.append(("L", f"land:{k}:{what}:{who['system']}", f"`{who['system']}` " + {"event": "слушает событие", "http": "вызывает",
+                                                                                          "grpc": "вызывает gRPC"}[k] + f" `{what}`", det))
+        if entities or any(it[0] == "E" for it in items):
+            for s in L.land.get("shared", []):
+                if s.get("kind") == "база данных":
+                    items.append(("L", f"land:db:{s['name']}", f"общая база `{s['name']}`: также {', '.join(s['others'])}",
+                                  [f"наши системы: {', '.join(s['ours'])}", "меняешь схему или значения (новый статус, поле) — другая система читает "
+                                   "их в обход контракта: задача или вопрос её владельцу"]))
     # тест-кейсы qa-scan
     if L.cases is not None:
         for c in L.cases:
@@ -397,6 +429,7 @@ IMPACT_HEAD = """# Влияние изменения `{id}`
 KIND_TITLE = OrderedDict([("C", "Кто вызывает затронутые входы"), ("S", "События: публикуемые и названные"),
                           ("E", "Сущности: где поле потеряется молча"), ("Q", "Блокирующие вопросы затронутых возможностей — опирается ли на них изменение?"),
                           ("N", "Смежные возможности — связаны событиями или той же сущностью"),
+                          ("L", "Потребители в других системах (ландшафт ar-scan)"),
                           ("T", "Тест-кейсы (qa-scan)"), ("D", "Проверка интерфейса"), ("X", "Добавлено вручную")])
 
 
@@ -450,7 +483,7 @@ def cmd_analyze(a):
     out = [IMPACT_HEAD.format(id=a.id, caps=", ".join(f"`{c}`" for c in caps) or "—",
                               more=(f"; входы {', '.join(a.entry)}" if a.entry else "") + (f"; события {', '.join(a.event)}" if a.event else "")
                               + (f"; сущности {', '.join(a.entity)}" if a.entity else ""),
-                              extra=(", test-cases/" if L.cases is not None else "") + (", design-context/" if L.design else ""))]
+                              extra=(", test-cases/" if L.cases is not None else "") + (", ландшафта ar-scan" if L.land is not None else "") + (", design-context/" if L.design else ""))]
     js_items = []
     for kind, title in KIND_TITLE.items():
         if kind == "X":
