@@ -53,6 +53,7 @@ REF_RX = re.compile(r"[\w./-]+\.\w{1,6}(?::\d+)?|https?://\S+")
 AUTO_START = "<!-- sa:auto id=\""
 FILL = "<!-- заполнить"
 DB_ENV = re.compile(r"^([A-Z][A-Z0-9]*?)_(?:DB|DATABASE|PG|POSTGRES|MYSQL|MONGO)_(?:URL|URI|DSN|HOST|NAME|CONNECTION)$")
+SEARCH_RX = re.compile(r"grep|поиск|искал|ищу|вхожден|не найден|нет ни|нигде", re.I)
 PRODUCER_RX = re.compile(r"produc|kafka|publish|bus|broker|channel|queue|topic|nats|sns|sqs|pubsub|emitter", re.I)
 KINDS = {"call": "вызов", "event": "событие", "data": "данные"}
 
@@ -927,7 +928,7 @@ def link_docs(A, docs):
 # ---------------------------------------------------------------- сверка
 
 def read_decisions(path):
-    """RECONCILE.md → {key: решение}"""
+    """RECONCILE.md → {key: {"check": что проверено, "decision": решение}}"""
     dec = {}
     if not path.is_file():
         return dec
@@ -936,12 +937,21 @@ def read_decisions(path):
         m = re.search(r"<!-- key: (.+?) -->", ln)
         if m:
             key = m.group(1)
+            dec.setdefault(key, {"check": "", "decision": ""})
             continue
-        m = re.match(r"^\s+- \*\*Решение:\*\*\s*(.*)$", ln)
-        if m and key:
+        if not key:
+            continue
+        m = re.match(r"^\s+- (?:\*\*)?Проверка:(?:\*\*)?\s*(.*)$", ln)
+        if m:
             v = m.group(1).strip()
             if v and not v.startswith(FILL):
-                dec[key] = v
+                dec[key]["check"] = v
+            continue
+        m = re.match(r"^\s+- \*\*Решение:\*\*\s*(.*)$", ln)
+        if m:
+            v = m.group(1).strip()
+            if v and not v.startswith(FILL):
+                dec[key]["decision"] = v
             key = None
     return dec
 
@@ -1051,14 +1061,16 @@ def write_reconcile(A, items):
         out += [f"## {g}", ""]
         for key, title, lines in its:
             n += 1
-            dec = old.get(key, "")
+            o = old.get(key, {})
+            dec, chk = o.get("decision", ""), o.get("check", "")
             out += [f"- [{'x' if dec else ' '}] R-{n:02d} {title} <!-- key: {key} -->"] + [f"  {ln}" for ln in lines]
+            out.append(f"  - **Проверка:** {chk or FILL + ': что открыл и что увидел — путь:строка в коде, документ:строка -->'}")
             out.append(f"  - **Решение:** {dec or FILL + ': вопрос Q-… | ок: почему | не связь: почему -->'}")
         out.append("")
     if not items:
         out.append("Расхождений нет.")
     A.reconcile.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
-    return n, sum(1 for _, k, _, _ in items if k in old)
+    return n, sum(1 for _, k, _, _ in items if old.get(k, {}).get("decision"))
 
 
 # ---------------------------------------------------------------- запись слоя
@@ -1462,7 +1474,7 @@ def cmd_q(a):
         sa.die("категория — одна из: " + "; ".join(sa.CATEGORIES))
     if a.importance not in sa.IMPORTANCE:
         sa.die("важность: блокирует | уточняет")
-    if not a.title.strip().endswith("?"):
+    if not a.title.strip().rstrip("»\"') ").endswith("?"):
         sa.die("вопрос — одной фразой с «?»")
     text = A.questions.read_text(encoding="utf-8") if A.questions.is_file() else tmpl("QUESTIONS.md")
     qs = sa.parse_questions(text)
@@ -1539,6 +1551,15 @@ def cmd_check(a):
             m = re.search(r"(R-\d+) .*<!-- key: (.+?) -->", ln)
             if m:
                 key = m.group(1)
+                continue
+            m = re.match(r"^\s+- (?:\*\*)?Проверка:(?:\*\*)?\s*(.*)$", ln)
+            if m and key:
+                v = m.group(1).strip()
+                if not v or v.startswith(FILL):
+                    err.append(f"RECONCILE.md {key}: не заполнена «Проверка» — сначала открой места из пункта и запиши, что увидел")
+                elif not REF_RX.search(v) and not (SEARCH_RX.search(v) and any(
+                        re.search(rf"(?<![\w-]){re.escape(x)}(?![\w-])", v) for r in A.data["repos"] for x in (r["name"],) + tuple(A.systems()))):
+                    err.append(f"RECONCILE.md {key}: в «Проверке» нет ссылки (путь:строка, документ или «поиск X в <репозиторий> — 0»): «{squash(v, 50)}»")
                 continue
             m = re.match(r"^\s+- \*\*Решение:\*\*\s*(.*)$", ln)
             if m and key:
