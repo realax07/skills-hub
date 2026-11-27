@@ -824,7 +824,7 @@ def link_code(A, scans, L):
                     if me:
                         x2 = L.infra[f"{m.group(1).lower()} db ({name})"]
                         x2["kind"] = "база данных"
-                        x2["users"][me].append(f"{rname}:{f}")
+                        x2["users"][me].append(with_line(S, rname, f))
                 continue
             m = re.match(r"^ConnectionStrings[:_]+(\w[\w-]*)$", name, re.I)
             if m:
@@ -833,7 +833,7 @@ def link_code(A, scans, L):
                     if me and not A.resolve(m.group(1)):
                         x2 = L.infra[m.group(1)]
                         x2["kind"] = x2["kind"] or ("база данных" if re.search(r"db$|database|sql", m.group(1), re.I) else "ресурс по строке подключения")
-                        x2["users"][me].append(f"{rname}:{f}")
+                        x2["users"][me].append(with_line(S, rname, f))
         projects, res, refs = S["aspire"]
         p_sys = {}
         for var, (proj, name, relp) in projects.items():
@@ -871,6 +871,14 @@ def link_code(A, scans, L):
                     L.infra[f"{dep} ({comp[dep]['image'].split(':')[0]})"]["kind"] = kind
                     if f"{rname}:{s['file']}" not in L.infra[f"{dep} ({comp[dep]['image'].split(':')[0]})"]["users"][me]:
                         L.infra[f"{dep} ({comp[dep]['image'].split(':')[0]})"]["users"][me].append(f"{rname}:{s['file']}")
+
+
+def with_line(S, rname, loc):
+    """repo:файл:строка `текст строки` — в проекте чужой репозиторий может быть недоступен"""
+    fp, _, ln = loc.partition(":")
+    lines = S["src"].ln(fp)
+    txt = lines[int(ln) - 1] if ln.isdigit() and 0 < int(ln) <= len(lines) else ""
+    return f"{rname}:{loc}" + (f" `{squash(txt.replace('`', ''), 110)}`" if txt.strip() else "")
 
 
 def r_split(A, rname):
@@ -1323,7 +1331,10 @@ def write_json(A, L, doc_edges):
                   for (o, p), h in L.http.items() if h["consumers"]]),
         ("grpc", [OrderedDict([("owner", o), ("service", s), ("consumers", {c: v[:5] for c, v in g["consumers"].items()})])
                   for (o, s), g in L.grpc.items() if g["consumers"]]),
-        ("infra", OrderedDict((n, {"kind": x["kind"], "users": sorted(x["users"])}) for n, x in L.infra.items())),
+        ("infra", OrderedDict((n, {"kind": x["kind"], "users": sorted(x["users"]),
+                                   "evidence": {s: sorted(set(v), key=lambda e: (bool(re.search(r"\.(env\w*|ya?ml|json|example)(:|$)", e)), e))[:3]
+                                                for s, v in x["users"].items()}})
+                              for n, x in L.infra.items())),
         ("doc_edges", doc_edges),
     ])
     A.landscape_json.write_text(json.dumps(js, ensure_ascii=False, indent=1, default=list) + "\n", encoding="utf-8")
@@ -1668,7 +1679,8 @@ def slice_for(A, ss, arch_ref):
                     consumers.append(OrderedDict([("kind", "grpc"), ("what", g["service"]), ("owner", g["owner"]), ("consumer", who(s)),
                                                   ("evidence", locs[:3])]))
     shared = [OrderedDict([("name", n), ("kind", x.get("kind", "")), ("ours", sorted(set(x["users"]) & mine)),
-                           ("others", sorted(set(x["users"]) - mine))])
+                           ("others", sorted(set(x["users"]) - mine)),
+                           ("evidence", {s: v for s, v in x.get("evidence", {}).items() if s not in mine})])
               for n, x in js.get("infra", {}).items() if set(x.get("users", [])) & mine and set(x.get("users", [])) - mine]
     return OrderedDict([("source", arch_ref), ("built", A.data.get("built", "")), ("systems", ss), ("consumers", consumers), ("shared", shared)])
 

@@ -61,7 +61,13 @@
    ],
    "others": [
     "warehouse-sync"
-   ]
+   ],
+   "evidence": {
+    "warehouse-sync": [
+     "warehouse-sync:src/jobs/pick_orders.py:18 `SELECT id, items FROM orders WHERE status = 'PAID' AND picked_at IS NULL`",
+     "warehouse-sync:src/jobs/pick_orders.py:31 `UPDATE orders SET picked_at = now() WHERE id = %s`"
+    ]
+   }
   }
  ]
 }
