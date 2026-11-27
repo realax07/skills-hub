@@ -1,0 +1,262 @@
+{
+ "built": "2026-11-27 17:13",
+ "systems": {
+  "orders": {
+   "title": "orders",
+   "repo": "orders",
+   "package": ".",
+   "aliases": [],
+   "purpose": "Заказы: оформление, статусы, отмена",
+   "owner": "Команда «Заказы»",
+   "external": false
+  },
+  "payments": {
+   "title": "payments",
+   "repo": "payments",
+   "package": ".",
+   "aliases": [],
+   "purpose": "Списание денег за заказ через Stripe",
+   "owner": "Команда Billing (канал #billing)",
+   "external": false
+  },
+  "notifications": {
+   "title": "notifications",
+   "repo": "notifications",
+   "package": ".",
+   "aliases": [],
+   "purpose": "Письма покупателям по событиям заказов",
+   "owner": "Команда «Коммуникации»",
+   "external": false
+  },
+  "stripe": {
+   "title": "Stripe",
+   "repo": "",
+   "package": "",
+   "aliases": [
+    "api.stripe.com"
+   ],
+   "purpose": "Эквайринг: списание с карты",
+   "owner": "",
+   "external": true
+  },
+  "sendgrid": {
+   "title": "SendGrid",
+   "repo": "",
+   "package": "",
+   "aliases": [
+    "api.sendgrid.com"
+   ],
+   "purpose": "Отправка писем",
+   "owner": "",
+   "external": true
+  },
+  "crm": {
+   "title": "CRM",
+   "repo": "",
+   "package": "",
+   "aliases": [],
+   "purpose": "Карточки покупателей, ведёт отдел продаж",
+   "owner": "Отдел продаж",
+   "external": true
+  },
+  "storefront": {
+   "title": "Витрина",
+   "repo": "",
+   "package": "",
+   "aliases": [
+    "web"
+   ],
+   "purpose": "Сайт магазина, вызывает Orders Service",
+   "owner": "",
+   "external": false
+  }
+ },
+ "edges": [
+  {
+   "from": "payments",
+   "to": "orders",
+   "kind": "event",
+   "what": [
+    "payments.completed"
+   ],
+   "evidence": [
+    "payments:app/api/payments.py:22 → orders:src/consumers/payments.ts:8 (kafka)"
+   ]
+  },
+  {
+   "from": "orders",
+   "to": "notifications",
+   "kind": "event",
+   "what": [
+    "orders.created"
+   ],
+   "evidence": [
+    "orders:src/routes/orders.ts:13 → notifications:notifications/worker.py:9 (kafka)"
+   ]
+  },
+  {
+   "from": "orders",
+   "to": "payments",
+   "kind": "call",
+   "what": [
+    "HTTP /api/payments",
+    "адрес payments",
+    "адрес из настройки PAYMENTS_URL"
+   ],
+   "evidence": [
+    "orders:src/clients/payments.ts:5",
+    "orders:src/clients/payments.ts:1",
+    "orders:.env.example:3"
+   ]
+  },
+  {
+   "from": "payments",
+   "to": "stripe",
+   "kind": "call",
+   "what": [
+    "адрес api.stripe.com"
+   ],
+   "evidence": [
+    "payments:app/stripe_client.py:5"
+   ]
+  },
+  {
+   "from": "notifications",
+   "to": "sendgrid",
+   "kind": "call",
+   "what": [
+    "адрес api.sendgrid.com"
+   ],
+   "evidence": [
+    "notifications:notifications/mailer.py:8"
+   ]
+  }
+ ],
+ "events": {
+  "payments.completed": {
+   "publishers": [
+    "payments"
+   ],
+   "subscribers": [
+    "orders"
+   ],
+   "fields": {}
+  },
+  "orders.created": {
+   "publishers": [
+    "orders"
+   ],
+   "subscribers": [
+    "notifications"
+   ],
+   "fields": {}
+  }
+ },
+ "http": [
+  {
+   "owner": "payments",
+   "prefix": "/api/payments",
+   "entries": [
+    "POST /api/payments",
+    "GET /api/payments/{payment_id}"
+   ],
+   "consumers": {
+    "orders": [
+     "orders:src/clients/payments.ts:5 `const r = await fetch(${PAYMENTS_URL}/api/payments, {`"
+    ]
+   }
+  }
+ ],
+ "grpc": [],
+ "infra": {
+  "orders db (ORDERS_DB_URL)": {
+   "kind": "база данных",
+   "users": [
+    "notifications",
+    "orders"
+   ],
+   "evidence": {
+    "orders": [
+     "orders:.env.example:2"
+    ],
+    "notifications": [
+     "notifications:notifications/worker.py:11 `conn = psycopg.connect(os.environ[\"ORDERS_DB_URL\"])`",
+     "notifications:.env.example:2"
+    ]
+   }
+  }
+ },
+ "doc_edges": [
+  {
+   "from": "storefront",
+   "to": "orders",
+   "kind": "call",
+   "what": "",
+   "source": "../docs/architecture.md:17"
+  },
+  {
+   "from": "orders",
+   "to": "payments",
+   "kind": "call",
+   "what": "списание",
+   "source": "../docs/architecture.md:18"
+  },
+  {
+   "from": "payments",
+   "to": "orders",
+   "kind": "event",
+   "what": "payments.completed",
+   "source": "../docs/architecture.md:19"
+  },
+  {
+   "from": "orders",
+   "to": "notifications",
+   "kind": "event",
+   "what": "orders.created",
+   "source": "../docs/architecture.md:20"
+  },
+  {
+   "from": "payments",
+   "to": "notifications",
+   "kind": "event",
+   "what": "payments.completed",
+   "source": "../docs/architecture.md:21"
+  },
+  {
+   "from": "orders",
+   "to": "crm",
+   "kind": "call",
+   "what": "новый покупатель",
+   "source": "../docs/architecture.md:22"
+  },
+  {
+   "from": "notifications",
+   "to": "sendgrid",
+   "kind": "call",
+   "what": "",
+   "source": "../docs/architecture.md:23"
+  },
+  {
+   "from": "payments",
+   "to": null,
+   "kind": "event",
+   "what": "payments.completed",
+   "source": "../docs/asyncapi/payments.yaml"
+  },
+  {
+   "from": "payments",
+   "to": null,
+   "kind": "event",
+   "what": "payments.refunded",
+   "source": "../docs/asyncapi/payments.yaml"
+  },
+  {
+   "from": "notifications",
+   "to": "crm",
+   "kind": "data",
+   "what": "контакты покупателя",
+   "source": "docs/architecture.md:30",
+   "claim": "D-01"
+  }
+ ]
+}

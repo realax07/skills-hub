@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html><head><title>Payments Service</title></head>
+<body>
+<h1>Payments Service</h1>
+<table>
+<tr><th>Владелец</th><td>Команда Billing (канал #billing)</td></tr>
+<tr><th>Репозиторий</th><td>git/payments</td></tr>
+<tr><th>SLA</th><td>99.9%, p95 &lt; 800 мс</td></tr>
+</table>
+<h2>API</h2>
+<p>POST /api/payments — списать сумму заказа. Повторный запрос с тем же orderId возвращает уже созданный платёж (идемпотентность).</p>
+<p>GET /api/payments/{id} — статус платежа.</p>
+<h2>События</h2>
+<p>payments.completed — результат списания; payments.refunded — возврат.</p>
+<h2>Внешние</h2>
+<p>Stripe — эквайринг.</p>
+</body></html>

@@ -1,0 +1,73 @@
+{
+ "source": "../architecture",
+ "built": "2026-11-27 12:00",
+ "systems": [
+  "orders"
+ ],
+ "consumers": [
+  {
+   "kind": "http",
+   "what": "/api/orders",
+   "entries": [
+    "POST /api/orders",
+    "GET /api/orders",
+    "GET /api/orders/{id}",
+    "POST /api/orders/{id}/cancel",
+    "POST /api/orders/{id}/ship"
+   ],
+   "owner": "orders",
+   "consumer": {
+    "system": "support-desk",
+    "title": "Портал поддержки",
+    "repo": "support-desk",
+    "owner": "Команда поддержки",
+    "external": false
+   },
+   "evidence": [
+    "support-desk:src/api/orders.ts:14 `await http.post(`/api/orders/${id}/cancel`, { reason })`",
+    "support-desk:src/views/OrderCard.vue:41 `v-if=\"order.status === 'NEW' || order.status === 'PAID'\"`"
+   ]
+  },
+  {
+   "kind": "http",
+   "what": "/api/orders",
+   "entries": [
+    "POST /api/orders",
+    "GET /api/orders",
+    "GET /api/orders/{id}",
+    "POST /api/orders/{id}/cancel",
+    "POST /api/orders/{id}/ship"
+   ],
+   "owner": "orders",
+   "consumer": {
+    "system": "mobile-app",
+    "title": "Мобильное приложение",
+    "repo": "mobile-app",
+    "owner": "Команда мобильной разработки",
+    "external": false
+   },
+   "evidence": [
+    "mobile-app:lib/api/orders_api.dart:22 `final r = await dio.get('/api/orders/$id');`",
+    "mobile-app:lib/screens/order_screen.dart:57 `if (order.status == 'NEW') CancelButton(onTap: () => api.cancel(order.id))`"
+   ]
+  }
+ ],
+ "shared": [
+  {
+   "name": "orders db (DATABASE_URL)",
+   "kind": "база данных",
+   "ours": [
+    "orders"
+   ],
+   "others": [
+    "warehouse-sync"
+   ],
+   "evidence": {
+    "warehouse-sync": [
+     "warehouse-sync:src/jobs/pick_orders.py:18 `SELECT id, items FROM orders WHERE status = 'PAID' AND picked_at IS NULL`",
+     "warehouse-sync:src/jobs/pick_orders.py:31 `UPDATE orders SET picked_at = now() WHERE id = %s`"
+    ]
+   }
+  }
+ ]
+}

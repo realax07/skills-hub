@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="skill-hash" content="15a37c2b2de79105">
+<title>ar-rules — гайд</title>
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --surface-2: #f0eee8; --text: #1d1c1a; --muted: #6b6760; --line: #e2dfd7;
+  --accent: #2f5bd3; --accent-soft: #e6ecfb;
+  --human: #b4561f; --human-soft: #fbeee4;
+  --model: #6a3fc1; --model-soft: #efe8fb;
+  --script: #1f7a54; --script-soft: #e3f4ec;
+  --warn: #9a6a00; --warn-soft: #fbf1d9;
+  --code-bg: #f3f1ec; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --surface: #1d1c1b; --surface-2: #262523; --text: #ecebe7; --muted: #a29f97; --line: #34322f;
+    --accent: #8aa8ff; --accent-soft: #1f2840;
+    --human: #f0a070; --human-soft: #35241a; --model: #b79af5; --model-soft: #2a2140;
+    --script: #6fd3a5; --script-soft: #17302a; --warn: #e7c062; --warn-soft: #332a14;
+    --code-bg: #232220; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --surface: #1d1c1b; --surface-2: #262523; --text: #ecebe7; --muted: #a29f97; --line: #34322f;
+  --accent: #8aa8ff; --accent-soft: #1f2840;
+  --human: #f0a070; --human-soft: #35241a; --model: #b79af5; --model-soft: #2a2140;
+  --script: #6fd3a5; --script-soft: #17302a; --warn: #e7c062; --warn-soft: #332a14;
+  --code-bg: #232220; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+header.top .wrap { display: flex; align-items: center; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.crumbs { color: var(--muted); font-size: 14px; }
+.crumbs a { color: var(--muted); }
+nav.toc { margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--text); }
+.theme-btn { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.hero { padding: 48px 0 28px; }
+.hero .kicker { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 8px 0 14px; letter-spacing: -.01em; }
+.hero p.lead { font-size: 19px; color: var(--muted); max-width: 760px; margin: 0; }
+section { padding: 34px 0; border-top: 1px solid var(--line); }
+section h2 { font-size: 24px; margin: 0 0 6px; }
+section .sub { color: var(--muted); margin: 0 0 22px; max-width: 760px; }
+.grid { display: grid; gap: 14px; }
+.cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.two { grid-template-columns: 1fr 1fr; }
+.list { margin: 0; padding-left: 20px; }
+.list li { margin: 4px 0; }
+.yes h3 { color: var(--script); } .no h3 { color: var(--human); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; }
+.tablebox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+
+/* поток: три дорожки */
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+.chip.human { background: var(--human-soft); color: var(--human); }
+.chip.model { background: var(--model-soft); color: var(--model); }
+.chip.script { background: var(--script-soft); color: var(--script); }
+.chip.file { background: var(--surface-2); color: var(--text); font-family: var(--mono); font-weight: 500; font-size: 12px; text-decoration: none; border-color: var(--line); }
+.chip.file:hover { border-color: var(--accent); }
+.flow { position: relative; }
+.lanes-head, .frow { display: grid; grid-template-columns: 44px repeat(3, 1fr); gap: 12px; }
+.lanes-head { padding: 8px 0; }
+.lanes-head div { font-size: 13px; font-weight: 700; text-align: center; padding: 6px; border-radius: 8px; }
+.lanes-head .h { background: var(--human-soft); color: var(--human); }
+.lanes-head .m { background: var(--model-soft); color: var(--model); }
+.lanes-head .s { background: var(--script-soft); color: var(--script); }
+.frow { position: relative; padding: 6px 0; }
+.frow .num { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 14px; margin-top: 10px; position: relative; z-index: 1; }
+.frow::before { content: ""; position: absolute; left: 21px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.frow:first-of-type::before { top: 24px; } .frow:last-child::before { bottom: calc(100% - 24px); }
+.lane { min-width: 0; }
+.lane.dim { display: flex; align-items: center; justify-content: center; }
+.lane.dim::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.lane.also::after { background: currentColor; opacity: .5; }
+.step { border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+.step.human { border-left: 4px solid var(--human); } .step.model { border-left: 4px solid var(--model); } .step.script { border-left: 4px solid var(--script); }
+.step h4 { margin: 0 0 4px; font-size: 15px; }
+.step p { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+.step .cmd { display: block; background: var(--code-bg); border-radius: 6px; padding: 6px 8px; font-size: 12px; margin: 6px 0; overflow-x: auto; white-space: pre; }
+.step .outs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.step .badge-mob { display: none; }
+
+/* дерево результата */
+.tree td.path { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.tree td.path .ind { display: inline-block; }
+.tree tr.dir td.path { color: var(--muted); }
+.tree tr:target, .tree tr.hl { background: var(--accent-soft); }
+.tree .who { font-size: 13px; color: var(--muted); }
+.git { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.git.yes { background: var(--script-soft); color: var(--script); }
+.git.no { background: var(--human-soft); color: var(--human); }
+.git.opt { background: var(--warn-soft); color: var(--warn); }
+
+/* жизненный цикл */
+.pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.stage { flex: 1 1 200px; display: flex; align-items: stretch; }
+.stage .box { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+.stage.cur .box { border: 2px solid var(--accent); background: var(--accent-soft); }
+.stage .box h4 { margin: 0 0 4px; font-size: 15px; }
+.stage .box p { margin: 0; font-size: 14px; color: var(--muted); }
+.stage .box .skill { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.stage .arrow { width: 28px; display: grid; place-items: center; color: var(--muted); font-size: 20px; }
+.stage:last-child .arrow { display: none; }
+.modes { margin-top: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.modes .card h3 { display: flex; gap: 8px; align-items: center; }
+
+/* примеры */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tabs button { border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.example { display: none; }
+.example.on { display: block; }
+.example .note { color: var(--muted); margin: 0 0 10px; font-size: 15px; }
+pre.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; margin: 0; white-space: pre; max-height: 520px; }
+@media print { .example { display: block; } .tabs { display: none; } }
+
+/* замеры */
+.metric { margin-bottom: 18px; }
+.metric h4 { margin: 0 0 8px; font-size: 15px; }
+.bar { display: grid; grid-template-columns: 180px 1fr 70px; gap: 10px; align-items: center; margin: 5px 0; font-size: 14px; }
+.bar .track { background: var(--surface-2); border-radius: 6px; height: 18px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 6px; }
+.bar .fill.alt { background: var(--muted); }
+.bar .val { font-variant-numeric: tabular-nums; text-align: right; }
+.metric .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+
+.rules li { margin: 8px 0; }
+.rules b { display: block; }
+footer { color: var(--muted); font-size: 13px; padding: 30px 0 50px; border-top: 1px solid var(--line); }
+
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px; }
+  nav.toc { display: none; }
+  .two { grid-template-columns: 1fr; }
+  .lanes-head { display: none; }
+  .frow { grid-template-columns: 36px 1fr; }
+  .frow::before { left: 17px; }
+  .frow .num { width: 28px; height: 28px; font-size: 13px; }
+  .lane.dim { display: none; }
+  .step .badge-mob { display: inline-flex; margin-bottom: 6px; }
+  .stage { flex-basis: 100%; flex-direction: column; }
+  .stage .arrow { width: auto; height: 26px; transform: rotate(90deg); }
+  .bar { grid-template-columns: 110px 1fr 54px; }
+  .tree table, .tree tbody, .tree tr, .tree td { display: block; width: 100%; }
+  .tree tr:first-child { display: none; }
+  .tree tr { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .tree td { border: 0; padding: 2px 8px; }
+  .tree td.path { white-space: normal; font-weight: 600; }
+  .tree td:empty { display: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="crumbs"><a href="../../README.md">architecture</a> / <b>ar-rules</b></span><nav class="toc"><a href=#gives>Что даёт</a><a href=#when>Когда звать</a><a href=#flow>Как работает</a><a href=#tree>Куда складывает</a><a href=#life>Что дальше</a><a href=#examples>Примеры</a><a href=#rules>Правила</a></nav><button class="theme-btn" id="theme" type="button">тема</button></div></header><div class="hero"><div class="wrap"><div class="kicker">Архитектура · ar-rules</div><h1>ar-rules: правила архитектуры, которые проверяются</h1><p class="lead">Скилл превращает ADR, страницы стандартов и договорённости в принципы: правило одним предложением, почему, источник, к каким изменениям относится и как проверить. Скрипт проверяет код всех систем ландшафта, нарушения получают решения, а принципы уходят в проекты — превентивными правилами для dev-агентов и пунктами в плане sa-change.</p></div></div><section id="gives"><div class="wrap"><h2>Что даёт</h2><p class="sub">ADR и вики пишут для людей: «должен», «стараемся», «по возможности». Агент такой текст не выполнит, а нарушение никто не заметит. ar-rules оставляет только правила, которые можно проверить, и проверяет их.</p><div class="grid cards"><div class="card"><h3>Кандидаты из документов</h3><p><code>RULE-CANDIDATES.md</code>: решения ADR и фразы «должен», «запрещено», «только», MUST со ссылкой на строку; у каждого решение — принцип, дубль или «не принцип: почему».</p></div><div class="card"><h3>Принципы</h3><p><code>principles.md</code>: правило, почему, источник, область, к каким изменениям (события, вызовы, данные, деньги, безопасность), системы, как проверить, исключения.</p></div><div class="card"><h3>Проверки скриптом</h3><p>Общая база данных в ландшафте, внешние HTTP-вызовы без таймаута или дольше лимита, обязательный или запрещённый шаблон в коде; остальное — вопрос на ревью.</p></div><div class="card"><h3>Нарушения с решениями</h3><p><code>VIOLATIONS.md</code>: у каждого — проверка по месту и решение: нарушение, исключение с источником, ложное, вопрос. Сохраняются при повторной проверке.</p></div><div class="card"><h3>Правила для dev-агентов</h3><p><code>link</code> кладёт в проект <code>system-context/principles.md</code> с исключениями и текущими нарушениями и указатель в AGENTS.md: агент читает правила до задачи.</p></div><div class="card"><h3>Пункты в плане sa-change</h3><p><code>principles.json</code>: принципы, которые касаются изменения, становятся пунктами P в impact.md — задача, «соблюдено: как» или исключение.</p></div></div></div></section><section id="when"><div class="wrap"><h2>Когда звать</h2><p class="sub">Есть слой ar-scan и документы с договорённостями — или договорённости в голове.</p><div class="grid two"><div class="card yes"><h3>Подходит</h3><ul class="list"><li>«Собери принципы / стандарты / правила архитектуры для агентов».</li><li>«Проверь сервисы на соответствие ADR».</li><li>«У нас принято: все вызовы с таймаутом, платежи идемпотентны» — записать и проверить.</li><li>guardrails для dev-агентов.</li></ul></div><div class="card no"><h3>Не подходит</h3><ul class="list"><li>Карта систем и связей — ar-scan.</li><li>Стиль кода одного проекта — линтер или AGENTS.md проекта.</li><li>Спланировать изменение — sa-change (он читает принципы).</li></ul></div></div><h3 style="margin:26px 0 10px">Что нужно на входе</h3><div class="tablebox"><table><tr><th>Что</th><th>Нужно</th><th>Зачем и как</th></tr><tr><td><b>Слой ar-scan</b></td><td>обязательно</td><td><code>architecture/sources.json</code> и <code>landscape.json</code>: системы, репозитории, общие базы.</td></tr><tr><td><b>Документы</b></td><td>если есть</td><td>ADR, стандарты, вики — из ландшафта или <code>scan --docs</code>.</td></tr><tr><td><b>Договорённости из чата</b></td><td>если есть</td><td>«у нас принято …» — принцип с источником «чат».</td></tr></table></div></div></section><section id="flow"><div class="wrap"><h2>Как работает</h2><p class="sub">Скрипт находит кандидатов и нарушения, модель решает, что правило и что нарушение, человек заводит исключения и отвечает на вопросы.</p><div class="legend"><span class="chip human">Человек</span><span class="chip model">Модель</span><span class="chip script">Скрипт</span><span style="color:var(--muted)">— кто делает шаг; файлы под шагом — что он создаёт (нажми, чтобы найти в дереве)</span></div><div class="flow"><div class="lanes-head"><span></span><div class="h">Человек</div><div class="m">Модель</div><div class="s">Скрипт</div></div><div class="frow"><div class="num">1</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Кандидаты</h4><p>Решения ADR и модальные фразы из документов.</p><code class="cmd">rules.py scan &lt;arch&gt;</code><div class="outs"><a class="chip file" href="#f-architecture-rule-candidates-md">architecture/RULE-CANDIDATES.md</a></div></div></div></div><div class="frow"><div class="num">2</div><div class="lane dim"></div><div class="lane"><div class="step model"><span class="chip model badge-mob">Модель</span><h4>Принципы</h4><p>Правило, почему, источник, область, к чему относится, как проверить; кандидатам — решения.</p><code class="cmd">rules.py add &lt;arch&gt; …</code><div class="outs"><a class="chip file" href="#f-architecture-principles-md">architecture/principles.md</a></div></div></div><div class="lane dim"></div></div><div class="frow"><div class="num">3</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Проверка кода</h4><p>no-shared-db, timeout, grep по всем системам ландшафта.</p><code class="cmd">rules.py verify &lt;arch&gt;</code><div class="outs"><a class="chip file" href="#f-architecture-violations-md">architecture/VIOLATIONS.md</a></div></div></div></div><div class="frow"><div class="num">4</div><div class="lane dim"></div><div class="lane"><div class="step model"><span class="chip model badge-mob">Модель</span><h4>Нарушения</h4><p>Проверка по месту, потом решение: нарушение, исключение, ложное, вопрос.</p><code class="cmd">rules.py except …; rules.py q …</code></div></div><div class="lane dim"></div></div><div class="frow"><div class="num">5</div><div class="lane dim"></div><div class="lane dim"></div><div class="lane"><div class="step script"><span class="chip script badge-mob">Скрипт</span><h4>Проверка слоя</h4><p>Решения у всех кандидатов и нарушений, источники, проверки, вопросы существуют.</p><code class="cmd">rules.py check &lt;arch&gt;</code></div></div></div><div class="frow"><div class="num">6</div><div class="lane"><div class="step human"><span class="chip human badge-mob">Человек</span><h4>В проекты</h4><p>Правила, исключения и текущие нарушения — в каждый репозиторий.</p><code class="cmd">rules.py link &lt;arch&gt; &lt;repo&gt;</code><div class="outs"><a class="chip file" href="#f-repo-system-context-principles-md">&lt;repo&gt;/system-context/principles.md</a></div><div style="margin-top:6px"><span class="chip script">Скрипт</span> </div></div></div><div class="lane dim"></div><div class="lane dim also" style="color:var(--script)"></div></div></div></div></section><section id="tree"><div class="wrap"><h2>Куда что складывает</h2><p class="sub">Всё — в слое architecture/ рядом с ландшафтом; в проекты — только по <code>link</code>.</p><div class="tablebox tree"><table><tr><th>Путь</th><th>Что внутри</th><th>Кто пишет → кто читает</th><th>Git</th></tr><tr class="dir"><td class="path"><span class="ind" style="width:0px"></span>📁 architecture/</td><td></td><td></td><td></td></tr><tr id="f-architecture-principles-json" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 principles.json</td><td>Принципы: правило, почему, источник, область, applies, системы, проверка, исключения.</td><td class="who">rules.py add/edit/except<br>→ скрипты, link</td><td><span class="git yes">в git</span></td></tr><tr id="f-architecture-principles-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 principles.md</td><td>Принципы по областям для людей и агентов.</td><td class="who">rules.py<br>→ человек, агенты</td><td><span class="git yes">в git</span></td></tr><tr id="f-architecture-rule-candidates-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 RULE-CANDIDATES.md</td><td>Кандидаты из документов с решениями.</td><td class="who">rules.py scan + модель<br>→ ревью</td><td><span class="git yes">в git</span></td></tr><tr id="f-architecture-violations-md" class=""><td class="path"><span class="ind" style="width:18px"></span>📄 VIOLATIONS.md</td><td>Нарушения с проверкой и решением.</td><td class="who">rules.py verify + модель<br>→ архитектор, владельцы систем</td><td><span class="git yes">в git</span></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:0px"></span>📁 &lt;repo&gt;/</td><td></td><td></td><td></td></tr><tr class="dir"><td class="path"><span class="ind" style="width:18px"></span>📁 system-context/</td><td></td><td></td><td></td></tr><tr id="f-repo-system-context-principles-md" class=""><td class="path"><span class="ind" style="width:36px"></span>📄 principles.md</td><td>Правила для систем репозитория, исключения, нарушения здесь; <code>principles.json</code> — для sa-change.</td><td class="who">rules.py link<br>→ dev-агент, sa-change</td><td><span class="git yes">в git</span></td></tr></table></div></div></section><section id="life"><div class="wrap"><h2>Что дальше</h2><p class="sub">Принципы — между картой ландшафта и изменениями.</p><div class="pipe"><div class="stage"><div class="box"><h4>Карта ландшафта</h4><p>Системы, связи, общие базы, документы.</p><a class="skill" href="../ar-scan/guide.html">ar-scan →</a></div><div class="arrow">→</div></div><div class="stage cur"><div class="box"><h4>Принципы</h4><p>Правила, проверки, нарушения, исключения.</p><span class="skill">ar-rules · этот скилл</span></div><div class="arrow">→</div></div><div class="stage"><div class="box"><h4>Планировать изменение</h4><p>Пункты P: изменение выполняет правило или не расширяет нарушение.</p><a class="skill" href="../../../system-analysis/skills/sa-change/guide.html">sa-change →</a></div><div class="arrow">→</div></div></div><div class="grid modes"><div class="card"><h3>Первый сбор</h3><p><b>Когда:</b> принципов ещё нет</p><p style="margin-top:6px">scan → add → verify → решения → check → link.</p></div><div class="card"><h3>Повторная проверка</h3><p><b>Когда:</b> код изменился</p><p style="margin-top:6px">verify: решения сохраняются по ключу, новые нарушения — без решения → check → link.</p></div><div class="card"><h3>Правило из чата</h3><p><b>Когда:</b> «у нас принято …»</p><p style="margin-top:6px">add --source чат → verify → link.</p></div></div><h3 style="margin:26px 0 10px">Как результат используется потом</h3><div class="grid cards"><div class="card"><h3>Dev-агент</h3><p>Читает <code>system-context/principles.md</code> до задачи; «нарушается здесь сейчас» — не повторять и не расширять.</p></div><div class="card"><h3>sa-change</h3><p>Пункты P в impact.md: задача, «соблюдено: как» или исключение; вопросы принципов — в «Цепочке».</p></div><div class="card"><h3>Архитектор</h3><p>VIOLATIONS.md — долг по системам; исключения заводит он.</p></div></div></div></section><section id="examples"><div class="wrap"><h2>Примеры из прогонов</h2><p class="sub">С фикстуры магазина (три сервиса, ADR, стандарты из Confluence) и разбора клиники (<code>examples/</code>).</p><div data-tabs><div class="tabs" role="tablist"><button type="button" aria-selected="true">Принцип</button><button type="button" aria-selected="false">Нарушение</button></div><div class="example on"><p class="note">principles.md</p><pre class="code">### P-02. Таймаут внешних вызовов не больше 5 секунд
+- **Правило:** Каждый внешний HTTP-вызов задаёт таймаут не больше 5 секунд.
+- **Почему:** Без таймаута зависший сосед держит потоки и запросы вызывающего — отказ расползается по цепочке.
+- **Источник:** ../docs/confluence/dev-standards.html:17 (статус: принят)
+- **Как проверить:** скрипт: у внешних HTTP-вызовов таймаут не больше 5 с (`rules.py verify`)
+- **Нарушений сейчас:** 3</pre></div><div class="example"><p class="note">VIOLATIONS.md</p><pre class="code">- [x] V-02 `payments`: таймаут 10 с больше лимита 5 с
+  - Где: payments:app/stripe_client.py:9 `r = httpx.post(`
+  - **Проверка:** httpx.post(timeout=10) — payments:app/stripe_client.py:13
+  - **Решение:** нарушение: таймаут Stripe 10 с при лимите 5 — уменьшить или завести исключение с Billing</pre></div></div></div></section><section id="rules"><div class="wrap"><h2>Главные правила</h2><p class="sub">Почему скилл ведёт себя так, а не иначе.</p><ul class="list rules"><li><b>Одно правило — одно проверяемое предложение.</b>Лозунг агент проигнорирует, границу — выполнит.</li><li><b>Почему — обязательно.</b>С причиной модель сама поймёт, что «особый случай» не особый.</li><li><b>Источник у принципа и исключения.</b>Правила не придумываются: документ, слова пользователя, вопрос.</li><li><b>Нарушение — после проверки места.</b>Эвристика ошибается; ложные нарушения подрывают доверие к правилам.</li><li><b>Немного сильных правил.</b>8–15 прочтут, 60 — нет.</li></ul><h3 style="margin:26px 0 10px">Если что-то пошло не так</h3><div class="tablebox"><table><tr><th>Симптом</th><th>Что делать</th></tr><tr><td>grep нашёл сотни мест</td><td>Сузить <code>--pattern</code> и <code>--files</code> через <code>edit</code>, затем <code>verify</code>.</td></tr><tr><td>«без таймаута», а таймаут в общем клиенте</td><td><code>ложное: таймаут задан в путь:строка</code>.</td></tr><tr><td>Владелец общей базы в нарушениях</td><td>Нарушает читающий: владельцу — «ложное», читающему — исключение или нарушение.</td></tr></table></div></div></section><footer><div class="wrap">Подробно для агента — <a href="SKILL.md">SKILL.md</a>. Гайд собран <code>tools/build_guides.py</code> из <code>guide.json</code>; правь его, а не этот файл.</div></footer>
+<script>
+(function () {
+  // вкладки примеров
+  document.querySelectorAll("[data-tabs]").forEach(function (box) {
+    var btns = box.querySelectorAll(".tabs button"), panes = box.querySelectorAll(".example");
+    btns.forEach(function (b, i) {
+      b.addEventListener("click", function () {
+        btns.forEach(function (x, j) { x.setAttribute("aria-selected", i === j ? "true" : "false"); });
+        panes.forEach(function (p, j) { p.classList.toggle("on", i === j); });
+      });
+    });
+  });
+  // переключатель темы
+  var btn = document.getElementById("theme");
+  if (btn) {
+    var key = "guide-theme", root = document.documentElement;
+    try { var saved = localStorage.getItem(key); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+    btn.addEventListener("click", function () {
+      var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark"
+                                                 : matchMedia("(prefers-color-scheme: dark)").matches;
+      var next = dark ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem(key, next); } catch (e) {}
+    });
+  }
+  // подсветка файла из шага потока
+  document.querySelectorAll("a.chip.file").forEach(function (a) {
+    a.addEventListener("click", function () {
+      var row = document.getElementById(a.getAttribute("href").slice(1));
+      if (!row) return;
+      document.querySelectorAll(".tree tr.hl").forEach(function (r) { r.classList.remove("hl"); });
+      row.classList.add("hl");
+    });
+  });
+})();
+</script>
+</body>
+</html>

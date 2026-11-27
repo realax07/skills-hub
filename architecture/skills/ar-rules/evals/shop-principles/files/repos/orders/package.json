@@ -1,0 +1,8 @@
+{
+  "name": "orders",
+  "version": "1.4.0",
+  "private": true,
+  "scripts": { "start": "node dist/server.js", "build": "tsc" },
+  "dependencies": { "express": "^4.19.2", "kafkajs": "^2.2.4", "@prisma/client": "^5.14.0" },
+  "devDependencies": { "typescript": "^5.4.0", "prisma": "^5.14.0" }
+}

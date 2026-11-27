@@ -61,6 +61,8 @@ class Layer:
         self.cases = json.loads(tc.read_text(encoding="utf-8")).get("cases", []) if tc.is_file() else None
         lj = P.ctx / "landscape.json"   # срез ландшафта ar-scan: потребители в других системах
         self.land = json.loads(lj.read_text(encoding="utf-8")) if lj.is_file() else None
+        pj = P.ctx / "principles.json"   # принципы ar-rules для систем этого репозитория
+        self.principles = json.loads(pj.read_text(encoding="utf-8")).get("principles", []) if pj.is_file() else None
 
     @staticmethod
     def _notes(path):
@@ -130,6 +132,7 @@ def cmd_layer(a):
               f"общих ресурсов {len(L.land.get('shared', []))}")
     else:
         print("· ландшафт (ar-scan): нет — потребители в других репозиториях не посчитаны, внешние подписчики и клиенты — вопросы")
+    print(f"· принципы (ar-rules): " + (f"есть, {len(L.principles)}" if L.principles is not None else "нет"))
     print(f"· test-cases/: {'есть, кейсов ' + str(len(L.cases)) if L.cases is not None else 'нет (или нет индекса — qa-scan: route.py index)'}")
     active = [d.name for d in sorted((P.openspec / "changes").glob("*")) if d.is_dir() and d.name != "archive"]
     print(f"· активные изменения: {', '.join(active) or 'нет'}")
@@ -249,7 +252,10 @@ def cap_tests(L, cap):
     return out
 
 
-def build_items(L, caps, entries, events, entities, extra_files):
+MONEY_RX = re.compile(r"pay|refund|charge|invoice|billing|stripe|оплат|возврат|списан|плат[её]ж|деньг|сч[её]т", re.I)
+
+
+def build_items(L, caps, entries, events, entities, extra_files, money_hint=""):
     """Пункты влияния: у каждого ключ (для сохранения решений при повторном анализе), вид, текст, подробности."""
     items, info = [], OrderedDict()
     cj = L.cj
@@ -398,6 +404,31 @@ def build_items(L, caps, entries, events, entities, extra_files):
                                    "«Значения те же» — не довод: новый переход (PAID → REFUNDED) меняет, какие строки попадают в её выборку и когда, — "
                                    "это звено «Цепочки» (гонка). Решение — задача у себя (проверка статуса, блокировка), вопрос её владельцу "
                                    "или «не затрагивается: <почему по её запросу>»"]))
+    # принципы ar-rules: какие относятся к этому изменению
+    if L.principles is not None:
+        kinds = {"all"}
+        if any(it[0] == "S" for it in items) or events:
+            kinds.add("events")
+        if any(e.startswith(("http:", "grpc:")) for e in target_entries) or any(it[0] == "C" for it in items):
+            kinds.add("http")
+        if entities or any(it[0] in ("E",) for it in items) or any(it[1].startswith("land:db:") for it in items):
+            kinds.add("data")
+        text = " ".join([" ".join(caps), " ".join(target_entries)] + [L.caps().get(c, {}).get("title", "") for c in caps]) + " " + (money_hint or "")
+        if MONEY_RX.search(text):
+            kinds.add("money")
+        if any(e.startswith("ui:") for e in target_entries) or re.search(r"auth|login|role|роль|доступ|token|secret", text, re.I):
+            kinds.add("security")
+        for p in L.principles:
+            if not set(p.get("applies", [])) & kinds:
+                continue
+            det = [f"правило: {p['rule']}", f"почему: {p.get('why', '')}", f"как проверить: {p.get('check', '')}"]
+            if p.get("question"):
+                det.append(f"вопрос себе в «Цепочке»: {p['question']}")
+            for x in p.get("exceptions", []):
+                det.append(f"исключение: `{x['system']}` — {x['reason']}")
+            if p.get("violations_here"):
+                det.append("уже нарушается здесь: " + "; ".join(p["violations_here"][:3]) + " — изменение не должно расширять нарушение")
+            items.append(("P", f"principle:{p['id']}", p["title"], det))
     # тест-кейсы qa-scan
     if L.cases is not None:
         for c in L.cases:
@@ -434,6 +465,7 @@ KIND_TITLE = OrderedDict([("C", "Кто вызывает затронутые в
                           ("E", "Сущности: где поле потеряется молча"), ("Q", "Блокирующие вопросы затронутых возможностей — опирается ли на них изменение?"),
                           ("N", "Смежные возможности — связаны событиями или той же сущностью"),
                           ("L", "Потребители в других системах (ландшафт ar-scan)"),
+                          ("P", "Принципы архитектуры (ar-rules), которые касаются изменения"),
                           ("T", "Тест-кейсы (qa-scan)"), ("D", "Проверка интерфейса"), ("X", "Добавлено вручную")])
 
 
@@ -477,12 +509,13 @@ def cmd_analyze(a):
         sa.die(f"нет возможностей {', '.join(unknown)}; есть: {', '.join(L.caps())}")
     if not caps and not (a.entry or a.event or a.entity):
         sa.die("укажи хотя бы --cap (возможности, которые меняются) — найти их поможет change.py find")
-    items, info, files = build_items(L, caps, a.entry or [], a.event or [], a.entity or [], a.file or [])
+    prop = (d / "proposal.md").read_text(encoding="utf-8") if (d / "proposal.md").is_file() else ""
+    items, info, files = build_items(L, caps, a.entry or [], a.event or [], a.entity or [], a.file or [], a.id + " " + prop[:400])
     keep, manual = read_impact(d / "impact.md")
     used = defaultdict(int)
     for k, (iid, _) in keep.items():
         p, n = iid.split("-")
-        if p != "Q":
+        if p not in ("Q", "P"):
             used[p] = max(used[p], int(n))
     out = [IMPACT_HEAD.format(id=a.id, caps=", ".join(f"`{c}`" for c in caps) or "—",
                               more=(f"; входы {', '.join(a.entry)}" if a.entry else "") + (f"; события {', '.join(a.event)}" if a.event else "")
@@ -501,6 +534,8 @@ def cmd_analyze(a):
                 iid, dec = keep[key]
             elif kind == "Q":
                 iid, dec = key[2:], ""      # пункт-вопрос — под номером самого вопроса
+            elif kind == "P":
+                iid, dec = key.split(":", 1)[1], ""   # пункт-принцип — под номером принципа
             else:
                 used[kind] += 1
                 iid, dec = f"{kind}-{used[kind]:02d}", ""
@@ -670,8 +705,12 @@ def cmd_check(a):
                     err.append(f"{rel(imp)} {cur}: «не затрагивается» без причины — почему именно (одной фразой)")
             elif cur.startswith("Q-") and (low.startswith("ответ") or low.startswith("в proposal")):
                 pass
+            elif cur.startswith("P-") and (low.startswith("соблюдено") or low.startswith("исключение")):
+                if len(dec) < 30:
+                    err.append(f"{rel(imp)} {cur}: «{dec.split(':')[0]}» без объяснения — как именно (раздел design, задача) или почему исключение")
             else:
-                err.append(f"{rel(imp)} {cur}: решение — «задача N.N», «не затрагивается: почему»" + (", «ответ: …» или «в proposal: …»" if cur.startswith("Q-") else ""))
+                err.append(f"{rel(imp)} {cur}: решение — «задача N.N», «не затрагивается: почему»" + (", «ответ: …» или «в proposal: …»" if cur.startswith("Q-") else "")
+                           + (", «соблюдено: как» или «исключение: почему»" if cur.startswith("P-") else ""))
     # proposal: разделы влияния и вопросов
     pp = d / "proposal.md"
     if pp.is_file():
