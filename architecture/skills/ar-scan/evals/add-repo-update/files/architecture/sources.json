@@ -1,0 +1,153 @@
+{
+ "version": 1,
+ "created": "2026-11-27 11:03",
+ "modified": "2026-11-27 11:04",
+ "built": "2026-11-27 11:04",
+ "repos": [
+  {
+   "name": "orders",
+   "path": "../repos/orders",
+   "split": "auto",
+   "head": "",
+   "built": "2026-11-27 11:04",
+   "split_used": "repo"
+  },
+  {
+   "name": "payments",
+   "path": "../repos/payments",
+   "split": "auto",
+   "head": "",
+   "built": "2026-11-27 11:04",
+   "split_used": "repo"
+  },
+  {
+   "name": "notifications",
+   "path": "../repos/notifications",
+   "split": "auto",
+   "head": "",
+   "built": "2026-11-27 11:04",
+   "split_used": "repo"
+  }
+ ],
+ "docs": [
+  {
+   "path": "../docs",
+   "note": ""
+  }
+ ],
+ "systems": {
+  "orders": {
+   "title": "orders",
+   "repo": "orders",
+   "package": ".",
+   "aliases": [],
+   "purpose": "Заказы: оформление, статусы, отмена",
+   "purpose_src": "docs/architecture.md:7",
+   "owner": "Команда «Заказы»",
+   "owner_src": "docs/architecture.md:7",
+   "external": false,
+   "excluded": "",
+   "merged_into": ""
+  },
+  "payments": {
+   "title": "payments",
+   "repo": "payments",
+   "package": ".",
+   "aliases": [],
+   "purpose": "Списание денег за заказ через Stripe",
+   "purpose_src": "docs/architecture.md:8",
+   "owner": "Команда Billing (канал #billing)",
+   "owner_src": "docs/confluence/payments-service.html:5",
+   "external": false,
+   "excluded": "",
+   "merged_into": ""
+  },
+  "notifications": {
+   "title": "notifications",
+   "repo": "notifications",
+   "package": ".",
+   "aliases": [],
+   "purpose": "Письма покупателям по событиям заказов",
+   "purpose_src": "docs/architecture.md:9",
+   "owner": "Команда «Коммуникации»",
+   "owner_src": "docs/architecture.md:9",
+   "external": false,
+   "excluded": "",
+   "merged_into": ""
+  },
+  "stripe": {
+   "title": "Stripe",
+   "repo": "",
+   "package": "",
+   "aliases": [
+    "api.stripe.com"
+   ],
+   "purpose": "Эквайринг: списание с карты",
+   "purpose_src": "docs/confluence/payments-service.html:17",
+   "owner": "",
+   "owner_src": "",
+   "external": true,
+   "excluded": "",
+   "merged_into": ""
+  },
+  "sendgrid": {
+   "title": "SendGrid",
+   "repo": "",
+   "package": "",
+   "aliases": [
+    "api.sendgrid.com"
+   ],
+   "purpose": "Отправка писем",
+   "purpose_src": "repos/notifications/notifications/mailer.py:8",
+   "owner": "",
+   "owner_src": "",
+   "external": true,
+   "excluded": "",
+   "merged_into": ""
+  },
+  "crm": {
+   "title": "CRM",
+   "repo": "",
+   "package": "",
+   "aliases": [],
+   "purpose": "Карточки покупателей, ведёт отдел продаж",
+   "purpose_src": "docs/architecture.md:11",
+   "owner": "Отдел продаж",
+   "owner_src": "docs/architecture.md:11",
+   "external": true,
+   "excluded": "",
+   "merged_into": ""
+  },
+  "storefront": {
+   "title": "Витрина",
+   "repo": "",
+   "package": "",
+   "aliases": [
+    "web"
+   ],
+   "purpose": "Сайт магазина, вызывает Orders Service",
+   "purpose_src": "docs/architecture.md:10",
+   "owner": "",
+   "owner_src": "",
+   "external": false,
+   "excluded": "",
+   "merged_into": ""
+  }
+ },
+ "claims": [
+  {
+   "id": "D-01",
+   "from": "notifications",
+   "to": "crm",
+   "kind": "data",
+   "what": "контакты покупателя",
+   "source": "docs/architecture.md:30"
+  }
+ ],
+ "docs_hash": {
+  "../docs/architecture.md": "4b4da68e0d36",
+  "../docs/adr/0001-kafka-for-integration.md": "e9217abc0b0a",
+  "../docs/asyncapi/payments.yaml": "1b3533b21390",
+  "../docs/confluence/payments-service.html": "e70cd973ccf8"
+ }
+}

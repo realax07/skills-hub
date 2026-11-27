@@ -220,6 +220,8 @@ class Inv:
         self.warnings = []
         self.js_router_entries = []   # (file, ident, entry id)
         self.js_mounts = []           # (file, prefix, ident)
+        self.py_mounts = []           # (file, модуль роутера, префикс) — include_router / register_blueprint
+        self.py_router_entries = []   # (file, eid)
         self.js_imports = {}          # (file, ident) -> относительный путь модуля
         self.sdk_uses = []            # импорты SDK внешних сервисов
 
@@ -450,8 +452,11 @@ class Inv:
             else:
                 methods = [meth.upper()]
             for me in methods:
-                self.add_entry("http", f"{me} {join_path(prefix, mm.group(3))}", relp, line_of(text, mm.start()),
-                               "FastAPI/Flask")
+                eid = self.add_entry("http", f"{me} {join_path(prefix, mm.group(3))}", relp, line_of(text, mm.start()),
+                                     "FastAPI/Flask")
+                self.py_router_entries.append((relp, eid))
+        for mm in re.finditer(r"\.(?:include_router|register_blueprint)\(\s*([\w.]+)\s*,[^)]*?(?:url_)?prefix\s*=\s*['\"]([^'\"]+)", text):
+            self.py_mounts.append((relp, mm.group(1), mm.group(2)))
         if relp.endswith("urls.py"):
             for mm in re.finditer(r"\b(?:re_)?path\(\s*r?['\"]([^'\"]*)['\"]\s*,\s*([\w.]+(?:\.as_view\(\))?)", text):
                 if mm.group(2).startswith("include"):
@@ -918,6 +923,26 @@ class Inv:
                 return c
         return None
 
+    def apply_py_mounts(self):
+        """Префиксы FastAPI/Flask: app.include_router(payments.router, prefix="/api/payments") → префикс у входов модуля payments."""
+        renamed = OrderedDict()
+        for f, ident, pre in self.py_mounts:
+            parts = [x for x in ident.split(".") if x not in ("router", "bp", "blueprint", "api", "routes", "views")]
+            stem = parts[-1] if parts else ""
+            for rf, eid in self.py_router_entries:
+                if eid not in self.entries or not stem or Path(rf).stem != stem:
+                    continue
+                e = self.entries[eid]
+                meth, path = e["name"].split(" ", 1)
+                if path.startswith(pre.rstrip("/") + "/") or path == pre.rstrip("/"):
+                    continue
+                self.entries.pop(eid)
+                e2 = dict(e, also=list(e["also"]))
+                e2["name"] = f"{meth} {join_path(pre, path)}".rstrip("/") if path != "/" else f"{meth} {pre.rstrip('/')}"
+                e2["id"] = f"http:{e2['name']}"
+                renamed[e2["id"]] = e2
+        self.entries.update(renamed)
+
     def apply_js_mounts(self):
         """Префиксы роутеров Express: app.use('/api/orders', ordersRouter) → /api/orders + путь из файла роутера."""
         if not self.js_mounts:
@@ -1024,6 +1049,7 @@ class Inv:
             if ext in {".md", ".mdx", ".rst", ".adoc", ".txt", ".yaml", ".yml", ".json"}:
                 self.scan_doc(p, relp, read(p))
         self.apply_js_mounts()
+        self.apply_py_mounts()
         # один и тот же CLI: скрипт из pyproject (app.cli:main) и `python app/cli.py` — оставить скрипт
         targets = {e["how"].split("→", 1)[-1].strip() for e in self.entries.values() if e["how"].startswith("pyproject scripts")}
         for eid in [i for i, e in self.entries.items() if e["how"] == "argparse"]:

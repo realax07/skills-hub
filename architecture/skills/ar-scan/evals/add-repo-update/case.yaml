@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: add-repo-update
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Агент понимает, что это обновление: status, add-repo repos/delivery, build. Прежние решения в RECONCILE.md (5 пунктов) и вопросы Q-001, Q-002
+  сохранены, заметки «Зачем и как» не потеряны. Новая система delivery: слушает payments.completed (payments → delivery), вызывает
+  GET /api/orders/{id} у orders по ORDERS_URL (delivery → orders), публикует delivery.shipped, которое никто в ландшафте не слушает, —
+  новый пункт сверки решён вопросом (кто потребляет, должен ли orders ставить статус «отгружен»). Назначение delivery — по коду с источником,
+  владелец не выдуман. «Зачем и как» у новых связей заполнены со ссылками на код. landscape.py check без ошибок.

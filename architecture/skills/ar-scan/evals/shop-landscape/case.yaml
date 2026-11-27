@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: shop-landscape
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Агент работает автономно. architecture/ собран landscape.py (init, add-repo на три репозитория, add-docs, build): системы orders,
+  payments, notifications из кода; из документов и адресов — внешние Stripe, SendGrid, CRM и витрина без репозитория (через system, алиасы).
+  Связи из кода: HTTP orders → payments, события orders.created (orders → notifications) и payments.completed (payments → orders).
+  В RECONCILE.md у каждого пункта решение после проверки: уведомления читают базу заказов (ORDERS_DB_URL) вопреки ADR-0001 — вопрос;
+  письмо об оплате (payments → notifications) есть только в документе — вопрос или ок с причиной; payments.refunded описан в AsyncAPI,
+  но в коде нет; контакты из CRM в документе, а в коде — база заказов. Назначение и владельцы — с источниками (Billing — из Confluence),
+  владельцы без источника не выдуманы. «Зачем и как» у связей заполнены со ссылками на код. landscape.py check без ошибок.
+  В repos/ ничего не записано (link не запускался), в отчёте — блокирующие вопросы и команды link.

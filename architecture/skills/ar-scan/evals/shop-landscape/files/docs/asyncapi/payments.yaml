@@ -1,0 +1,22 @@
+asyncapi: '2.6.0'
+info:
+  title: Payments Service
+  version: '1.0.0'
+channels:
+  payments.completed:
+    subscribe:
+      message:
+        payload:
+          type: object
+          properties:
+            orderId: { type: string }
+            paymentId: { type: string }
+            status: { type: string, enum: [succeeded, failed] }
+  payments.refunded:
+    subscribe:
+      message:
+        payload:
+          type: object
+          properties:
+            orderId: { type: string }
+            amount: { type: number }
